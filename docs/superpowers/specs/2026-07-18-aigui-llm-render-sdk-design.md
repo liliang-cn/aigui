@@ -40,6 +40,7 @@
 | `@aigui/plugin-highlight` | 代码高亮（Shiki），含复制按钮 | 重（可选）|
 | `@aigui/plugin-katex` | 数学公式 | 重（可选）|
 | `@aigui/plugin-mermaid` | 图表 | 重（可选）|
+| `@aigui/plugin-primitives` | 通用原语卡片（`list` / `key-value` / `table` / `chart` / `layout`），LLM 无需开发者预注册即可拼出临时 UI | 中（可选）|
 
 样式方针：**核心真 headless**，不带观点性主题，只给结构 + class 钩子。高亮 / KaTeX / Mermaid 插件各自附带其运行所必需的 CSS，用户按需 import。重依赖不进核心包。
 
@@ -122,7 +123,21 @@ const systemPrompt = `你是助手...\n\n${registry.toPromptSpec()}`
 
 `toPromptSpec()` 产出可直接塞进 system prompt 的文本，说明围栏块格式、可用卡片列表、每个卡片的字段与示例。若用 function calling / 结构化输出，`toJSONSchema()` 导出同一份 schema，类型更硬。开发者不用两地手写、不会对不上。
 
-### 6.3 卡片按钮 → 请求（action 事件机制）
+### 6.3 卡片定义的归属
+卡片由**应用开发者**定义，LLM 只负责在已注册的卡片里挑一个并填 JSON 数据，**不能发明新卡片类型**。
+
+| 角色 | 负责 |
+|---|---|
+| AIGUI SDK | 注册机制、解析、渲染管线、把规格生成给 LLM |
+| 应用开发者 | 定义卡片目录：`type` / schema / 渲染组件 / description / example |
+| LLM | 在注册集合内挑卡片、填数据 |
+
+原因：卡片要真正渲染就得有真实组件（开发者的设计、交互、框架）；LLM 凭空造 `type` 前端无从渲染。因此卡片是**封闭的、开发者掌控的集合**，LLM 经 `toPromptSpec()` 被约束其中；产未注册类型 → 走 §6.1 回退。核心**不内置**任何卡片。
+
+### 6.4 通用原语卡片（可选插件 `@aigui/plugin-primitives`）
+面向「不想为每种数据都建组件」的场景：插件提供一组通用原语卡片（`list` / `key-value` / `table` / `chart` / `layout` 容器），LLM 无需开发者预注册即可拼出临时 UI。作为**可选插件**，不进核心（保持核心 headless）；引入时其原语卡片自动注册进 registry，`toPromptSpec()` 也会带上它们的规格。原语卡片自带最小必需样式，遵循 §7 插件 CSS 约定。
+
+### 6.5 卡片按钮 → 请求（action 事件机制）
 卡片按钮只声明**意图**，不含真实 URL，避免把安全口子留给模型：
 
 ````
