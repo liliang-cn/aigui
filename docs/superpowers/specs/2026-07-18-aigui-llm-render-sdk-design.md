@@ -256,7 +256,7 @@ r.feed(readableStream)   // 或 r.push(chunk)
 
 ## 9. 工程
 
-- pnpm workspace + Turborepo；每包用 tsup 出 ESM + CJS + d.ts。
+- pnpm workspace + Turborepo；每包用 **tsdown**（基于 Rolldown / Oxc，Rust 内核）出 ESM + CJS + d.ts。
 - 测试：Vitest（核心解析 / diff / 流式补全 / sanitizer 单测）；React/Vue 用 Testing Library；流式用「分片喂入」快照测。
 - 核心目标：`@aigui/core` gzip 尽量小（markdown-it + 容错 JSON + sanitizer），重功能全在可选插件。
 
