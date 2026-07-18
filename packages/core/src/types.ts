@@ -26,7 +26,7 @@ export type RenderOutput =
   | { kind: "element"; tag: string; props?: Record<string, unknown>; children?: RenderOutput[] }
   | { kind: "card"; type: string; data: unknown }
 
-export type NodeRenderer = (node: ASTNode) => RenderOutput
+export type NodeRenderer = (node: ASTNode) => RenderOutput | Promise<RenderOutput>
 
 export interface JSONSchema {
   type?: string
