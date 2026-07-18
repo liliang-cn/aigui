@@ -39,6 +39,18 @@ export function createParser(options: ParserOptions = {}): (src: string) => ASTN
         }
         continue
       }
+      if (t.type === "hr") {
+        nodes.push({ key: `${index++}:hr`, type: "hr", tag: "hr" })
+        continue
+      }
+      if (t.type === "code_block") {
+        nodes.push({ key: `${index++}:code`, type: "code", tag: "code", content: t.content })
+        continue
+      }
+      if (t.type === "html_block") {
+        nodes.push({ key: `${index++}:html`, type: "html", content: t.content })
+        continue
+      }
       if (t.type === "heading_open") {
         const inline = tokens[i + 1]
         nodes.push({

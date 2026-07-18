@@ -31,4 +31,20 @@ describe("createParser", () => {
     expect(nodes[0].key).toBeTruthy()
     expect(nodes[0].key).not.toBe(nodes[1].key)
   })
+  it("emits a node for a horizontal rule", () => {
+    const parse = createParser()
+    const nodes = parse("a\n\n---\n\nb")
+    expect(nodes.some((n) => n.type === "hr" || (n.type === "html" && (n.content ?? "").includes("<hr")))).toBe(true)
+  })
+  it("emits a code node for an indented code block", () => {
+    const parse = createParser()
+    const nodes = parse("    const a = 1\n")
+    expect(nodes.some((n) => n.type === "code")).toBe(true)
+  })
+  it("emits an html node for a raw html block", () => {
+    const parse = createParser()
+    const nodes = parse("<div>hi</div>")
+    const html = nodes.find((n) => n.type === "html")
+    expect(html?.content ?? "").toContain("<div>")
+  })
 })

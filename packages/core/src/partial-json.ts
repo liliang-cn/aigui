@@ -21,12 +21,14 @@ export function parsePartialJSON(input: string): PartialJSONResult {
   } catch {
     // Fall through to repair.
   }
-  const repaired = repair(str)
-  if (repaired !== null) {
+  // Try each repair candidate in order of preference. The first (if any) keeps a
+  // trailing literal, which is correct only when that literal is complete; if it
+  // fails to parse we fall back to dropping to the last known-good boundary.
+  for (const candidate of repair(str)) {
     try {
-      return { data: JSON.parse(repaired), complete: false }
+      return { data: JSON.parse(candidate), complete: false }
     } catch {
-      // Fall through.
+      // Try the next, more conservative candidate.
     }
   }
   return { data: undefined, complete: false }
@@ -39,7 +41,7 @@ type Mode = "value" | "objKey" | "objColon" | "afterValue"
 const LITERAL_CHAR = /[0-9a-zA-Z+.\-]/
 const WHITESPACE = /\s/
 
-function repair(str: string): string | null {
+function repair(str: string): string[] {
   const stack: Container[] = []
   let inString = false
   let escaped = false
@@ -125,16 +127,18 @@ function repair(str: string): string | null {
 
   // An unclosed value string: keep the received characters and close it.
   if (inString && !stringIsKey) {
-    return closeContainers(str + '"', stack)
+    return [closeContainers(str + '"', stack)]
   }
-  // An unclosed trailing literal (e.g. a number) is assumed complete: keep it.
+  // A truncation back to the last safe point, dropping any dangling
+  // key/colon/comma, then auto-closing the open containers.
+  const fallback = lastGoodEnd === -1 ? [] : [closeContainers(str.slice(0, lastGoodEnd), stack)]
+  // An unclosed trailing literal (e.g. a number or a boolean) may be complete or
+  // truncated. Try keeping it first; if that fails to parse, the caller falls
+  // back to dropping it entirely.
   if (inLiteral) {
-    return closeContainers(str, stack)
+    return [closeContainers(str, stack), ...fallback]
   }
-  // Otherwise truncate back to the last safe point, dropping any dangling
-  // key/colon/comma, then auto-close the open containers.
-  if (lastGoodEnd === -1) return null
-  return closeContainers(str.slice(0, lastGoodEnd), stack)
+  return fallback
 }
 
 function closeContainers(body: string, stack: Container[]): string {
