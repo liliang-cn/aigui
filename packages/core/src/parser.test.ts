@@ -1,0 +1,34 @@
+import { describe, expect, it } from "vitest"
+import { CardRegistry } from "./card-registry"
+import { createParser } from "./parser"
+
+describe("createParser", () => {
+  it("parses a paragraph", () => {
+    const parse = createParser()
+    const nodes = parse("hello world")
+    expect(nodes[0]).toMatchObject({ type: "paragraph" })
+    expect(nodes[0].content).toContain("hello world")
+  })
+  it("parses a heading", () => {
+    const parse = createParser()
+    expect(parse("# Title")[0]).toMatchObject({ type: "heading", tag: "h1" })
+  })
+  it("recognizes a card fenced block as a card node", () => {
+    const registry = new CardRegistry()
+    registry.register({ type: "weather", description: "weather", schema: { type: "object" } })
+    const parse = createParser({ registry })
+    const nodes = parse('```card:weather\n{"city":"tokyo"}\n```')
+    const card = nodes.find((n) => n.type === "card")
+    expect(card?.card).toMatchObject({ type: "weather", data: { city: "tokyo" }, complete: true })
+  })
+  it("keeps a normal code fence as a code node", () => {
+    const parse = createParser()
+    expect(parse("```ts\nconst a=1\n```")[0]).toMatchObject({ type: "code" })
+  })
+  it("gives every node a stable unique key", () => {
+    const parse = createParser()
+    const nodes = parse("# A\n\nbody")
+    expect(nodes[0].key).toBeTruthy()
+    expect(nodes[0].key).not.toBe(nodes[1].key)
+  })
+})
