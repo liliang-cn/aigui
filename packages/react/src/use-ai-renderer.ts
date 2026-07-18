@@ -17,7 +17,7 @@ export function useAIRenderer(options: Omit<RendererOptions, "onPatch"> = {}): U
       onPatch: (_patches: Patch[], nextNodes: ASTNode[]) => setNodes(nextNodes),
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options.registry, options.sanitize])
+  }, [options.registry, options.sanitize, options.plugins])
 
   const push = useCallback((chunk: string) => renderer.push(chunk), [renderer])
   const feed = useCallback(
