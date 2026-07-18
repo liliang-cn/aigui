@@ -196,7 +196,78 @@ r.feed(readableStream)   // 或 r.push(chunk)
 - 测试：Vitest（核心解析 / diff / 流式补全 / sanitizer 单测）；React/Vue 用 Testing Library；流式用「分片喂入」快照测。
 - 核心目标：`@aigui/core` gzip 尽量小（markdown-it + 容错 JSON + sanitizer），重功能全在可选插件。
 
-## 10. 非目标（v1 不做）
+## 10. 后端集成契约（语言无关）
+
+核心思路：前后端之间只是 HTTP + JSON，卡片规格就是一段普通字符串。**后端零 AIGUI 依赖**，用 Python / Go / Node.js / Java 皆可。它只做两件事：把前端传来的 `promptSpec` 拼进 system prompt，然后把 LLM 的流原样转发回去。
+
+### 10.1 统一请求契约
+
+前端请求：
+```json
+POST /api/chat
+{
+  "messages": [{ "role": "user", "content": "帮我查东京到大阪的航班" }],
+  "promptSpec": "…registry.toPromptSpec() 的文本…",
+  "jsonSchema": { "…可选，registry.toJSONSchema()…" }
+}
+```
+
+后端逻辑（任何语言一致）：
+```
+system = BASE_SYSTEM + "\n\n" + body.promptSpec
+调用 LLM（stream=true），逐 delta 以 SSE / chunked 写回纯文本增量
+```
+
+响应是纯文本增量流，SDK 的 `feed(response.body)` 直接消费。卡片围栏块混在文本流里，后端不用懂卡片。
+
+### 10.2 各语言片段（均不依赖 SDK）
+
+Go：
+```go
+system := baseSystem + "\n\n" + req.PromptSpec
+stream, _ := client.CreateChatCompletionStream(ctx, openai.ChatCompletionRequest{
+    Messages: append([]Msg{{Role: "system", Content: system}}, req.Messages...),
+    Stream:   true,
+})
+for {
+    chunk, err := stream.Recv()
+    if err != nil { break }
+    w.Write([]byte(chunk.Choices[0].Delta.Content)); flusher.Flush()
+}
+```
+
+Python（FastAPI）：
+```python
+system = BASE_SYSTEM + "\n\n" + body.promptSpec
+async def gen():
+    stream = await client.chat.completions.create(
+        messages=[{"role": "system", "content": system}, *body.messages], stream=True)
+    async for chunk in stream:
+        yield chunk.choices[0].delta.content or ""
+return StreamingResponse(gen(), media_type="text/event-stream")
+```
+
+Node（Express）：
+```ts
+const system = BASE_SYSTEM + "\n\n" + req.body.promptSpec
+const stream = await openai.chat.completions.create({
+  messages: [{ role: "system", content: system }, ...req.body.messages], stream: true })
+for await (const c of stream) res.write(c.choices[0].delta.content ?? "")
+```
+
+Java（Spring，SSE）：
+```java
+String system = BASE_SYSTEM + "\n\n" + body.getPromptSpec();
+// 用你的 LLM SDK 开流，逐 delta：emitter.send(content);
+```
+
+### 10.3 结构化输出
+`registry.toJSONSchema()` 导出标准 JSON Schema，随 body 传给后端，塞进各自 LLM SDK 的 `tools` / `response_format`。JSON Schema 是通用标准，Go / Python / Java / Node 的 LLM SDK 都认。
+
+### 10.4 卡片按钮的业务接口
+按钮点击时 SDK 抛 `onCardAction({ type, params })`，App 再调后端普通 REST 接口（本来就有的业务 API）。后端按 `action` 名做白名单校验，URL / 鉴权全在后端，LLM 碰不到。
+
+## 11. 非目标（v1 不做）
 
 - 不做真正的增量流式解析器（每块 re-parse 已足够）。
 - 不内置默认视觉主题（真 headless）。
