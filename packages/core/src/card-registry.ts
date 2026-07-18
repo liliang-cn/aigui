@@ -18,6 +18,10 @@ export class CardRegistry {
     return this.cards.has(type)
   }
 
+  getRender(type: string): unknown {
+    return this.cards.get(type)?.render
+  }
+
   parse(type: string, rawJson: string): CardParseResult {
     const def = this.cards.get(type)
     const { data, complete } = parsePartialJSON(rawJson)
