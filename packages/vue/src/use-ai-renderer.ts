@@ -12,6 +12,7 @@ export function useAIRenderer(options: Omit<RendererOptions, "onPatch"> = {}): U
   const nodes = shallowRef<ASTNode[]>([])
   const renderer = new Renderer({
     ...options,
+    plugins: options.plugins,
     onPatch: (_patches: Patch[], snapshot: ASTNode[]) => { nodes.value = snapshot },
   })
   return {

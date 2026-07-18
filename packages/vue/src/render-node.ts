@@ -1,12 +1,23 @@
 import { h, type Component, type VNode } from "vue"
-import { sanitizeHtml, type ASTNode, type CardRegistry } from "@aigui/core"
+import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardRegistry, type RenderOutput } from "@aigui/core"
+import { AsyncOutput, renderOutput } from "./render-output"
 
 export interface RenderContext {
   registry?: CardRegistry
+  plugins?: AIGuiPlugin[]
   onCardAction?: (action: { type: string; params?: unknown; cardType: string }) => void
 }
 
 export function renderNode(node: ASTNode, ctx: RenderContext): VNode {
+  // Plugin node renderers win over built-in types.
+  const r = collectNodeRenderers(ctx.plugins)[node.type]
+  if (r) {
+    const out = r(node)
+    if (out && typeof (out as { then?: unknown }).then === "function") {
+      return h(AsyncOutput, { key: node.key, promise: out as Promise<RenderOutput> })
+    }
+    return renderOutput(out as RenderOutput)
+  }
   switch (node.type) {
     case "heading": return h(node.tag ?? "h1", { key: node.key, innerHTML: node.html ?? "" })
     case "paragraph": return h("p", { key: node.key, innerHTML: node.html ?? "" })
