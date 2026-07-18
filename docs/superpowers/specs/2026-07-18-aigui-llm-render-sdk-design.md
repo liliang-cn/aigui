@@ -164,23 +164,72 @@ SDK 渲染按钮，点击时抛统一事件，宿主决定怎么发请求：
 
 可选：`requestExecutor`（带 URL 白名单）作为独立能力，让卡片内嵌真实请求，**默认关闭**。
 
-## 7. 插件系统 + 安全
+## 7. 插件系统
 
-核心解析基于 markdown-it，复用其可插拔生态。统一插件接口，重依赖全部外置：
+核心解析基于 markdown-it，复用其可插拔生态。**用户能写的插件与内置插件用同一套公开接口，无私有通道**——内置的 highlight / katex / mermaid / primitives 本身就是用这套接口实现的。
+
+### 7.1 插件契约
 
 ```ts
 interface AiGuiPlugin {
   name: string
-  extendParser?(md: MarkdownIt): void
-  nodeRenderers?: Record<string, Renderer>
-  css?: string                    // 该插件必需的样式，用户按需 import
+  extendParser?(md: MarkdownIt): void            // ① 解析层：定义新语法 → 新 AST 节点（框架无关）
+  cards?: CardDef[]                              // ② 批量注册卡片（最简单的扩展方式）
+  nodeRenderers?: Record<string, NodeRenderer>   // ③ 新节点怎么渲染
+  isBlockComplete?(nodeType: string, raw: string): boolean  // ④ 块级"收全才渲染"判定
+  css?: string                                   // ⑤ 该插件必需的样式，用户按需 import
 }
 ```
 
-- `@aigui/plugin-highlight`（Shiki）、`plugin-katex`、`plugin-mermaid` 均实现此接口；核心不依赖它们。
-- Mermaid / KaTeX 这类「块收全才能渲染」的，复用卡片同款 `complete` 机制，避免流式中途渲染报错。
+约束：核心 headless、输出框架无关 AST + patch 事件，因此"渲染新东西"必须跨 React/Vue/vanilla 三框架成立。为此给用户两条路。
 
-安全：核心内置 sanitizer（白名单，DOMPurify 思路），默认过滤 `<script>` / 事件属性 / 危险协议，防 XSS。用户可传自定义白名单。SSR / Node 用同构 sanitizer。默认清洗、可配置。
+### 7.2 简单路（覆盖约 90% 需求，纯数据，不碰解析器）
+
+写个卡片即可，零门槛：
+```ts
+registry.register({
+  type: 'poll', description: '投票卡片', schema: { /* ... */ },
+  render: MyPollComponent,   // 你自己框架的组件
+})
+```
+
+### 7.3 进阶路（新 markdown 语法/节点，超出卡片范畴）
+
+`extendParser` 定语法 + `nodeRenderers` 定渲染。关键：**`nodeRenderer` 不返回具体框架元素，而是返回"框架中立描述符"**，各适配层各自翻译，从而写一次三框架通用：
+
+```ts
+type RenderOutput =
+  | { kind: 'html'; html: string }                       // 会过 sanitizer
+  | { kind: 'element'; tag: string; props?: object; children?: RenderOutput[] }  // 中立 vdom
+  | { kind: 'card'; type: string; data: unknown }        // 交给卡片系统
+
+const katexPlugin: AiGuiPlugin = {
+  name: 'katex',
+  extendParser: md => md.use(katexParserRule),           // 产出 'math' 节点
+  isBlockComplete: (t, raw) => raw.endsWith('$$'),
+  nodeRenderers: {
+    math: node => ({ kind: 'html', html: katex.renderToString(node.content) }),
+  },
+  css: katexCss,
+}
+```
+
+KaTeX / Mermaid → 输出 `html` 描述符，天然三框架通用；高亮 → `element` 描述符。
+
+### 7.4 逃生舱（要原生交互组件）
+
+插件如需原生 React/Vue 组件（如可交互图表），按框架分包发 `@myplugin/react`、`@myplugin/vue`，`nodeRenderers` 直接给该框架组件。与整体哲学一致。
+
+### 7.5 用法与生命周期
+
+```ts
+<AiRenderer plugins={[katex(), mermaid(), myCustomPlugin()]} />
+```
+插件按顺序 apply；`css` 由用户决定是否 import；`cards` 自动进 registry 并被 `toPromptSpec()` 带上；`isBlockComplete` 复用卡片同款 `complete` 机制，避免流式中途渲染报错。
+
+### 7.6 安全
+
+核心内置 sanitizer（白名单，DOMPurify 思路），默认过滤 `<script>` / 事件属性 / 危险协议，防 XSS；插件产出的 `kind:'html'` 也过此清洗。用户可传自定义白名单。SSR / Node 用同构 sanitizer。默认清洗、可配置。
 
 ## 8. 各框架公开 API
 
