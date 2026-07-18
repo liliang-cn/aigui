@@ -71,6 +71,39 @@
 
 核心只吐**框架无关的 AST + patch 事件**，不碰任何框架。流式策略为「每块 re-parse + AST diff」，实现稳、兼容所有 markdown 特性，聊天场景性能足够。
 
+### 4.1 多通道流（StreamRouter）
+
+一条 SSE 里可能同时携带多种数据（如后端同时推 `progress` 和 `content`），前端要在**不同 UI 区域各自独立更新**（进度条一处、正文一处）。`StreamRouter` 坐在 `Renderer` 之上，把单条流按「通道」解复用，分发给不同消费者：
+
+```ts
+const router = new StreamRouter()
+router.channel("content", contentRenderer)     // Renderer：markdown + 卡片 → 正文区
+router.on("progress", (p) => setProgress(p))    // 纯回调 → 进度条
+router.on("status",   (s) => setStatus(s))      // → 状态条
+router.feed(response.body)                        // 单条流，自动解复用
+```
+
+- 每个 UI 区域订阅自己关心的通道，彼此**独立更新**；`content` 通道是完整 `Renderer`（流式 markdown+卡片），`progress`/`status` 是轻量状态回调（需要富 UI 时也可挂各自的小 renderer）。
+- 通道即字段，可任意多个。
+
+**帧格式：两种都支持**，`StreamRouter` 自动识别——
+
+1. **JSON 封装行**（推荐，传输无关）：每个 SSE `data:` 行是 `{ "ch": "<channel>", "delta"?: string, "data"?: any }`。`delta` 累加进该通道的文本（喂给 Renderer）；`data` 是一次性结构化值（喂给回调）。例：
+   ```
+   data: {"ch":"content","delta":"正在为你查"}
+   data: {"ch":"progress","data":42}
+   data: {"ch":"content","delta":"航班..."}
+   ```
+2. **SSE `event:` 名**：用原生 SSE 的 `event:` 字段当通道名，`data:` 是负载。
+   ```
+   event: content
+   data: 正在为你查
+   event: progress
+   data: 42
+   ```
+
+无 `ch` / 无 `event:` 的裸文本行 → 落入默认 `content` 通道，兼容单通道老用法。
+
 ## 5. 流式补全（`@aigui/core` 专门模块）
 
 在内存里对缓冲做一次临时补全再喂给解析器，补全**只用于本次渲染**，不污染真实缓冲；下一块用新全文重来。两个纯函数模块，可单测（喂各种半截输入断言输出）：
@@ -283,6 +316,8 @@ system = BASE_SYSTEM + "\n\n" + body.promptSpec
 ```
 
 响应是纯文本增量流，SDK 的 `feed(response.body)` 直接消费。卡片围栏块混在文本流里，后端不用懂卡片。
+
+**多通道（可选）**：若后端要在同一条流里同时推正文与旁路数据（进度/状态），按 §4.1 的帧格式发即可——要么每行 `data: {"ch":"progress","data":42}`（JSON 封装行），要么用原生 `event: progress` 命名事件。前端用 `StreamRouter` 解复用到不同 UI 区域；不发通道帧时就是单一 `content` 通道，后端无需改动。
 
 ### 10.2 各语言片段（均不依赖 SDK）
 
