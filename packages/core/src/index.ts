@@ -8,6 +8,8 @@ export { createParser } from "./parser"
 export type { ParserOptions } from "./parser"
 export { diffAst } from "./diff"
 export { Renderer } from "./renderer"
+export { StreamRouter } from "./stream-router"
+export type { ChannelSink } from "./stream-router"
 export type {
   ASTNode, Patch, RenderOutput, NodeRenderer, JSONSchema, CardDef, AIGuiPlugin, RendererOptions,
 } from "./types"
