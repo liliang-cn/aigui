@@ -1,11 +1,25 @@
-import { sanitizeHtml, type ASTNode, type CardRegistry } from "@aigui/core"
+import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardRegistry, type RenderOutput } from "@aigui/core"
+import { renderOutputToElement } from "./render-output"
 
 export interface DomRenderContext {
   registry?: CardRegistry
   onCardAction?: (action: { type: string; params?: unknown; cardType: string }) => void
+  plugins?: AIGuiPlugin[]
 }
 
 export function renderNodeToElement(node: ASTNode, ctx: DomRenderContext): HTMLElement {
+  const r = collectNodeRenderers(ctx.plugins)[node.type]
+  if (r) {
+    const out = r(node)
+    if (typeof (out as { then?: unknown })?.then === "function") {
+      // Async: render a placeholder now and swap in the resolved output on settle.
+      const ph = document.createElement("div")
+      ph.setAttribute("data-aigui-async-pending", "")
+      void (out as Promise<RenderOutput>).then((res) => ph.replaceWith(renderOutputToElement(res)))
+      return ph
+    }
+    return renderOutputToElement(out as RenderOutput)
+  }
   switch (node.type) {
     case "heading": { const el = document.createElement(node.tag ?? "h1"); el.innerHTML = node.html ?? ""; return el }
     case "paragraph": { const el = document.createElement("p"); el.innerHTML = node.html ?? ""; return el }

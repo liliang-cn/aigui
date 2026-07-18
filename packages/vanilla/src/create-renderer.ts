@@ -14,7 +14,7 @@ export interface VanillaRenderer {
 
 export function createRenderer(el: HTMLElement, options: CreateRendererOptions = {}): VanillaRenderer {
   const { onCardAction, ...rendererOpts } = options
-  const ctx: DomRenderContext = { registry: options.registry, onCardAction }
+  const ctx: DomRenderContext = { registry: options.registry, onCardAction, plugins: options.plugins }
   const state = createReconcileState()
   const renderer = new Renderer({
     ...rendererOpts,
