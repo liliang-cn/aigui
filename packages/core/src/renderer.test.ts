@@ -18,6 +18,14 @@ describe("Renderer", () => {
     await r.feed(gen())
     expect(onPatch).toHaveBeenCalledTimes(2)
   })
+  it("passes the full current AST as the second onPatch arg", () => {
+    const onPatch = vi.fn()
+    const r = new Renderer({ onPatch })
+    r.push("# A")
+    const [, nodes] = onPatch.mock.calls.at(-1)!
+    expect(Array.isArray(nodes)).toBe(true)
+    expect(nodes.some((n: any) => n.type === "heading")).toBe(true)
+  })
   it("reset clears state", () => {
     const onPatch = vi.fn()
     const r = new Renderer({ onPatch })

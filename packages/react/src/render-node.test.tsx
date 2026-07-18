@@ -33,9 +33,31 @@ describe("renderNode", () => {
     container.querySelector("button")!.click()
     expect(onCardAction).toHaveBeenCalledWith({ type: "book", params: { id: 1 }, cardType: "flight" })
   })
-  it("renders a skeleton for an incomplete card", () => {
+  it("renders a raw fallback (not a skeleton) for a complete-but-invalid card", () => {
+    const node: ASTNode = { key: "0:card", type: "card", card: { type: "flight", data: { partial: 1 }, complete: true, valid: false } }
+    const { container } = render(<>{renderNode(node, {})}</>)
+    expect(container.querySelector("[data-aigui-card-loading]")).toBeNull()
+    expect(container.querySelector("[data-aigui-card-invalid]")).toBeTruthy()
+    expect(container.textContent).toContain("partial")
+  })
+  it("still renders a skeleton for an incomplete card", () => {
     const node: ASTNode = { key: "0:card", type: "card", card: { type: "flight", data: {}, complete: false, valid: false } }
     const { container } = render(<>{renderNode(node, {})}</>)
     expect(container.querySelector("[data-aigui-card-loading]")).toBeTruthy()
+  })
+  it("sanitizes content in the default/unknown node branch", () => {
+    const node: ASTNode = { key: "0:x", type: "callout", content: "<img src=x onerror=alert(1)>" }
+    const { container } = render(<>{renderNode(node, {})}</>)
+    expect(container.innerHTML).not.toContain("onerror")
+  })
+  it("renders an hr node", () => {
+    const node: ASTNode = { key: "0:hr", type: "hr" }
+    const { container } = render(<>{renderNode(node, {})}</>)
+    expect(container.querySelector("hr")).toBeTruthy()
+  })
+  it("injects an html node's content", () => {
+    const node: ASTNode = { key: "0:html", type: "html", content: "<span>raw</span>" }
+    const { container } = render(<>{renderNode(node, {})}</>)
+    expect(container.querySelector("span")?.textContent).toBe("raw")
   })
 })

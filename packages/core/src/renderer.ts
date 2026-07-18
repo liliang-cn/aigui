@@ -52,7 +52,7 @@ export class Renderer {
     if (this.sanitize) sanitizeNodes(nextAst)
     const patches: Patch[] = diffAst(this.prevAst, nextAst)
     this.prevAst = nextAst
-    if (patches.length > 0) this.options.onPatch?.(patches)
+    if (patches.length > 0) this.options.onPatch?.(patches, nextAst)
   }
 }
 

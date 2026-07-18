@@ -1,5 +1,5 @@
 import { createElement, type ComponentType, type ReactNode } from "react"
-import type { ASTNode, CardRegistry } from "@aigui/core"
+import { sanitizeHtml, type ASTNode, type CardRegistry } from "@aigui/core"
 
 export interface RenderContext {
   registry?: CardRegistry
@@ -25,15 +25,22 @@ export function renderNode(node: ASTNode, ctx: RenderContext): ReactNode {
     case "card":
       return renderCard(node, ctx)
     default:
-      return <div key={node.key} dangerouslySetInnerHTML={{ __html: node.html ?? node.content ?? "" }} />
+      return <div key={node.key} dangerouslySetInnerHTML={{ __html: node.html ?? sanitizeHtml(node.content ?? "") }} />
   }
 }
 
 function renderCard(node: ASTNode, ctx: RenderContext): ReactNode {
   const card = node.card
   if (!card) return null
-  if (!card.complete || !card.valid) {
+  if (!card.complete) {
     return <div key={node.key} data-aigui-card-loading data-card-type={card.type} />
+  }
+  if (!card.valid) {
+    return (
+      <pre key={node.key} data-aigui-card-invalid data-card-type={card.type}>
+        <code>{JSON.stringify(card.data, null, 2)}</code>
+      </pre>
+    )
   }
   const Comp = getCardComponent(ctx.registry, card.type)
   if (!Comp) {

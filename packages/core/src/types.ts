@@ -58,5 +58,5 @@ export interface RendererOptions {
   registry?: CardRegistry
   plugins?: AIGuiPlugin[]
   sanitize?: boolean
-  onPatch?: (patches: Patch[]) => void
+  onPatch?: (patches: Patch[], nodes: ASTNode[]) => void
 }

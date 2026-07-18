@@ -1,6 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { Renderer, type ASTNode, type Patch, type RendererOptions } from "@aigui/core"
-import { applyPatches } from "./apply-patches"
 
 export interface UseAIRendererResult {
   nodes: ASTNode[]
@@ -11,15 +10,12 @@ export interface UseAIRendererResult {
 
 export function useAIRenderer(options: Omit<RendererOptions, "onPatch"> = {}): UseAIRendererResult {
   const [nodes, setNodes] = useState<ASTNode[]>([])
-  const rendererRef = useRef<Renderer | null>(null)
 
   const renderer = useMemo(() => {
-    const r = new Renderer({
+    return new Renderer({
       ...options,
-      onPatch: (patches: Patch[]) => setNodes((prev) => applyPatches(prev, patches)),
+      onPatch: (_patches: Patch[], nextNodes: ASTNode[]) => setNodes(nextNodes),
     })
-    rendererRef.current = r
-    return r
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options.registry, options.sanitize])
 
