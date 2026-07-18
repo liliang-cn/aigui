@@ -15,4 +15,8 @@ export default defineWorkspace([
     resolve: { alias },
     test: { name: "react", root: "packages/react" },
   },
+  {
+    resolve: { alias },
+    test: { name: "vanilla", root: "packages/vanilla" },
+  },
 ])
