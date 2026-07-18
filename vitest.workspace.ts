@@ -19,4 +19,8 @@ export default defineWorkspace([
     resolve: { alias },
     test: { name: "vanilla", root: "packages/vanilla" },
   },
+  {
+    resolve: { alias },
+    test: { name: "vue", root: "packages/vue" },
+  },
 ])
