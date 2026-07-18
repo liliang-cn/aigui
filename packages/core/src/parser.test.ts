@@ -47,4 +47,15 @@ describe("createParser", () => {
     const html = nodes.find((n) => n.type === "html")
     expect(html?.content ?? "").toContain("<div>")
   })
+  it("renders inline markdown to html on a paragraph node", () => {
+    const parse = createParser()
+    const node = parse("a **bold** b")[0]
+    expect(node.type).toBe("paragraph")
+    expect(node.html).toContain("<strong>bold</strong>")
+  })
+  it("renders inline markdown to html on a heading node", () => {
+    const parse = createParser()
+    const node = parse("# a `code`")[0]
+    expect(node.html).toContain("<code>code</code>")
+  })
 })

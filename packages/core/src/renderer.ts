@@ -56,11 +56,17 @@ export class Renderer {
   }
 }
 
-/** Recursively replace the content of every `html` node with a sanitized copy. */
+/**
+ * Recursively sanitize node markup in place: the content of `html` nodes and
+ * the rendered inline `html` field carried by any node.
+ */
 function sanitizeNodes(nodes: ASTNode[]): void {
   for (const node of nodes) {
     if (node.type === "html" && typeof node.content === "string") {
       node.content = sanitizeHtml(node.content)
+    }
+    if (node.html) {
+      node.html = sanitizeHtml(node.html)
     }
     if (node.children) sanitizeNodes(node.children)
   }

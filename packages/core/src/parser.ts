@@ -53,22 +53,26 @@ export function createParser(options: ParserOptions = {}): (src: string) => ASTN
       }
       if (t.type === "heading_open") {
         const inline = tokens[i + 1]
+        const raw = inline?.content ?? ""
         nodes.push({
           key: `${index++}:heading`,
           type: "heading",
           tag: t.tag,
-          content: inline?.content ?? "",
+          content: raw,
+          html: md.renderInline(raw),
         })
         i += 2 // skip inline + heading_close
         continue
       }
       if (t.type === "paragraph_open") {
         const inline = tokens[i + 1]
+        const raw = inline?.content ?? ""
         nodes.push({
           key: `${index++}:paragraph`,
           type: "paragraph",
           tag: "p",
-          content: inline?.content ?? "",
+          content: raw,
+          html: md.renderInline(raw),
         })
         i += 2 // skip inline + paragraph_close
         continue

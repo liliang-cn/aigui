@@ -7,6 +7,7 @@ export interface ASTNode {
   type: string         // "paragraph" | "heading" | "code" | "card" | "html" | plugin types
   tag?: string
   content?: string
+  html?: string
   attrs?: Record<string, string>
   children?: ASTNode[]
   /** card-specific payload */
