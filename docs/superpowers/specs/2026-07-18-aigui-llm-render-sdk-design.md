@@ -34,8 +34,8 @@
 | 包 | 作用 | 依赖重量 |
 |---|---|---|
 | `@aigui/core` | headless 核心：流式聚合、markdown-it 解析、AST diff、卡片注册表、流式补全、sanitizer。**零框架依赖** | 轻 |
-| `@aigui/react` | React 适配：`<AiRenderer>` 组件、`useAiRenderer` hook | peer: react |
-| `@aigui/vue` | Vue 适配：`<AiRenderer>` 组件、`useAiRenderer` composable | peer: vue |
+| `@aigui/react` | React 适配：`<AIRenderer>` 组件、`useAIRenderer` hook | peer: react |
+| `@aigui/vue` | Vue 适配：`<AIRenderer>` 组件、`useAIRenderer` composable | peer: vue |
 | `@aigui/vanilla` | 直接挂 DOM 的 `createRenderer(el, ...)` | 轻 |
 | `@aigui/plugin-highlight` | 代码高亮（Shiki），含复制按钮 | 重（可选）|
 | `@aigui/plugin-katex` | 数学公式 | 重（可选）|
@@ -154,7 +154,7 @@ const systemPrompt = `你是助手...\n\n${registry.toPromptSpec()}`
 SDK 渲染按钮，点击时抛统一事件，宿主决定怎么发请求：
 
 ```ts
-<AiRenderer onCardAction={(a) => {
+<AIRenderer onCardAction={(a) => {
   // a = { type:'book_flight', params:{id:'JL123'}, cardId }
   if (a.type === 'book_flight') myApi.book(a.params.id)
 }} />
@@ -171,7 +171,7 @@ SDK 渲染按钮，点击时抛统一事件，宿主决定怎么发请求：
 ### 7.1 插件契约
 
 ```ts
-interface AiGuiPlugin {
+interface AIGuiPlugin {
   name: string
   extendParser?(md: MarkdownIt): void            // ① 解析层：定义新语法 → 新 AST 节点（框架无关）
   cards?: CardDef[]                              // ② 批量注册卡片（最简单的扩展方式）
@@ -203,7 +203,7 @@ type RenderOutput =
   | { kind: 'element'; tag: string; props?: object; children?: RenderOutput[] }  // 中立 vdom
   | { kind: 'card'; type: string; data: unknown }        // 交给卡片系统
 
-const katexPlugin: AiGuiPlugin = {
+const katexPlugin: AIGuiPlugin = {
   name: 'katex',
   extendParser: md => md.use(katexParserRule),           // 产出 'math' 节点
   isBlockComplete: (t, raw) => raw.endsWith('$$'),
@@ -223,7 +223,7 @@ KaTeX / Mermaid → 输出 `html` 描述符，天然三框架通用；高亮 →
 ### 7.5 用法与生命周期
 
 ```ts
-<AiRenderer plugins={[katex(), mermaid(), myCustomPlugin()]} />
+<AIRenderer plugins={[katex(), mermaid(), myCustomPlugin()]} />
 ```
 插件按顺序 apply；`css` 由用户决定是否 import；`cards` 自动进 registry 并被 `toPromptSpec()` 带上；`isBlockComplete` 复用卡片同款 `complete` 机制，避免流式中途渲染报错。
 
@@ -235,16 +235,16 @@ KaTeX / Mermaid → 输出 `html` 描述符，天然三框架通用；高亮 →
 
 **React**
 ```tsx
-const { push, feed, reset } = useAiRenderer()
-<AiRenderer registry={registry} plugins={[katex()]}
+const { push, feed, reset } = useAIRenderer()
+<AIRenderer registry={registry} plugins={[katex()]}
             onCardAction={handle} sanitize />
 ```
 
 **Vue**
 ```vue
-<AiRenderer :registry :plugins @card-action="handle" />
+<AIRenderer :registry :plugins @card-action="handle" />
 ```
-配 `useAiRenderer()` composable。
+配 `useAIRenderer()` composable。
 
 **Vanilla**
 ```ts
