@@ -20,7 +20,13 @@ export class Renderer {
     this.options = options
     // Sanitization is on by default; only an explicit `false` disables it.
     this.sanitize = options.sanitize !== false
-    this.parse = createParser({ registry: options.registry })
+    // Register plugin-provided cards into the registry once (not per render).
+    if (options.registry) {
+      for (const plugin of options.plugins ?? []) {
+        for (const card of plugin.cards ?? []) options.registry.register(card)
+      }
+    }
+    this.parse = createParser({ registry: options.registry, plugins: options.plugins })
   }
 
   push(chunk: string): void {

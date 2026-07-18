@@ -1,9 +1,11 @@
 import MarkdownIt from "markdown-it"
 import type { CardRegistry } from "./card-registry"
-import type { ASTNode } from "./types"
+import { pluginNodeTypes } from "./plugins"
+import type { AIGuiPlugin, ASTNode } from "./types"
 
 export interface ParserOptions {
   registry?: CardRegistry
+  plugins?: AIGuiPlugin[]
   configureMd?: (md: MarkdownIt) => void
 }
 
@@ -11,6 +13,8 @@ export interface ParserOptions {
 export function createParser(options: ParserOptions = {}): (src: string) => ASTNode[] {
   const md = new MarkdownIt({ html: true, linkify: true })
   options.configureMd?.(md)
+  for (const plugin of options.plugins ?? []) plugin.extendParser?.(md)
+  const pluginTypes = pluginNodeTypes(options.plugins)
 
   return (src: string): ASTNode[] => {
     const tokens = md.parse(src, {})
@@ -27,6 +31,13 @@ export function createParser(options: ParserOptions = {}): (src: string) => ASTN
             key: `${index++}:card`,
             type: "card",
             card: { type: cardType, data: res.data, complete: res.complete, valid: res.valid },
+          })
+        } else if (pluginTypes.has(info)) {
+          nodes.push({
+            key: `${index++}:${info}`,
+            type: info,
+            content: t.content,
+            attrs: { info },
           })
         } else {
           nodes.push({
@@ -96,6 +107,16 @@ export function createParser(options: ParserOptions = {}): (src: string) => ASTN
           content: md.renderer.render(slice, md.options, {}),
         })
         i = j
+        continue
+      }
+      // Any other leftover top-level token (e.g. a self-contained block token
+      // introduced by a plugin's extendParser): render it through markdown-it.
+      if (t.block && t.level === 0) {
+        nodes.push({
+          key: `${index++}:${t.type}`,
+          type: "html",
+          content: md.renderer.render([t], md.options, {}),
+        })
         continue
       }
     }

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
+import { CardRegistry } from "./card-registry"
 import { Renderer } from "./renderer"
 import type { Patch } from "./types"
 
@@ -35,5 +36,11 @@ describe("Renderer", () => {
     r.push("world")
     const patches: Patch[] = onPatch.mock.calls.at(-1)![0]
     expect(patches[0]).toMatchObject({ op: "insert", index: 0 })
+  })
+  it("registers plugin cards into the registry", () => {
+    const registry = new CardRegistry()
+    const r = new Renderer({ registry, plugins: [{ name: "pl", cards: [{ type: "poll", description: "p" }] }] })
+    r.push("hi")
+    expect(registry.has("poll")).toBe(true)
   })
 })
