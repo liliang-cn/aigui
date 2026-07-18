@@ -1,0 +1,21 @@
+{
+  "name": "@aigui/react",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "require": "./dist/index.cjs" } },
+  "files": ["dist"],
+  "scripts": { "build": "tsdown", "typecheck": "tsc --noEmit" },
+  "dependencies": { "@aigui/core": "workspace:*" },
+  "peerDependencies": { "react": ">=18" },
+  "devDependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/dom": "^10.4.0"
+  }
+}
