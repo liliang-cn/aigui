@@ -35,4 +35,8 @@ export default defineWorkspace([
     resolve: { alias },
     test: { name: "plugin-highlight", root: "packages/plugin-highlight" },
   },
+  {
+    resolve: { alias },
+    test: { name: "plugin-mermaid", root: "packages/plugin-mermaid" },
+  },
 ])
