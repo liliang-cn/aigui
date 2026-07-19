@@ -39,4 +39,8 @@ export default defineWorkspace([
     resolve: { alias },
     test: { name: "plugin-mermaid", root: "packages/plugin-mermaid" },
   },
+  {
+    resolve: { alias },
+    test: { name: "plugin-chart", root: "packages/plugin-chart" },
+  },
 ])
