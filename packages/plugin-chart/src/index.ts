@@ -4,6 +4,13 @@ import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type RenderOutput } f
 export interface ChartOptions {
   width?: number
   height?: number
+  /**
+   * When true, complete options render a LIVE ECharts instance via the `mount`
+   * RenderOutput (enabling tooltip/dataZoom/click). When false/omitted, complete
+   * options render a static SSR SVG. Incomplete options always render the loading
+   * placeholder regardless of this flag.
+   */
+  interactive?: boolean
 }
 
 /** Prompt spec describing the ```chart``` fence for LLM system prompts. */
@@ -21,10 +28,22 @@ export function chartPromptSpec(): string {
 export function chart(opts: ChartOptions = {}): AIGuiPlugin {
   const width = opts.width ?? 600
   const height = opts.height ?? 400
+  const interactive = opts.interactive ?? false
   const render = (node: ASTNode): RenderOutput => {
     const { data: option, complete } = parsePartialJSON(node.content ?? "")
     if (!complete || option == null || typeof option !== "object") {
       return { kind: "html", html: `<div data-aigui-chart-loading></div>` }
+    }
+    if (interactive) {
+      const opt = option as echarts.EChartsCoreOption
+      return {
+        kind: "mount",
+        mount: (el: HTMLElement) => {
+          const inst = echarts.init(el, undefined, { renderer: "svg", width, height })
+          inst.setOption(opt)
+          return () => inst.dispose()
+        },
+      }
     }
     try {
       const inst = echarts.init(null, null, { renderer: "svg", ssr: true, width, height })

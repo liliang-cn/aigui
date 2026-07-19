@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest"
 import { Renderer, collectNodeRenderers, type ASTNode, type RenderOutput } from "@aigui/core"
 import { chart, chartPromptSpec } from "./index"
@@ -31,5 +32,34 @@ describe("plugin-chart", () => {
   })
   it("exposes a prompt spec mentioning the chart fence", () => {
     expect(chartPromptSpec()).toContain("chart")
+  })
+  it("interactive mode returns a mount RenderOutput for a complete option", () => {
+    const r = collectNodeRenderers([chart({ interactive: true })]).chart
+    const out = r({ key: "0:chart", type: "chart", content: barOption } as ASTNode) as RenderOutput
+    expect(out.kind).toBe("mount")
+  })
+  it("interactive mount initializes a live instance on the element and returns cleanup", () => {
+    const r = collectNodeRenderers([chart({ interactive: true })]).chart
+    const out = r({ key: "0:chart", type: "chart", content: barOption } as ASTNode) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected mount")
+    const el = document.createElement("div"); el.style.width = "600px"; el.style.height = "400px"
+    document.body.appendChild(el)
+    const cleanup = out.mount(el)
+    expect(el.querySelector("svg")).toBeTruthy()
+    expect(typeof cleanup).toBe("function")
+    if (typeof cleanup === "function") cleanup()
+    el.remove()
+  })
+  it("interactive mode still shows loading placeholder for incomplete json", () => {
+    const r = collectNodeRenderers([chart({ interactive: true })]).chart
+    const out = r({ key: "0:chart", type: "chart", content: '{"series":[{"type":"bar"' } as ASTNode) as RenderOutput
+    expect(out.kind).toBe("html")
+    if (out.kind === "html") expect(out.html).toContain("data-aigui-chart-loading")
+  })
+  it("default (non-interactive) mode still returns static svg html", () => {
+    const r = collectNodeRenderers([chart()]).chart
+    const out = r({ key: "0:chart", type: "chart", content: barOption } as ASTNode) as RenderOutput
+    expect(out.kind).toBe("html")
+    if (out.kind === "html") expect(out.html).toContain("<svg")
   })
 })
