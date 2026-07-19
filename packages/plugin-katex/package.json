@@ -1,0 +1,13 @@
+{
+  "name": "@aigui/plugin-katex",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "require": "./dist/index.cjs" } },
+  "files": ["dist"],
+  "scripts": { "build": "tsdown", "typecheck": "tsc --noEmit" },
+  "dependencies": { "@aigui/core": "workspace:*", "katex": "^0.16.11" },
+  "devDependencies": { "@types/katex": "^0.16.7", "@types/markdown-it": "^14.1.2" }
+}
