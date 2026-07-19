@@ -235,6 +235,7 @@ type RenderOutput =
   | { kind: 'html'; html: string }                       // 会过 sanitizer
   | { kind: 'element'; tag: string; props?: object; children?: RenderOutput[] }  // 中立 vdom
   | { kind: 'card'; type: string; data: unknown }        // 交给卡片系统
+  | { kind: 'mount'; mount: (el: HTMLElement) => void | (() => void) }  // 命令式挂载：交给插件一个真实 DOM 节点自行挂载（如可交互 ECharts 实例），返回可选清理函数
 
 const katexPlugin: AIGuiPlugin = {
   name: 'katex',
