@@ -31,4 +31,8 @@ export default defineWorkspace([
     resolve: { alias },
     test: { name: "plugin-katex", root: "packages/plugin-katex" },
   },
+  {
+    resolve: { alias },
+    test: { name: "plugin-highlight", root: "packages/plugin-highlight" },
+  },
 ])
