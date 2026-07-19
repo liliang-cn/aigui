@@ -1,4 +1,4 @@
-import { createElement, useEffect, useState, type ReactNode } from "react"
+import { createElement, useEffect, useRef, useState, type ReactNode } from "react"
 import { sanitizeHtml, type RenderOutput } from "@aigui/core"
 
 /** Translate a framework-neutral RenderOutput into React nodes. */
@@ -19,7 +19,23 @@ export function renderOutput(out: RenderOutput, key?: string): ReactNode {
           <code>{JSON.stringify(out.data, null, 2)}</code>
         </pre>
       )
+    case "mount":
+      return <MountHost key={key} mount={out.mount} />
   }
+}
+
+/** Host a framework-neutral imperative mount into a managed DOM element. */
+function MountHost({ mount }: { mount: (el: HTMLElement) => void | (() => void) }) {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!ref.current) return
+    const cleanup = mount(ref.current)
+    return () => {
+      if (typeof cleanup === "function") cleanup()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  return <div ref={ref} data-aigui-mount />
 }
 
 export interface AsyncOutputProps {
