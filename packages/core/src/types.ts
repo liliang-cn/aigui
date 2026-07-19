@@ -25,6 +25,7 @@ export type RenderOutput =
   | { kind: "html"; html: string }
   | { kind: "element"; tag: string; props?: Record<string, unknown>; children?: RenderOutput[] }
   | { kind: "card"; type: string; data: unknown }
+  | { kind: "mount"; mount: (el: HTMLElement) => void | (() => void) }
 
 export type NodeRenderer = (node: ASTNode) => RenderOutput | Promise<RenderOutput>
 
