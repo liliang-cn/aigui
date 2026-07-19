@@ -5,11 +5,16 @@ export interface ReconcileState { els: Map<string, { el: HTMLElement; hash: stri
 
 export function createReconcileState(): ReconcileState { return { els: new Map() } }
 
+/** Run a mounted widget's cleanup (if any) before the element leaves the DOM. */
+export function disposeEl(el: HTMLElement): void {
+  (el as { __aiguiCleanup?: () => void }).__aiguiCleanup?.()
+}
+
 export function reconcile(container: HTMLElement, nodes: ASTNode[], ctx: DomRenderContext, state: ReconcileState): void {
   const nextKeys = new Set(nodes.map((n) => n.key))
   // remove stale
   for (const [key, entry] of state.els) {
-    if (!nextKeys.has(key)) { entry.el.remove(); state.els.delete(key) }
+    if (!nextKeys.has(key)) { disposeEl(entry.el); entry.el.remove(); state.els.delete(key) }
   }
   // create/update and order
   let prev: HTMLElement | null = null
@@ -25,7 +30,7 @@ export function reconcile(container: HTMLElement, nodes: ASTNode[], ctx: DomRend
       if (updateElementInPlace(entry.el, node, ctx)) {
         entry.hash = hash
       } else {
-        const el = renderNodeToElement(node, ctx); entry.el.replaceWith(el); entry.el = el; entry.hash = hash
+        disposeEl(entry.el); const el = renderNodeToElement(node, ctx); entry.el.replaceWith(el); entry.el = el; entry.hash = hash
       }
     }
     // ensure position: insert after prev

@@ -1,6 +1,6 @@
 import { Renderer, type ASTNode, type Patch, type RendererOptions } from "@aigui/core"
 import { type DomRenderContext } from "./render-node-dom"
-import { createReconcileState, reconcile } from "./reconcile"
+import { createReconcileState, disposeEl, reconcile } from "./reconcile"
 
 export interface CreateRendererOptions extends Omit<RendererOptions, "onPatch"> {
   onCardAction?: DomRenderContext["onCardAction"]
@@ -20,10 +20,12 @@ export function createRenderer(el: HTMLElement, options: CreateRendererOptions =
     ...rendererOpts,
     onPatch: (_patches: Patch[], nodes: ASTNode[]) => reconcile(el, nodes, ctx, state),
   })
+  // Run cleanup for every mounted widget before tearing down tracked elements.
+  const disposeAll = () => { for (const entry of state.els.values()) disposeEl(entry.el) }
   return {
     push: (c) => renderer.push(c),
     feed: (s) => renderer.feed(s as never),
-    reset: () => { renderer.reset(); state.els.clear(); el.replaceChildren() },
-    destroy: () => { state.els.clear(); el.replaceChildren() },
+    reset: () => { disposeAll(); renderer.reset(); state.els.clear(); el.replaceChildren() },
+    destroy: () => { disposeAll(); state.els.clear(); el.replaceChildren() },
   }
 }

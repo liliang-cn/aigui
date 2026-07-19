@@ -25,5 +25,17 @@ export function renderOutputToElement(out: RenderOutput): HTMLElement {
       pre.appendChild(code)
       return pre
     }
+    case "mount": {
+      // Host a live widget. Defer mount(el) to a microtask so the reconciler
+      // appends this element to the DOM before the widget initializes. Any
+      // returned cleanup is stored on the element for the reconcile lifecycle.
+      const el = document.createElement("div")
+      el.setAttribute("data-aigui-mount", "")
+      queueMicrotask(() => {
+        const c = out.mount(el)
+        if (typeof c === "function") (el as { __aiguiCleanup?: () => void }).__aiguiCleanup = c
+      })
+      return el
+    }
   }
 }
