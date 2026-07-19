@@ -5,6 +5,11 @@ import { chart, chartPromptSpec } from "./index"
 
 const barOption = JSON.stringify({ xAxis: { type: "category", data: ["A", "B"] }, yAxis: { type: "value" }, series: [{ type: "bar", data: [1, 2] }] })
 
+const bar3DOption = JSON.stringify({
+  xAxis3D: { type: "category", data: ["a", "b"] }, yAxis3D: { type: "category", data: ["x", "y"] }, zAxis3D: { type: "value" },
+  grid3D: {}, series: [{ type: "bar3D", data: [[0, 0, 5], [1, 1, 8]] }],
+})
+
 describe("plugin-chart", () => {
   it("renders a complete chart option to an svg html RenderOutput", () => {
     const r = collectNodeRenderers([chart()]).chart
@@ -61,5 +66,26 @@ describe("plugin-chart", () => {
     const out = r({ key: "0:chart", type: "chart", content: barOption } as ASTNode) as RenderOutput
     expect(out.kind).toBe("html")
     if (out.kind === "html") expect(out.html).toContain("<svg")
+  })
+  it("gl mode returns a mount RenderOutput for a complete 3D option", () => {
+    const r = collectNodeRenderers([chart({ gl: true })]).chart
+    const out = r({ key: "0:c", type: "chart", content: bar3DOption } as ASTNode) as RenderOutput
+    expect(out.kind).toBe("mount")
+  })
+  it("gl mount returns a cleanup function and does not throw synchronously (jsdom has no WebGL)", () => {
+    const r = collectNodeRenderers([chart({ gl: true })]).chart
+    const out = r({ key: "0:c", type: "chart", content: bar3DOption } as ASTNode) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected mount")
+    const el = document.createElement("div"); el.style.width = "400px"; el.style.height = "300px"; document.body.appendChild(el)
+    const cleanup = out.mount(el)
+    expect(typeof cleanup).toBe("function")
+    if (typeof cleanup === "function") cleanup()
+    el.remove()
+  })
+  it("gl mode still shows loading placeholder for incomplete json", () => {
+    const r = collectNodeRenderers([chart({ gl: true })]).chart
+    const out = r({ key: "0:c", type: "chart", content: '{"series":[{"type":"bar3D"' } as ASTNode) as RenderOutput
+    expect(out.kind).toBe("html")
+    if (out.kind === "html") expect(out.html).toContain("data-aigui-chart-loading")
   })
 })

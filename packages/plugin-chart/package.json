@@ -8,5 +8,5 @@
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "require": "./dist/index.cjs" } },
   "files": ["dist"],
   "scripts": { "build": "tsdown", "typecheck": "tsc --noEmit" },
-  "dependencies": { "@aigui/core": "workspace:*", "echarts": "^5.5.1" }
+  "dependencies": { "@aigui/core": "workspace:*", "echarts": "^5.5.1", "echarts-gl": "^2.0.9" }
 }

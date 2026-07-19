@@ -11,13 +11,26 @@ export interface ChartOptions {
    * placeholder regardless of this flag.
    */
   interactive?: boolean
+  /**
+   * When true, complete options render a LIVE ECharts instance using the
+   * `echarts-gl` extension and the canvas renderer (required by WebGL) via the
+   * `mount` RenderOutput. This enables 3D chart types (bar3D/scatter3D/surface/
+   * line3D/globe/map3D), which have no static SSR form. `gl` implies interactive.
+   * The `echarts-gl` module is lazily imported and memoized across mounts.
+   */
+  gl?: boolean
 }
+
+/** Memoized `echarts-gl` side-effect import, shared across all mounts. */
+let glReady: Promise<unknown> | null = null
+const loadGl = () => (glReady ??= import("echarts-gl"))
 
 /** Prompt spec describing the ```chart``` fence for LLM system prompts. */
 export function chartPromptSpec(): string {
   return [
     "Charts (fenced): ```chart <ECharts option JSON>```.",
     'Example: ```chart {"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[1,2]}]}```',
+    "When gl mode is enabled, 3D types are available: bar3D, scatter3D, surface, line3D, globe, map3D (WebGL, live-only).",
   ].join("\n")
 }
 
@@ -28,11 +41,39 @@ export function chartPromptSpec(): string {
 export function chart(opts: ChartOptions = {}): AIGuiPlugin {
   const width = opts.width ?? 600
   const height = opts.height ?? 400
-  const interactive = opts.interactive ?? false
+  const gl = opts.gl ?? false
+  const interactive = gl || (opts.interactive ?? false)
   const render = (node: ASTNode): RenderOutput => {
     const { data: option, complete } = parsePartialJSON(node.content ?? "")
     if (!complete || option == null || typeof option !== "object") {
       return { kind: "html", html: `<div data-aigui-chart-loading></div>` }
+    }
+    if (gl) {
+      const opt = option as echarts.EChartsCoreOption
+      return {
+        kind: "mount",
+        mount: (el: HTMLElement) => {
+          let inst: echarts.ECharts | undefined
+          let disposed = false
+          // `echarts-gl` (WebGL) has no static SSR form and its import is async,
+          // so init inside the resolved promise. `.catch` swallows failures in
+          // WebGL-less environments (e.g. headless/jsdom) so no unhandled rejection.
+          loadGl()
+            .then(() => {
+              if (disposed) return
+              // NOTE: no `renderer:"svg"` — WebGL requires the canvas renderer.
+              inst = echarts.init(el, undefined, { width, height })
+              inst.setOption(opt)
+            })
+            .catch(() => {
+              /* no WebGL (e.g. headless/jsdom) or gl import failed — swallow */
+            })
+          return () => {
+            disposed = true
+            inst?.dispose()
+          }
+        },
+      }
     }
     if (interactive) {
       const opt = option as echarts.EChartsCoreOption
