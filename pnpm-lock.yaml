@@ -37,6 +37,12 @@ importers:
         specifier: ^29.1.1
         version: 29.1.1
 
+  packages/plugin-primitives:
+    dependencies:
+      '@aigui/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/react:
     dependencies:
       '@aigui/core':
