@@ -1,17 +1,28 @@
 {
   "name": "aigui",
   "private": true,
+  "description": "AIGUI — framework-agnostic SDK for rendering streaming LLM output (markdown, cards, charts, math, diagrams) in React, Vue, and vanilla JS.",
+  "license": "MIT",
+  "author": "Liang Li <ll_faw@hotmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liliang-cn/aigui.git"
+  },
   "type": "module",
   "scripts": {
     "build": "turbo run build",
     "test": "vitest run",
-    "typecheck": "turbo run typecheck"
+    "typecheck": "turbo run typecheck",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "turbo run build && changeset publish"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.31.1",
+    "tsdown": "^0.9.0",
     "turbo": "^2.5.0",
     "typescript": "^5.6.0",
-    "vitest": "^2.1.0",
-    "tsdown": "^0.9.0"
+    "vitest": "^2.1.0"
   },
   "packageManager": "pnpm@9.12.0"
 }

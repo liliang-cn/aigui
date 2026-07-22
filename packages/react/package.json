@@ -1,15 +1,55 @@
 {
   "name": "@aigui/react",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "React adapter for AIGUI — stream LLM output into live React components with cards, plugins, and interactive widgets.",
+  "keywords": [
+    "llm",
+    "ai",
+    "streaming",
+    "markdown",
+    "react",
+    "components",
+    "cards",
+    "aigui"
+  ],
+  "license": "MIT",
+  "author": "Liang Li <ll_faw@hotmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liliang-cn/aigui.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://github.com/liliang-cn/aigui#readme",
+  "bugs": "https://github.com/liliang-cn/aigui/issues",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "require": "./dist/index.cjs" } },
-  "files": ["dist"],
-  "scripts": { "build": "tsdown", "typecheck": "tsc --noEmit" },
-  "dependencies": { "@aigui/core": "workspace:*" },
-  "peerDependencies": { "react": ">=18" },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aigui/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
   "devDependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

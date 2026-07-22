@@ -1,12 +1,52 @@
 {
   "name": "@aigui/plugin-highlight",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Shiki code-highlighting plugin for AIGUI.",
+  "keywords": [
+    "llm",
+    "ai",
+    "streaming",
+    "markdown",
+    "shiki",
+    "syntax-highlighting",
+    "code",
+    "plugin",
+    "aigui"
+  ],
+  "license": "MIT",
+  "author": "Liang Li <ll_faw@hotmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liliang-cn/aigui.git",
+    "directory": "packages/plugin-highlight"
+  },
+  "homepage": "https://github.com/liliang-cn/aigui#readme",
+  "bugs": "https://github.com/liliang-cn/aigui/issues",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "require": "./dist/index.cjs" } },
-  "files": ["dist"],
-  "scripts": { "build": "tsdown", "typecheck": "tsc --noEmit" },
-  "dependencies": { "@aigui/core": "workspace:*", "shiki": "^1.22.0" }
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@aigui/core": "workspace:*",
+    "shiki": "^1.22.0"
+  }
 }

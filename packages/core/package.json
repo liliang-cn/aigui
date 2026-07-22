@@ -1,6 +1,27 @@
 {
   "name": "@aigui/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Headless streaming renderer core for LLM-generated UI — markdown/JSON repair, card registry, AST diff, plugin engine, sanitizer.",
+  "keywords": [
+    "llm",
+    "ai",
+    "streaming",
+    "markdown",
+    "renderer",
+    "headless",
+    "sanitizer",
+    "ast-diff",
+    "aigui"
+  ],
+  "license": "MIT",
+  "author": "Liang Li <ll_faw@hotmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liliang-cn/aigui.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/liliang-cn/aigui#readme",
+  "bugs": "https://github.com/liliang-cn/aigui/issues",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -13,8 +34,13 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc --noEmit"
