@@ -1,0 +1,37 @@
+name: Release
+
+# Publishes all public @aigui/* packages to npm when a version tag (vX.Y.Z) is pushed.
+# The npm token is read from the NPM_TOKEN repository secret — never hardcoded.
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # enables npm provenance on public repos
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4 # reads packageManager from package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: "https://registry.npmjs.org"
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      - run: pnpm exec vitest run
+
+      # Publishes every workspace package whose version is not yet on the registry.
+      # pnpm skips packages already published at their current version.
+      - run: pnpm -r publish --access public --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
