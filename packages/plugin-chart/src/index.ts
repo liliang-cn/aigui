@@ -96,5 +96,5 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
       return { kind: "html", html: `<pre data-aigui-chart-error>${String((e as Error)?.message ?? e)}</pre>` }
     }
   }
-  return { name: "chart", nodeRenderers: { chart: render } }
+  return { name: "chart", nodeRenderers: { chart: render }, promptSpec: chartPromptSpec() }
 }

@@ -43,5 +43,6 @@ export function primitives(): AIGuiPlugin {
   return {
     name: "primitives",
     nodeRenderers: { list: renderList, "key-value": renderKeyValue, table: renderTable, layout: renderLayout },
+    promptSpec: primitivesPromptSpec(),
   }
 }

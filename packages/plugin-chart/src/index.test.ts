@@ -38,6 +38,9 @@ describe("plugin-chart", () => {
   it("exposes a prompt spec mentioning the chart fence", () => {
     expect(chartPromptSpec()).toContain("chart")
   })
+  it("sets a non-empty promptSpec on the returned plugin", () => {
+    expect(chart().promptSpec).toContain("chart")
+  })
   it("interactive mode returns a mount RenderOutput for a complete option", () => {
     const r = collectNodeRenderers([chart({ interactive: true })]).chart
     const out = r({ key: "0:chart", type: "chart", content: barOption } as ASTNode) as RenderOutput

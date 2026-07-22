@@ -53,6 +53,8 @@ export interface AIGuiPlugin {
   nodeRenderers?: Record<string, NodeRenderer>
   isBlockComplete?: (nodeType: string, raw: string) => boolean
   css?: string
+  /** LLM-facing guidance describing this plugin's fence syntax. */
+  promptSpec?: string
 }
 
 export interface RendererOptions {

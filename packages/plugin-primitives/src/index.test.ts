@@ -30,4 +30,7 @@ describe("plugin-primitives", () => {
     const spec = primitivesPromptSpec()
     expect(String(spec)).toContain("list")
   })
+  it("sets a non-empty promptSpec on the returned plugin", () => {
+    expect(primitives().promptSpec).toContain("list")
+  })
 })
