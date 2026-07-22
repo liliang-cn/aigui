@@ -1,5 +1,5 @@
 {
-  "name": "@aigui/vue",
+  "name": "@ai-gui/vue",
   "version": "0.1.0",
   "description": "Vue 3 adapter for AIGUI — stream LLM output into live Vue components with cards and plugins.",
   "keywords": [
@@ -46,7 +46,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aigui/core": "workspace:*"
+    "@ai-gui/core": "workspace:*"
   },
   "peerDependencies": {
     "vue": ">=3.3"

@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use `- [ ]`.
 
-**Goal:** Add a `mount` `RenderOutput` kind so plugins can render **live, interactive** widgets (a real ECharts instance with tooltips / dataZoom / click) across React, Vue, and vanilla, with proper mount/unmount lifecycle. Then give `@aigui/plugin-chart` an interactive mode.
+**Goal:** Add a `mount` `RenderOutput` kind so plugins can render **live, interactive** widgets (a real ECharts instance with tooltips / dataZoom / click) across React, Vue, and vanilla, with proper mount/unmount lifecycle. Then give `@ai-gui/plugin-chart` an interactive mode.
 
 **Architecture:** New `RenderOutput` variant `{ kind: "mount"; mount: (el: HTMLElement) => void | (() => void) }`. The plugin receives a real DOM element in the browser and imperatively mounts a live instance, returning an optional cleanup. Each adapter provides a host that: creates a container, calls `mount(el)` once the element is in the DOM, and calls cleanup on unmount/replace. Framework-neutral (mount only needs a DOM element).
 
-**Tech Stack:** existing. Touches `@aigui/core` (type), `@aigui/react`, `@aigui/vue`, `@aigui/vanilla`, `@aigui/plugin-chart`.
+**Tech Stack:** existing. Touches `@ai-gui/core` (type), `@ai-gui/react`, `@ai-gui/vue`, `@ai-gui/vanilla`, `@ai-gui/plugin-chart`.
 
 Prereq: 9 packages on main, 134 tests. Adapters already translate `RenderOutput` (`html`/`element`/`card`) and dispatch plugin `nodeRenderers`.
 
@@ -48,7 +48,7 @@ export type RenderOutput =
   | { kind: "card"; type: string; data: unknown }
   | { kind: "mount"; mount: (el: HTMLElement) => void | (() => void) }
 ```
-- [ ] **Step 4: confirm PASS** + full suite + typecheck (existing adapter `renderOutput` switches now have an unhandled case — TS may flag exhaustiveness; if any adapter used an exhaustive `never` check it will fail typecheck. Adapters are handled in M2–M4, but core typecheck must stay green. Since adapters live in other packages, core typecheck passes; the whole-repo `pnpm typecheck` will surface adapter gaps — that is expected and fixed in M2–M4. For THIS task, require `pnpm --filter @aigui/core exec tsc --noEmit` clean and the core test green.)
+- [ ] **Step 4: confirm PASS** + full suite + typecheck (existing adapter `renderOutput` switches now have an unhandled case — TS may flag exhaustiveness; if any adapter used an exhaustive `never` check it will fail typecheck. Adapters are handled in M2–M4, but core typecheck must stay green. Since adapters live in other packages, core typecheck passes; the whole-repo `pnpm typecheck` will surface adapter gaps — that is expected and fixed in M2–M4. For THIS task, require `pnpm --filter @ai-gui/core exec tsc --noEmit` clean and the core test green.)
 - [ ] **Step 5: Commit** `feat(core): add mount RenderOutput kind for live interactive widgets`
 
 ---
@@ -62,7 +62,7 @@ export type RenderOutput =
 // @vitest-environment jsdom
 import { render } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import type { ASTNode, AIGuiPlugin } from "@aigui/core"
+import type { ASTNode, AIGuiPlugin } from "@ai-gui/core"
 import { renderNode } from "./render-node"
 
 describe("react mount RenderOutput", () => {
@@ -96,7 +96,7 @@ describe("react mount RenderOutput", () => {
     }
     ```
   - In `renderOutput`, add: `case "mount": return <MountHost key={key} mount={out.mount} />` (and ensure `renderNode`'s plugin dispatch routes a `mount` output here — it already calls `renderOutput(out, node.key)`).
-- [ ] **Step 4: PASS** + full suite + typecheck (`pnpm --filter @aigui/react exec tsc --noEmit`).
+- [ ] **Step 4: PASS** + full suite + typecheck (`pnpm --filter @ai-gui/react exec tsc --noEmit`).
 - [ ] **Step 5: Commit** `feat(react): mount RenderOutput host with lifecycle`
 
 ---
@@ -110,7 +110,7 @@ describe("react mount RenderOutput", () => {
 // @vitest-environment jsdom
 import { mount as vueMount } from "@vue/test-utils"
 import { describe, expect, it, vi } from "vitest"
-import type { ASTNode, AIGuiPlugin } from "@aigui/core"
+import type { ASTNode, AIGuiPlugin } from "@ai-gui/core"
 import { renderNode } from "./render-node"
 
 describe("vue mount RenderOutput", () => {
@@ -158,7 +158,7 @@ Approach: `renderOutputToElement` for `mount` creates a `<div data-aigui-mount>`
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest"
 import { createRenderer } from "./create-renderer"
-import type { AIGuiPlugin } from "@aigui/core"
+import type { AIGuiPlugin } from "@ai-gui/core"
 
 describe("vanilla mount RenderOutput", () => {
   it("mounts a live widget and cleans up on reset", async () => {
@@ -180,7 +180,7 @@ describe("vanilla mount RenderOutput", () => {
 ```
 - [ ] **Step 2: FAIL**.
 - [ ] **Step 3: implement** the mount case + reconcile cleanup + reset/destroy cleanup (store cleanups; call on remove/replace/reset/destroy). Ensure `renderNodeToElement`'s plugin sync dispatch routes a `mount` output to `renderOutputToElement`.
-- [ ] **Step 4: PASS** + full suite + typecheck + `pnpm --filter @aigui/vanilla build`.
+- [ ] **Step 4: PASS** + full suite + typecheck + `pnpm --filter @ai-gui/vanilla build`.
 - [ ] **Step 5: Commit** `feat(vanilla): mount RenderOutput host + reconcile cleanup lifecycle`
 
 ---

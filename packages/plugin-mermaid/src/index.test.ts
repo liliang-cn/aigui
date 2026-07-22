@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest"
-import { collectNodeRenderers, type ASTNode, type RenderOutput } from "@aigui/core"
+import { collectNodeRenderers, type ASTNode, type RenderOutput } from "@ai-gui/core"
 import { mermaid } from "./index"
 
 describe("plugin-mermaid", () => {

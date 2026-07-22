@@ -1,8 +1,8 @@
-# @aigui/core 实现计划（子项目 1：地基）
+# @ai-gui/core 实现计划（子项目 1：地基）
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 实现 headless、零框架依赖的 `@aigui/core`：流式聚合 → 内存补全 → markdown-it 解析（含卡片围栏块）→ AST diff → 框架无关 patch 事件，外加卡片注册表与 sanitizer。
+**Goal:** 实现 headless、零框架依赖的 `@ai-gui/core`：流式聚合 → 内存补全 → markdown-it 解析（含卡片围栏块）→ AST diff → 框架无关 patch 事件，外加卡片注册表与 sanitizer。
 
 **Architecture:** 纯函数模块（`parsePartialJSON` / `repairMarkdown`）+ 有状态编排器（`Renderer`）。核心只吐框架无关的 `ASTNode[]` 与 `Patch[]` 事件，不碰任何 UI 框架。基于 markdown-it 每块 re-parse + 结构化 diff。
 
@@ -21,7 +21,7 @@ turbo.json
 tsconfig.base.json
 vitest.workspace.ts
 packages/core/
-  package.json                    # @aigui/core
+  package.json                    # @ai-gui/core
   tsconfig.json
   tsdown.config.ts
   src/
@@ -114,7 +114,7 @@ export default ["packages/*"]
 `packages/core/package.json`:
 ```json
 {
-  "name": "@aigui/core",
+  "name": "@ai-gui/core",
   "version": "0.0.0",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -183,14 +183,14 @@ it("workspace runs", () => {
 Run: `pnpm install && pnpm test`
 Expected: 冒烟测试 PASS。
 
-Run: `pnpm --filter @aigui/core build`
+Run: `pnpm --filter @ai-gui/core build`
 Expected: 生成 `packages/core/dist/index.js`、`index.cjs`、`index.d.ts`。
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add -A
-git commit -m "chore: monorepo 脚手架 + @aigui/core 骨架（pnpm/turbo/tsdown/vitest）"
+git commit -m "chore: monorepo 脚手架 + @ai-gui/core 骨架（pnpm/turbo/tsdown/vitest）"
 ```
 
 ---
@@ -247,7 +247,7 @@ describe("parsePartialJSON", () => {
 
 - [ ] **Step 2: 运行确认失败**
 
-Run: `pnpm --filter @aigui/core test partial-json`
+Run: `pnpm --filter @ai-gui/core test partial-json`
 Expected: FAIL（parsePartialJSON 未定义）。
 
 - [ ] **Step 3: 实现**
@@ -349,7 +349,7 @@ function closeContainers(body: string, stack: string[]): string {
 
 - [ ] **Step 4: 运行确认通过**
 
-Run: `pnpm --filter @aigui/core test partial-json`
+Run: `pnpm --filter @ai-gui/core test partial-json`
 Expected: PASS（8/8）。若个别边界用例失败，调整 `repair` 的截断逻辑直至全绿；这些测试就是行为契约。
 
 - [ ] **Step 5: Commit**
@@ -403,7 +403,7 @@ describe("repairMarkdown", () => {
 
 - [ ] **Step 2: 运行确认失败**
 
-Run: `pnpm --filter @aigui/core test repair-markdown`
+Run: `pnpm --filter @ai-gui/core test repair-markdown`
 Expected: FAIL。
 
 - [ ] **Step 3: 实现**
@@ -438,7 +438,7 @@ export function repairMarkdown(buffer: string): string {
 
 - [ ] **Step 4: 运行确认通过**
 
-Run: `pnpm --filter @aigui/core test repair-markdown`
+Run: `pnpm --filter @ai-gui/core test repair-markdown`
 Expected: PASS（6/6）。
 
 - [ ] **Step 5: Commit**
@@ -522,7 +522,7 @@ export interface RendererOptions {
 
 - [ ] **Step 2: 类型检查通过**
 
-Run: `pnpm --filter @aigui/core typecheck`
+Run: `pnpm --filter @ai-gui/core typecheck`
 Expected: 无错误（此时 card-registry 尚未建，`import("./card-registry")` 会报错——先把该字段改为 `unknown`，Task 4 建好后回填。为避免回填遗漏，本步直接把 `registry?: unknown` 写好，Task 4 收尾时改成具体类型）。
 
 修正：`types.ts` 中先写 `registry?: unknown`。
@@ -601,7 +601,7 @@ describe("CardRegistry", () => {
 
 - [ ] **Step 2: 运行确认失败**
 
-Run: `pnpm --filter @aigui/core test card-registry`
+Run: `pnpm --filter @ai-gui/core test card-registry`
 Expected: FAIL。
 
 - [ ] **Step 3: 实现**
@@ -703,7 +703,7 @@ registry?: CardRegistry
 
 - [ ] **Step 5: 运行确认通过**
 
-Run: `pnpm --filter @aigui/core test card-registry && pnpm --filter @aigui/core typecheck`
+Run: `pnpm --filter @ai-gui/core test card-registry && pnpm --filter @ai-gui/core typecheck`
 Expected: PASS（6/6），typecheck 无错误。
 
 - [ ] **Step 6: Commit**
@@ -768,7 +768,7 @@ describe("createParser", () => {
 
 - [ ] **Step 2: 运行确认失败**
 
-Run: `pnpm --filter @aigui/core test parser`
+Run: `pnpm --filter @ai-gui/core test parser`
 Expected: FAIL。
 
 - [ ] **Step 3: 实现**
@@ -874,7 +874,7 @@ export function createParser(options: ParserOptions = {}): (src: string) => ASTN
 
 - [ ] **Step 4: 运行确认通过**
 
-Run: `pnpm --filter @aigui/core test parser`
+Run: `pnpm --filter @ai-gui/core test parser`
 Expected: PASS（5/5）。
 
 - [ ] **Step 5: Commit**
@@ -937,7 +937,7 @@ describe("diffAst", () => {
 
 - [ ] **Step 2: 运行确认失败**
 
-Run: `pnpm --filter @aigui/core test diff`
+Run: `pnpm --filter @ai-gui/core test diff`
 Expected: FAIL。
 
 - [ ] **Step 3: 实现**
@@ -973,7 +973,7 @@ function nodeEqual(a: ASTNode, b: ASTNode): boolean {
 
 - [ ] **Step 4: 运行确认通过**
 
-Run: `pnpm --filter @aigui/core test diff`
+Run: `pnpm --filter @ai-gui/core test diff`
 Expected: PASS（5/5）。
 
 - [ ] **Step 5: Commit**
@@ -996,8 +996,8 @@ git commit -m "feat(core): diffAst（AST → 最小 Patch[]）"
 - [ ] **Step 1: 加依赖**
 
 ```bash
-pnpm --filter @aigui/core add dompurify
-pnpm --filter @aigui/core add -D @types/dompurify jsdom
+pnpm --filter @ai-gui/core add dompurify
+pnpm --filter @ai-gui/core add -D @types/dompurify jsdom
 ```
 
 - [ ] **Step 2: 写失败测试**
@@ -1025,7 +1025,7 @@ describe("sanitizeHtml", () => {
 
 - [ ] **Step 3: 运行确认失败**
 
-Run: `pnpm --filter @aigui/core test sanitizer`
+Run: `pnpm --filter @ai-gui/core test sanitizer`
 Expected: FAIL。
 
 - [ ] **Step 4: 实现**
@@ -1040,7 +1040,7 @@ export function sanitizeHtml(html: string): string {
 
 - [ ] **Step 5: 运行确认通过**
 
-Run: `pnpm --filter @aigui/core test sanitizer`
+Run: `pnpm --filter @ai-gui/core test sanitizer`
 Expected: PASS（3/3）。
 
 - [ ] **Step 6: Commit**
@@ -1111,7 +1111,7 @@ describe("Renderer", () => {
 
 - [ ] **Step 2: 运行确认失败**
 
-Run: `pnpm --filter @aigui/core test renderer`
+Run: `pnpm --filter @ai-gui/core test renderer`
 Expected: FAIL。
 
 - [ ] **Step 3: 实现**
@@ -1194,7 +1194,7 @@ export type {
 
 - [ ] **Step 5: 运行全部测试 + typecheck + build**
 
-Run: `pnpm --filter @aigui/core test && pnpm --filter @aigui/core typecheck && pnpm --filter @aigui/core build`
+Run: `pnpm --filter @ai-gui/core test && pnpm --filter @ai-gui/core typecheck && pnpm --filter @ai-gui/core build`
 Expected: 全部 PASS；`dist/` 产出 `index.js` / `index.cjs` / `index.d.ts`。
 
 - [ ] **Step 6: Commit**
@@ -1214,6 +1214,6 @@ git commit -m "feat(core): Renderer 编排（push/feed/reset → onPatch）+ 公
 
 ## 后续子项目（各自独立成计划，不在本计划内）
 
-1. `@aigui/react` + `@aigui/vue` + `@aigui/vanilla` 适配层（消费 `Patch[]`，实现 `onCardAction`、插件 `nodeRenderers` 渲染、`RenderOutput` 翻译）。
+1. `@ai-gui/react` + `@ai-gui/vue` + `@ai-gui/vanilla` 适配层（消费 `Patch[]`，实现 `onCardAction`、插件 `nodeRenderers` 渲染、`RenderOutput` 翻译）。
 2. 插件：`plugin-highlight` / `plugin-katex` / `plugin-mermaid` / `plugin-primitives`。
 3. `requestExecutor`（可选、默认关闭）。

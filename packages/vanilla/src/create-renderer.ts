@@ -1,4 +1,4 @@
-import { Renderer, type ASTNode, type Patch, type RendererOptions } from "@aigui/core"
+import { Renderer, type ASTNode, type Patch, type RendererOptions } from "@ai-gui/core"
 import { type DomRenderContext } from "./render-node-dom"
 import { createReconcileState, disposeEl, reconcile } from "./reconcile"
 

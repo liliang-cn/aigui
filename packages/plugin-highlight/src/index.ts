@@ -1,5 +1,5 @@
 import { createHighlighter, type Highlighter } from "shiki"
-import type { AIGuiPlugin, ASTNode, RenderOutput } from "@aigui/core"
+import type { AIGuiPlugin, ASTNode, RenderOutput } from "@ai-gui/core"
 
 /** Options for the Shiki-backed code highlighter plugin. */
 export interface HighlightOptions {

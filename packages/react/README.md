@@ -1,18 +1,18 @@
-# @aigui/react
+# @ai-gui/react
 
 React adapter for [AIGUI](../../README.md) — renders a streaming LLM response into React, with app-defined cards and plugins.
 
 ## Install
 
 ```sh
-pnpm add @aigui/core @aigui/react
+pnpm add @ai-gui/core @ai-gui/react
 ```
 
 ## Usage
 
 ```tsx
-import { CardRegistry } from "@aigui/core"
-import { AIRenderer } from "@aigui/react"
+import { CardRegistry } from "@ai-gui/core"
+import { AIRenderer } from "@ai-gui/react"
 import { useRef } from "react"
 
 const registry = new CardRegistry()

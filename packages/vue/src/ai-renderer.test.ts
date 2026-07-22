@@ -2,7 +2,7 @@
 import { mount } from "@vue/test-utils"
 import { defineComponent, h, nextTick } from "vue"
 import { describe, expect, it, vi } from "vitest"
-import { CardRegistry } from "@aigui/core"
+import { CardRegistry } from "@ai-gui/core"
 import { AIRenderer } from "./ai-renderer"
 
 describe("AIRenderer", () => {

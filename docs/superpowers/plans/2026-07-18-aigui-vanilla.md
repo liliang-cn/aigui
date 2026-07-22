@@ -1,4 +1,4 @@
-# @aigui/vanilla Implementation Plan (sub-project 3: no-framework adapter)
+# @ai-gui/vanilla Implementation Plan (sub-project 3: no-framework adapter)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use `- [ ]`.
 
@@ -6,9 +6,9 @@
 
 **Architecture:** Wraps core `Renderer`. On each `onPatch(patches, nodes)` it runs a small keyed DOM reconciler: maintain `key → {el, node}`, create/update/remove elements by key, and order them to match the AST snapshot. Text/inline via `innerHTML` (already sanitized by core), code as `<pre><code>` text, cards via `registry.getRender(type)` returning an `HTMLElement`.
 
-**Tech Stack:** TypeScript, tsdown, Vitest + jsdom. No framework deps. Depends on `@aigui/core` (workspace).
+**Tech Stack:** TypeScript, tsdown, Vitest + jsdom. No framework deps. Depends on `@ai-gui/core` (workspace).
 
-Prereq: core is built; exports `Renderer`, `CardRegistry`, `ASTNode`, `Patch`, `RendererOptions`. Vitest aliases `@aigui/core` to source. Tests: `pnpm exec vitest run <name>`.
+Prereq: core is built; exports `Renderer`, `CardRegistry`, `ASTNode`, `Patch`, `RendererOptions`. Vitest aliases `@ai-gui/core` to source. Tests: `pnpm exec vitest run <name>`.
 
 ---
 
@@ -33,7 +33,7 @@ packages/vanilla/
 - [ ] **Step 1** `package.json`:
 ```json
 {
-  "name": "@aigui/vanilla",
+  "name": "@ai-gui/vanilla",
   "version": "0.0.0",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -42,7 +42,7 @@ packages/vanilla/
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "require": "./dist/index.cjs" } },
   "files": ["dist"],
   "scripts": { "build": "tsdown", "typecheck": "tsc --noEmit" },
-  "dependencies": { "@aigui/core": "workspace:*" }
+  "dependencies": { "@ai-gui/core": "workspace:*" }
 }
 ```
 - [ ] **Step 2** `tsconfig.json`:
@@ -62,8 +62,8 @@ import { expect, it } from "vitest"
 it("has a dom", () => { const d = document.createElement("div"); d.textContent = "hi"; expect(d.textContent).toBe("hi") })
 ```
 - [ ] **Step 6** Add `"vanilla"` project to `vitest.workspace.ts` (a `{ resolve: { alias }, test: { name: "vanilla", root: "packages/vanilla" } }` entry using the same `alias`).
-- [ ] **Step 7** `pnpm install && pnpm exec vitest run smoke` (vanilla smoke passes) and `pnpm --filter @aigui/vanilla build` (emits dist).
-- [ ] **Step 8** Commit: `chore: @aigui/vanilla package scaffold`
+- [ ] **Step 7** `pnpm install && pnpm exec vitest run smoke` (vanilla smoke passes) and `pnpm --filter @ai-gui/vanilla build` (emits dist).
+- [ ] **Step 8** Commit: `chore: @ai-gui/vanilla package scaffold`
 
 ---
 
@@ -77,8 +77,8 @@ Card render contract for vanilla: `registry.getRender(type)` returns `(data, api
 ```ts
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest"
-import type { ASTNode } from "@aigui/core"
-import { CardRegistry } from "@aigui/core"
+import type { ASTNode } from "@ai-gui/core"
+import { CardRegistry } from "@ai-gui/core"
 import { renderNodeToElement } from "./render-node-dom"
 
 describe("renderNodeToElement", () => {
@@ -117,7 +117,7 @@ describe("renderNodeToElement", () => {
 - [ ] **Step 2: confirm FAIL**
 - [ ] **Step 3: implement `render-node-dom.ts`**
 ```ts
-import { sanitizeHtml, type ASTNode, type CardRegistry } from "@aigui/core"
+import { sanitizeHtml, type ASTNode, type CardRegistry } from "@ai-gui/core"
 
 export interface DomRenderContext {
   registry?: CardRegistry
@@ -164,7 +164,7 @@ function renderCardElement(node: ASTNode, ctx: DomRenderContext): HTMLElement {
 ```ts
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest"
-import { CardRegistry } from "@aigui/core"
+import { CardRegistry } from "@ai-gui/core"
 import { createRenderer } from "./create-renderer"
 
 describe("createRenderer", () => {
@@ -203,7 +203,7 @@ describe("createRenderer", () => {
 - [ ] **Step 2: confirm FAIL**
 - [ ] **Step 3: implement `reconcile.ts`** — keyed DOM reconcile from an AST snapshot:
 ```ts
-import type { ASTNode } from "@aigui/core"
+import type { ASTNode } from "@ai-gui/core"
 import { renderNodeToElement, type DomRenderContext } from "./render-node-dom"
 
 export interface ReconcileState { els: Map<string, { el: HTMLElement; hash: string }> }
@@ -235,7 +235,7 @@ export function reconcile(container: HTMLElement, nodes: ASTNode[], ctx: DomRend
 ```
 - [ ] **Step 4: implement `create-renderer.ts`**
 ```ts
-import { Renderer, type ASTNode, type Patch, type RendererOptions } from "@aigui/core"
+import { Renderer, type ASTNode, type Patch, type RendererOptions } from "@ai-gui/core"
 import { type DomRenderContext } from "./render-node-dom"
 import { createReconcileState, reconcile } from "./reconcile"
 

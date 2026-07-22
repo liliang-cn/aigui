@@ -1,18 +1,18 @@
-# @aigui/plugin-chart
+# @ai-gui/plugin-chart
 
 Chart plugin for [AIGUI](../../README.md), powered by [ECharts](https://echarts.apache.org). The model emits a ` ```chart ` fenced block containing an ECharts option JSON. Charts are complete-gated: a skeleton shows while the option streams, then the full chart renders (never partial-drawn).
 
 ## Install
 
 ```sh
-pnpm add @aigui/plugin-chart
+pnpm add @ai-gui/plugin-chart
 ```
 
 ## Usage
 
 ```tsx
-import { chart } from "@aigui/plugin-chart"
-import { AIRenderer } from "@aigui/react"
+import { chart } from "@ai-gui/plugin-chart"
+import { AIRenderer } from "@ai-gui/react"
 
 <AIRenderer plugins={[chart({ interactive: true })]} />
 ```

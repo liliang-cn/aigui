@@ -1,5 +1,5 @@
 import { forwardRef, useImperativeHandle } from "react"
-import type { AIGuiPlugin, CardRegistry, RendererOptions } from "@aigui/core"
+import type { AIGuiPlugin, CardRegistry, RendererOptions } from "@ai-gui/core"
 import { useAIRenderer } from "./use-ai-renderer"
 import { renderNode, type RenderContext } from "./render-node"
 

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import type { ASTNode, AIGuiPlugin } from "@aigui/core"
+import type { ASTNode, AIGuiPlugin } from "@ai-gui/core"
 import { renderNode } from "./render-node"
 
 describe("react mount RenderOutput", () => {

@@ -1,18 +1,18 @@
-# @aigui/plugin-primitives
+# @ai-gui/plugin-primitives
 
 Primitive UI-block plugin for [AIGUI](../../README.md). Adds four structured, data-driven blocks the model can emit as fenced JSON: `list`, `table`, `key-value`, and `layout`.
 
 ## Install
 
 ```sh
-pnpm add @aigui/plugin-primitives
+pnpm add @ai-gui/plugin-primitives
 ```
 
 ## Usage
 
 ```tsx
-import { primitives } from "@aigui/plugin-primitives"
-import { AIRenderer } from "@aigui/react"
+import { primitives } from "@ai-gui/plugin-primitives"
+import { AIRenderer } from "@ai-gui/react"
 
 <AIRenderer plugins={[primitives()]} />
 ```

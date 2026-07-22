@@ -20,16 +20,16 @@ Install the core plus the adapter for your framework, then any plugins you want:
 
 ```sh
 # React
-pnpm add @aigui/core @aigui/react
+pnpm add @ai-gui/core @ai-gui/react
 
 # Vue
-pnpm add @aigui/core @aigui/vue
+pnpm add @ai-gui/core @ai-gui/vue
 
 # vanilla DOM
-pnpm add @aigui/core @aigui/vanilla
+pnpm add @ai-gui/core @ai-gui/vanilla
 
 # plugins (optional)
-pnpm add @aigui/plugin-katex @aigui/plugin-highlight @aigui/plugin-mermaid @aigui/plugin-primitives @aigui/plugin-chart
+pnpm add @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-primitives @ai-gui/plugin-chart
 ```
 
 ## Quick start — React
@@ -37,8 +37,8 @@ pnpm add @aigui/plugin-katex @aigui/plugin-highlight @aigui/plugin-mermaid @aigu
 Register a card type (schema + render component), mount `<AIRenderer>`, feed it a streaming response, and build the system prompt from the same registry.
 
 ```tsx
-import { CardRegistry, buildSystemPrompt } from "@aigui/core"
-import { AIRenderer } from "@aigui/react"
+import { CardRegistry, buildSystemPrompt } from "@ai-gui/core"
+import { AIRenderer } from "@ai-gui/react"
 import { useRef } from "react"
 
 // 1. Define a card. The LLM only fills `data`; the app owns the render + actions.
@@ -91,8 +91,8 @@ function Chat() {
 ```vue
 <script setup lang="ts">
 import { ref } from "vue"
-import { CardRegistry, buildSystemPrompt } from "@aigui/core"
-import { AIRenderer } from "@aigui/vue"
+import { CardRegistry, buildSystemPrompt } from "@ai-gui/core"
+import { AIRenderer } from "@ai-gui/vue"
 
 const registry = new CardRegistry()
 // registry.register({ type, description, render /* a Vue component: props `data`, emits `action` */ })
@@ -116,8 +116,8 @@ async function ask(prompt: string) {
 ## Quick start — vanilla
 
 ```ts
-import { CardRegistry, buildSystemPrompt } from "@aigui/core"
-import { createRenderer } from "@aigui/vanilla"
+import { CardRegistry, buildSystemPrompt } from "@ai-gui/core"
+import { createRenderer } from "@ai-gui/vanilla"
 
 const registry = new CardRegistry()
 registry.register({
@@ -145,20 +145,20 @@ await r.feed(res.body!)
 
 | Plugin | Factory | Adds |
 | --- | --- | --- |
-| `@aigui/plugin-katex` | `katex()` | Inline `$…$` and block `$$…$$` math |
-| `@aigui/plugin-highlight` | `highlight({ themes?, langs?, theme? })` | Shiki syntax highlighting for code blocks (async) |
-| `@aigui/plugin-mermaid` | `mermaid({ theme? })` | ` ```mermaid ` diagrams |
-| `@aigui/plugin-primitives` | `primitives()` | ` ```list `, ` ```table `, ` ```key-value `, ` ```layout ` UI blocks |
-| `@aigui/plugin-chart` | `chart({ interactive?, gl?, width?, height? })` | ` ```chart ` ECharts blocks — static SVG, live interactive, or 3D |
+| `@ai-gui/plugin-katex` | `katex()` | Inline `$…$` and block `$$…$$` math |
+| `@ai-gui/plugin-highlight` | `highlight({ themes?, langs?, theme? })` | Shiki syntax highlighting for code blocks (async) |
+| `@ai-gui/plugin-mermaid` | `mermaid({ theme? })` | ` ```mermaid ` diagrams |
+| `@ai-gui/plugin-primitives` | `primitives()` | ` ```list `, ` ```table `, ` ```key-value `, ` ```layout ` UI blocks |
+| `@ai-gui/plugin-chart` | `chart({ interactive?, gl?, width?, height? })` | ` ```chart ` ECharts blocks — static SVG, live interactive, or 3D |
 
 Pass plugins to any adapter:
 
 ```tsx
-import { katex } from "@aigui/plugin-katex"
-import { highlight } from "@aigui/plugin-highlight"
-import { mermaid } from "@aigui/plugin-mermaid"
-import { primitives } from "@aigui/plugin-primitives"
-import { chart } from "@aigui/plugin-chart"
+import { katex } from "@ai-gui/plugin-katex"
+import { highlight } from "@ai-gui/plugin-highlight"
+import { mermaid } from "@ai-gui/plugin-mermaid"
+import { primitives } from "@ai-gui/plugin-primitives"
+import { chart } from "@ai-gui/plugin-chart"
 
 <AIRenderer
   registry={registry}
@@ -185,13 +185,13 @@ Card buttons are **declarative**: the model emits an `action` name plus `params`
 ## Architecture
 
 ```
-LLM stream ──▶ @aigui/core (headless)
+LLM stream ──▶ @ai-gui/core (headless)
                  parse → AST + patches
                  plugins claim node types → RenderOutput (html | element | card | mount)
                  sanitize html
                     │
                     ▼
-        adapter (@aigui/react | @aigui/vue | @aigui/vanilla)
+        adapter (@ai-gui/react | @ai-gui/vue | @ai-gui/vanilla)
                  renders AST/patches into the DOM
 ```
 
@@ -204,15 +204,15 @@ LLM stream ──▶ @aigui/core (headless)
 
 | Package | Purpose |
 | --- | --- |
-| [`@aigui/core`](./packages/core/README.md) | Headless streaming engine: `Renderer`, `StreamRouter`, `CardRegistry`, `buildSystemPrompt`, parser/diff/sanitize utilities, and the shared types. |
-| [`@aigui/react`](./packages/react/README.md) | React adapter: `useAIRenderer` hook and `<AIRenderer>` component. |
-| [`@aigui/vue`](./packages/vue/README.md) | Vue adapter: `useAIRenderer` composable and `<AIRenderer>` component. |
-| [`@aigui/vanilla`](./packages/vanilla/README.md) | Vanilla-DOM adapter: `createRenderer(el, options)`. |
-| [`@aigui/plugin-katex`](./packages/plugin-katex/README.md) | KaTeX math (`$…$`, `$$…$$`). |
-| [`@aigui/plugin-highlight`](./packages/plugin-highlight/README.md) | Shiki syntax highlighting for code blocks. |
-| [`@aigui/plugin-mermaid`](./packages/plugin-mermaid/README.md) | Mermaid diagrams. |
-| [`@aigui/plugin-primitives`](./packages/plugin-primitives/README.md) | Primitive UI blocks: list / table / key-value / layout. |
-| [`@aigui/plugin-chart`](./packages/plugin-chart/README.md) | ECharts charts: static SVG, live interactive, or 3D. |
+| [`@ai-gui/core`](./packages/core/README.md) | Headless streaming engine: `Renderer`, `StreamRouter`, `CardRegistry`, `buildSystemPrompt`, parser/diff/sanitize utilities, and the shared types. |
+| [`@ai-gui/react`](./packages/react/README.md) | React adapter: `useAIRenderer` hook and `<AIRenderer>` component. |
+| [`@ai-gui/vue`](./packages/vue/README.md) | Vue adapter: `useAIRenderer` composable and `<AIRenderer>` component. |
+| [`@ai-gui/vanilla`](./packages/vanilla/README.md) | Vanilla-DOM adapter: `createRenderer(el, options)`. |
+| [`@ai-gui/plugin-katex`](./packages/plugin-katex/README.md) | KaTeX math (`$…$`, `$$…$$`). |
+| [`@ai-gui/plugin-highlight`](./packages/plugin-highlight/README.md) | Shiki syntax highlighting for code blocks. |
+| [`@ai-gui/plugin-mermaid`](./packages/plugin-mermaid/README.md) | Mermaid diagrams. |
+| [`@ai-gui/plugin-primitives`](./packages/plugin-primitives/README.md) | Primitive UI blocks: list / table / key-value / layout. |
+| [`@ai-gui/plugin-chart`](./packages/plugin-chart/README.md) | ECharts charts: static SVG, live interactive, or 3D. |
 
 ## Testing & build
 

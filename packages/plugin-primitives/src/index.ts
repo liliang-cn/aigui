@@ -1,4 +1,4 @@
-import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@aigui/core"
+import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@ai-gui/core"
 
 const el = (tag: string, props: Record<string, unknown> | undefined, children: RenderOutput[]): RenderOutput => ({ kind: "element", tag, props, children })
 const text = (s: string): RenderOutput => ({ kind: "html", html: escapeHtml(s) })

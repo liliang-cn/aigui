@@ -1,5 +1,5 @@
 import { defineComponent, h, onBeforeUnmount, onMounted, ref, type PropType, type VNode } from "vue"
-import { sanitizeHtml, type RenderOutput } from "@aigui/core"
+import { sanitizeHtml, type RenderOutput } from "@ai-gui/core"
 
 /** Host element for imperative `mount` outputs, wired to Vue's lifecycle. */
 const MountHost = defineComponent({

@@ -1,18 +1,18 @@
-# @aigui/plugin-katex
+# @ai-gui/plugin-katex
 
 KaTeX math plugin for [AIGUI](../../README.md). Renders inline `$…$` and block `$$…$$` math.
 
 ## Install
 
 ```sh
-pnpm add @aigui/plugin-katex
+pnpm add @ai-gui/plugin-katex
 ```
 
 ## Usage
 
 ```tsx
-import { katex } from "@aigui/plugin-katex"
-import { AIRenderer } from "@aigui/react"
+import { katex } from "@ai-gui/plugin-katex"
+import { AIRenderer } from "@ai-gui/react"
 
 <AIRenderer plugins={[katex()]} />
 ```

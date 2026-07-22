@@ -11,24 +11,24 @@ For the human-facing overview see [README.md](./README.md); for the checklist fo
 
 ## Part A — Integrating the SDK
 
-AIGUI renders a streaming LLM response as live UI. A headless core (`@aigui/core`) parses the stream into an AST; a thin adapter renders it in your framework; plugins add block types (math, charts, diagrams, …).
+AIGUI renders a streaming LLM response as live UI. A headless core (`@ai-gui/core`) parses the stream into an AST; a thin adapter renders it in your framework; plugins add block types (math, charts, diagrams, …).
 
 ### 1. Pick the adapter and install
 
 | Framework | Adapter | Install |
 | --- | --- | --- |
-| React | `@aigui/react` | `pnpm add @aigui/core @aigui/react` |
-| Vue | `@aigui/vue` | `pnpm add @aigui/core @aigui/vue` |
-| vanilla DOM | `@aigui/vanilla` | `pnpm add @aigui/core @aigui/vanilla` |
+| React | `@ai-gui/react` | `pnpm add @ai-gui/core @ai-gui/react` |
+| Vue | `@ai-gui/vue` | `pnpm add @ai-gui/core @ai-gui/vue` |
+| vanilla DOM | `@ai-gui/vanilla` | `pnpm add @ai-gui/core @ai-gui/vanilla` |
 
-Add any plugins you need: `@aigui/plugin-katex`, `@aigui/plugin-highlight`, `@aigui/plugin-mermaid`, `@aigui/plugin-primitives`, `@aigui/plugin-chart`.
+Add any plugins you need: `@ai-gui/plugin-katex`, `@ai-gui/plugin-highlight`, `@ai-gui/plugin-mermaid`, `@ai-gui/plugin-primitives`, `@ai-gui/plugin-chart`.
 
 ### 2. Register cards
 
 A **card** is an app-defined widget. You own the schema and the render component; the LLM only fills in the data. Register each card type on a `CardRegistry`:
 
 ```ts
-import { CardRegistry } from "@aigui/core"
+import { CardRegistry } from "@ai-gui/core"
 
 const registry = new CardRegistry()
 registry.register({
@@ -49,7 +49,7 @@ registry.register({
 React:
 
 ```tsx
-import { AIRenderer } from "@aigui/react"
+import { AIRenderer } from "@ai-gui/react"
 const ref = useRef(null)
 <AIRenderer ref={ref} registry={registry} plugins={plugins} onCardAction={handle} />
 // ref.current.push(chunk) / feed(source) / reset()
@@ -65,7 +65,7 @@ Vue:
 Vanilla:
 
 ```ts
-import { createRenderer } from "@aigui/vanilla"
+import { createRenderer } from "@ai-gui/vanilla"
 const r = createRenderer(el, { registry, plugins, onCardAction: handle })
 // r.push / r.feed / r.reset / r.destroy
 ```
@@ -87,11 +87,11 @@ function handle({ type, params, cardType }) {
 Pass plugin instances to the adapter. Each claims its block types and renders framework-neutral output; the core sanitizes all HTML.
 
 ```ts
-import { katex } from "@aigui/plugin-katex"
-import { highlight } from "@aigui/plugin-highlight"
-import { mermaid } from "@aigui/plugin-mermaid"
-import { primitives } from "@aigui/plugin-primitives"
-import { chart } from "@aigui/plugin-chart"
+import { katex } from "@ai-gui/plugin-katex"
+import { highlight } from "@ai-gui/plugin-highlight"
+import { mermaid } from "@ai-gui/plugin-mermaid"
+import { primitives } from "@ai-gui/plugin-primitives"
+import { chart } from "@ai-gui/plugin-chart"
 
 const plugins = [katex(), highlight(), mermaid(), chart({ interactive: true }), primitives()]
 ```
@@ -101,7 +101,7 @@ const plugins = [katex(), highlight(), mermaid(), chart({ interactive: true }), 
 Assemble the model's guidance from the **same** registry and plugins, then prepend it to your system prompt. This is what tells the model which cards and blocks exist.
 
 ```ts
-import { buildSystemPrompt } from "@aigui/core"
+import { buildSystemPrompt } from "@ai-gui/core"
 const system = buildSystemPrompt({ base: "You are a helpful assistant.", registry, plugins })
 ```
 

@@ -1,5 +1,5 @@
 {
-  "name": "@aigui/plugin-mermaid",
+  "name": "@ai-gui/plugin-mermaid",
   "version": "0.1.0",
   "description": "Mermaid diagram plugin for AIGUI.",
   "keywords": [
@@ -46,7 +46,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aigui/core": "workspace:*",
+    "@ai-gui/core": "workspace:*",
     "mermaid": "^11.4.0"
   }
 }

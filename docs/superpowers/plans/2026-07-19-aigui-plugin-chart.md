@@ -1,4 +1,4 @@
-# @aigui/plugin-chart Implementation Plan (sub-project 6)
+# @ai-gui/plugin-chart Implementation Plan (sub-project 6)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use `- [ ]`.
 
@@ -16,12 +16,12 @@ Prereq: plugin infra live. Core exports `parsePartialJSON`, `collectNodeRenderer
 
 **Files:** `packages/plugin-chart/{package.json,tsconfig.json,tsdown.config.ts}`, `src/index.ts`, `src/index.test.ts`; add project to `vitest.workspace.ts`.
 
-- [ ] **Step 1: scaffold** — `package.json` name `@aigui/plugin-chart`, deps `{ "@aigui/core": "workspace:*", "echarts": "^5.5.1" }`, standard scripts/exports; tsconfig extends base + DOM lib; tsdown externalizes `echarts`. Add `{ resolve:{alias}, test:{ name:"plugin-chart", root:"packages/plugin-chart" } }` to `vitest.workspace.ts`. `pnpm install`.
+- [ ] **Step 1: scaffold** — `package.json` name `@ai-gui/plugin-chart`, deps `{ "@ai-gui/core": "workspace:*", "echarts": "^5.5.1" }`, standard scripts/exports; tsconfig extends base + DOM lib; tsdown externalizes `echarts`. Add `{ resolve:{alias}, test:{ name:"plugin-chart", root:"packages/plugin-chart" } }` to `vitest.workspace.ts`. `pnpm install`.
 
 - [ ] **Step 2: failing test `src/index.test.ts`**
 ```ts
 import { describe, expect, it } from "vitest"
-import { Renderer, collectNodeRenderers, type ASTNode, type RenderOutput } from "@aigui/core"
+import { Renderer, collectNodeRenderers, type ASTNode, type RenderOutput } from "@ai-gui/core"
 import { chart, chartPromptSpec } from "./index"
 
 const barOption = JSON.stringify({ xAxis: { type: "category", data: ["A", "B"] }, yAxis: { type: "value" }, series: [{ type: "bar", data: [1, 2] }] })
@@ -60,7 +60,7 @@ describe("plugin-chart", () => {
 - [ ] **Step 3: implement `src/index.ts`**
 ```ts
 import * as echarts from "echarts"
-import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@aigui/core"
+import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@ai-gui/core"
 
 export interface ChartOptions { width?: number; height?: number }
 
@@ -94,7 +94,7 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
 ```
 Verify the ECharts SSR API against docs if `init(null, null, {ssr, renderer, width, height})` / `renderToSVGString()` differ in the installed version. The broken-option test asserts only "no throw + html" — if ECharts renders a bad option without throwing, that's fine (still html).
 
-- [ ] **Step 4: confirm PASS**, full suite, typecheck, `pnpm --filter @aigui/plugin-chart build`.
+- [ ] **Step 4: confirm PASS**, full suite, typecheck, `pnpm --filter @ai-gui/plugin-chart build`.
 - [ ] **Step 5: Commit** `feat(plugin-chart): ECharts SSR svg chart plugin`
 
 ---

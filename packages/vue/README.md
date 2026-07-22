@@ -1,11 +1,11 @@
-# @aigui/vue
+# @ai-gui/vue
 
 Vue adapter for [AIGUI](../../README.md) — renders a streaming LLM response into Vue, with app-defined cards and plugins.
 
 ## Install
 
 ```sh
-pnpm add @aigui/core @aigui/vue
+pnpm add @ai-gui/core @ai-gui/vue
 ```
 
 ## Usage
@@ -13,8 +13,8 @@ pnpm add @aigui/core @aigui/vue
 ```vue
 <script setup lang="ts">
 import { ref } from "vue"
-import { CardRegistry } from "@aigui/core"
-import { AIRenderer } from "@aigui/vue"
+import { CardRegistry } from "@ai-gui/core"
+import { AIRenderer } from "@ai-gui/vue"
 
 const registry = new CardRegistry()
 // A card render component receives props `data` and emits `action`.

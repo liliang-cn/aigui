@@ -1,5 +1,5 @@
 {
-  "name": "@aigui/plugin-chart",
+  "name": "@ai-gui/plugin-chart",
   "version": "0.1.0",
   "description": "ECharts chart plugin for AIGUI — static SVG, interactive, and 3D (echarts-gl).",
   "keywords": [
@@ -47,7 +47,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aigui/core": "workspace:*",
+    "@ai-gui/core": "workspace:*",
     "echarts": "^5.5.1",
     "echarts-gl": "^2.0.9"
   }

@@ -1,4 +1,4 @@
-import { sanitizeHtml, type RenderOutput } from "@aigui/core"
+import { sanitizeHtml, type RenderOutput } from "@ai-gui/core"
 
 /** Translate a framework-neutral RenderOutput (from a plugin node renderer) into a DOM element. */
 export function renderOutputToElement(out: RenderOutput): HTMLElement {

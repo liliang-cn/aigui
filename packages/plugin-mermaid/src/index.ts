@@ -1,5 +1,5 @@
 import type { MermaidConfig } from "mermaid"
-import type { AIGuiPlugin, ASTNode, RenderOutput } from "@aigui/core"
+import type { AIGuiPlugin, ASTNode, RenderOutput } from "@ai-gui/core"
 
 export interface MermaidOptions {
   theme?: string

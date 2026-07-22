@@ -1,18 +1,18 @@
-# @aigui/plugin-highlight
+# @ai-gui/plugin-highlight
 
 Syntax-highlighting plugin for [AIGUI](../../README.md), powered by [Shiki](https://shiki.style). Overrides fenced code blocks with highlighted output. Async.
 
 ## Install
 
 ```sh
-pnpm add @aigui/plugin-highlight
+pnpm add @ai-gui/plugin-highlight
 ```
 
 ## Usage
 
 ```tsx
-import { highlight } from "@aigui/plugin-highlight"
-import { AIRenderer } from "@aigui/react"
+import { highlight } from "@ai-gui/plugin-highlight"
+import { AIRenderer } from "@ai-gui/react"
 
 <AIRenderer plugins={[highlight({ themes: ["github-dark"], langs: ["ts", "python"] })]} />
 ```

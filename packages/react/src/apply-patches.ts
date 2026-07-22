@@ -1,4 +1,4 @@
-import type { ASTNode, Patch } from "@aigui/core"
+import type { ASTNode, Patch } from "@ai-gui/core"
 
 export function applyPatches(nodes: ASTNode[], patches: Patch[]): ASTNode[] {
   let out = nodes.slice()

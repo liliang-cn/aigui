@@ -1,17 +1,17 @@
-# @aigui/core
+# @ai-gui/core
 
-The headless streaming engine behind [AIGUI](../../README.md) — framework-agnostic. It parses a streaming LLM response into an AST + patches, runs plugin node renderers, sanitizes HTML, and builds the system prompt. Use it directly, or via an adapter (`@aigui/react`, `@aigui/vue`, `@aigui/vanilla`).
+The headless streaming engine behind [AIGUI](../../README.md) — framework-agnostic. It parses a streaming LLM response into an AST + patches, runs plugin node renderers, sanitizes HTML, and builds the system prompt. Use it directly, or via an adapter (`@ai-gui/react`, `@ai-gui/vue`, `@ai-gui/vanilla`).
 
 ## Install
 
 ```sh
-pnpm add @aigui/core
+pnpm add @ai-gui/core
 ```
 
 ## Usage
 
 ```ts
-import { Renderer, CardRegistry, buildSystemPrompt } from "@aigui/core"
+import { Renderer, CardRegistry, buildSystemPrompt } from "@ai-gui/core"
 
 const registry = new CardRegistry()
 registry.register({ type: "weather", description: "Weather summary", example: { city: "Tokyo" } })

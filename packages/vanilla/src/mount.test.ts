@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest"
 import { createRenderer } from "./create-renderer"
-import type { AIGuiPlugin } from "@aigui/core"
+import type { AIGuiPlugin } from "@ai-gui/core"
 
 describe("vanilla mount RenderOutput", () => {
   it("mounts a live widget and cleans up on reset", async () => {

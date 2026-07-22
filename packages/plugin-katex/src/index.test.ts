@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest"
-import { Renderer } from "@aigui/core"
+import { Renderer } from "@ai-gui/core"
 import { katex } from "./index"
 
 function collect(md: string) {

@@ -1,21 +1,21 @@
-# @aigui/react Implementation Plan (sub-project 2: React adapter)
+# @ai-gui/react Implementation Plan (sub-project 2: React adapter)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax.
 
-**Goal:** A thin React adapter over `@aigui/core`: a `useAIRenderer()` hook and an `<AIRenderer>` component that stream LLM output into live React elements, render cards as registered React components, and fire `onCardAction`.
+**Goal:** A thin React adapter over `@ai-gui/core`: a `useAIRenderer()` hook and an `<AIRenderer>` component that stream LLM output into live React elements, render cards as registered React components, and fire `onCardAction`.
 
-**Architecture:** `@aigui/core`'s `Renderer` emits framework-agnostic `Patch[]`. The hook maintains a keyed `ASTNode[]` in React state by applying patches. A `renderNode` mapper turns each node into a React element — text/inline via sanitized HTML injection, cards via the registry's React component, code as `<pre><code>`. Buttons in cards dispatch `onCardAction`.
+**Architecture:** `@ai-gui/core`'s `Renderer` emits framework-agnostic `Patch[]`. The hook maintains a keyed `ASTNode[]` in React state by applying patches. A `renderNode` mapper turns each node into a React element — text/inline via sanitized HTML injection, cards via the registry's React component, code as `<pre><code>`. Buttons in cards dispatch `onCardAction`.
 
 **Tech Stack:** React 18+, TypeScript, tsdown (Rolldown/Oxc), Vitest + @testing-library/react + jsdom.
 
-Prereq: `@aigui/core` is built (branch `feat/core`), exports `Renderer`, `CardRegistry`, `ASTNode`, `Patch`, `RendererOptions`, `AIGuiPlugin`, etc. Tests run from repo root: `pnpm exec vitest run <name>`.
+Prereq: `@ai-gui/core` is built (branch `feat/core`), exports `Renderer`, `CardRegistry`, `ASTNode`, `Patch`, `RendererOptions`, `AIGuiPlugin`, etc. Tests run from repo root: `pnpm exec vitest run <name>`.
 
 ---
 
 ## File Structure
 ```
 packages/react/
-  package.json            # @aigui/react, react as peer dep
+  package.json            # @ai-gui/react, react as peer dep
   tsconfig.json
   tsdown.config.ts
   src/
@@ -82,7 +82,7 @@ Do the same for heading (keep `tag: t.tag`).
 
 `renderer.ts`: in the sanitize step, for every node when sanitize is enabled, if `node.html` is set replace it with `sanitizeHtml(node.html)` (in addition to the existing `type:"html"` `content` handling). Apply recursively to children as already done.
 
-- [ ] **Step 4: Confirm PASS** — run the two test files, then full suite + typecheck to ensure no regression (`pnpm exec vitest run && pnpm --filter @aigui/core exec tsc --noEmit`).
+- [ ] **Step 4: Confirm PASS** — run the two test files, then full suite + typecheck to ensure no regression (`pnpm exec vitest run && pnpm --filter @ai-gui/core exec tsc --noEmit`).
 
 - [ ] **Step 5: Commit**
 ```bash
@@ -92,7 +92,7 @@ git commit -m "feat(core): rendered inline html on text nodes (adapter-ready)"
 
 ---
 
-## Task R2: @aigui/react package scaffold
+## Task R2: @ai-gui/react package scaffold
 
 **Files:**
 - Create: `packages/react/package.json`, `tsconfig.json`, `tsdown.config.ts`, `src/index.ts` (stub), `src/smoke.test.tsx`
@@ -101,7 +101,7 @@ git commit -m "feat(core): rendered inline html on text nodes (adapter-ready)"
 - [ ] **Step 1: package.json**
 ```json
 {
-  "name": "@aigui/react",
+  "name": "@ai-gui/react",
   "version": "0.0.0",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -110,7 +110,7 @@ git commit -m "feat(core): rendered inline html on text nodes (adapter-ready)"
   "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "require": "./dist/index.cjs" } },
   "files": ["dist"],
   "scripts": { "build": "tsdown", "typecheck": "tsc --noEmit" },
-  "dependencies": { "@aigui/core": "workspace:*" },
+  "dependencies": { "@ai-gui/core": "workspace:*" },
   "peerDependencies": { "react": ">=18" },
   "devDependencies": {
     "react": "^18.3.1",
@@ -157,12 +157,12 @@ it("renders react in jsdom", () => {
 
 - [ ] **Step 6: install + verify**
 
-Run: `pnpm install && pnpm exec vitest run smoke` (react smoke passes). Then `pnpm --filter @aigui/react build` — emits dist with index.js/.cjs/.d.ts.
+Run: `pnpm install && pnpm exec vitest run smoke` (react smoke passes). Then `pnpm --filter @ai-gui/react build` — emits dist with index.js/.cjs/.d.ts.
 
 - [ ] **Step 7: Commit**
 ```bash
 git add -A
-git commit -m "chore: @aigui/react package scaffold (react peer, testing-library, tsdown jsx)"
+git commit -m "chore: @ai-gui/react package scaffold (react peer, testing-library, tsdown jsx)"
 ```
 
 ---
@@ -177,7 +177,7 @@ git commit -m "chore: @aigui/react package scaffold (react peer, testing-library
 ```ts
 import { describe, expect, it } from "vitest"
 import { applyPatches } from "./apply-patches"
-import type { ASTNode, Patch } from "@aigui/core"
+import type { ASTNode, Patch } from "@ai-gui/core"
 
 const n = (key: string, content: string): ASTNode => ({ key, type: "paragraph", content })
 
@@ -208,7 +208,7 @@ describe("applyPatches", () => {
 
 - [ ] **Step 3: Implement `apply-patches.ts`**
 ```ts
-import type { ASTNode, Patch } from "@aigui/core"
+import type { ASTNode, Patch } from "@ai-gui/core"
 
 export function applyPatches(nodes: ASTNode[], patches: Patch[]): ASTNode[] {
   let out = nodes.slice()
@@ -247,8 +247,8 @@ git commit -m "feat(react): applyPatches keyed patch application"
 // @vitest-environment jsdom
 import { render } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import type { ASTNode } from "@aigui/core"
-import { CardRegistry } from "@aigui/core"
+import type { ASTNode } from "@ai-gui/core"
+import { CardRegistry } from "@ai-gui/core"
 import { renderNode } from "./render-node"
 
 describe("renderNode", () => {
@@ -292,7 +292,7 @@ describe("renderNode", () => {
 - [ ] **Step 3: Implement `render-node.tsx`**
 ```tsx
 import { createElement, type ReactNode } from "react"
-import type { ASTNode, CardRegistry } from "@aigui/core"
+import type { ASTNode, CardRegistry } from "@ai-gui/core"
 
 export interface RenderContext {
   registry?: CardRegistry
@@ -417,7 +417,7 @@ describe("useAIRenderer", () => {
 - [ ] **Step 3: Implement `use-ai-renderer.ts`**
 ```ts
 import { useCallback, useMemo, useRef, useState } from "react"
-import { Renderer, type ASTNode, type Patch, type RendererOptions } from "@aigui/core"
+import { Renderer, type ASTNode, type Patch, type RendererOptions } from "@ai-gui/core"
 import { applyPatches } from "./apply-patches"
 
 export interface UseAIRendererResult {
@@ -475,7 +475,7 @@ git commit -m "feat(react): useAIRenderer hook (Renderer + patch-applied nodes s
 import { render, act } from "@testing-library/react"
 import { createRef } from "react"
 import { describe, expect, it, vi } from "vitest"
-import { CardRegistry } from "@aigui/core"
+import { CardRegistry } from "@ai-gui/core"
 import { AIRenderer, type AIRendererHandle } from "./ai-renderer"
 
 describe("AIRenderer", () => {
@@ -503,7 +503,7 @@ describe("AIRenderer", () => {
 - [ ] **Step 3: Implement `ai-renderer.tsx`**
 ```tsx
 import { forwardRef, useImperativeHandle } from "react"
-import type { CardRegistry, RendererOptions } from "@aigui/core"
+import type { CardRegistry, RendererOptions } from "@ai-gui/core"
 import { useAIRenderer } from "./use-ai-renderer"
 import { renderNode, type RenderContext } from "./render-node"
 
@@ -543,7 +543,7 @@ export type { RenderContext } from "./render-node"
 export { applyPatches } from "./apply-patches"
 ```
 
-- [ ] **Step 6: Full verification** — `pnpm exec vitest run` (all pass), `pnpm --filter @aigui/react exec tsc --noEmit`, `pnpm --filter @aigui/react build` (emits dist).
+- [ ] **Step 6: Full verification** — `pnpm exec vitest run` (all pass), `pnpm --filter @ai-gui/react exec tsc --noEmit`, `pnpm --filter @ai-gui/react build` (emits dist).
 
 - [ ] **Step 7: Commit**
 ```bash

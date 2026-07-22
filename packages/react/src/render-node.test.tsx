@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { render } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import type { ASTNode } from "@aigui/core"
-import { CardRegistry } from "@aigui/core"
+import type { ASTNode } from "@ai-gui/core"
+import { CardRegistry } from "@ai-gui/core"
 import { renderNode } from "./render-node"
 
 describe("renderNode", () => {

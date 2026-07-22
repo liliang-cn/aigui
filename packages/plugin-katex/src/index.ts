@@ -1,5 +1,5 @@
 import katexLib from "katex"
-import type { AIGuiPlugin } from "@aigui/core"
+import type { AIGuiPlugin } from "@ai-gui/core"
 
 /**
  * Render a TeX expression to a KaTeX HTML string.

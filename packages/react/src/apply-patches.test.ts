@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import type { ASTNode, Patch } from "@aigui/core"
+import type { ASTNode, Patch } from "@ai-gui/core"
 import { applyPatches } from "./apply-patches"
 
 const n = (key: string, content: string): ASTNode => ({ key, type: "paragraph", content })

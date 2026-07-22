@@ -1,5 +1,5 @@
 import * as echarts from "echarts"
-import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@aigui/core"
+import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@ai-gui/core"
 
 export interface ChartOptions {
   width?: number

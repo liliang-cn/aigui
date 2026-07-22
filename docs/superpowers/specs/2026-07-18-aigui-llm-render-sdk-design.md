@@ -33,14 +33,14 @@
 
 | 包 | 作用 | 依赖重量 |
 |---|---|---|
-| `@aigui/core` | headless 核心：流式聚合、markdown-it 解析、AST diff、卡片注册表、流式补全、sanitizer。**零框架依赖** | 轻 |
-| `@aigui/react` | React 适配：`<AIRenderer>` 组件、`useAIRenderer` hook | peer: react |
-| `@aigui/vue` | Vue 适配：`<AIRenderer>` 组件、`useAIRenderer` composable | peer: vue |
-| `@aigui/vanilla` | 直接挂 DOM 的 `createRenderer(el, ...)` | 轻 |
-| `@aigui/plugin-highlight` | 代码高亮（Shiki），含复制按钮 | 重（可选）|
-| `@aigui/plugin-katex` | 数学公式 | 重（可选）|
-| `@aigui/plugin-mermaid` | 图表 | 重（可选）|
-| `@aigui/plugin-primitives` | 通用原语卡片（`list` / `key-value` / `table` / `chart` / `layout`），LLM 无需开发者预注册即可拼出临时 UI | 中（可选）|
+| `@ai-gui/core` | headless 核心：流式聚合、markdown-it 解析、AST diff、卡片注册表、流式补全、sanitizer。**零框架依赖** | 轻 |
+| `@ai-gui/react` | React 适配：`<AIRenderer>` 组件、`useAIRenderer` hook | peer: react |
+| `@ai-gui/vue` | Vue 适配：`<AIRenderer>` 组件、`useAIRenderer` composable | peer: vue |
+| `@ai-gui/vanilla` | 直接挂 DOM 的 `createRenderer(el, ...)` | 轻 |
+| `@ai-gui/plugin-highlight` | 代码高亮（Shiki），含复制按钮 | 重（可选）|
+| `@ai-gui/plugin-katex` | 数学公式 | 重（可选）|
+| `@ai-gui/plugin-mermaid` | 图表 | 重（可选）|
+| `@ai-gui/plugin-primitives` | 通用原语卡片（`list` / `key-value` / `table` / `chart` / `layout`），LLM 无需开发者预注册即可拼出临时 UI | 中（可选）|
 
 样式方针：**核心真 headless**，不带观点性主题，只给结构 + class 钩子。高亮 / KaTeX / Mermaid 插件各自附带其运行所必需的 CSS，用户按需 import。重依赖不进核心包。
 
@@ -104,7 +104,7 @@ router.feed(response.body)                        // 单条流，自动解复用
 
 无 `ch` / 无 `event:` 的裸文本行 → 落入默认 `content` 通道，兼容单通道老用法。
 
-## 5. 流式补全（`@aigui/core` 专门模块）
+## 5. 流式补全（`@ai-gui/core` 专门模块）
 
 在内存里对缓冲做一次临时补全再喂给解析器，补全**只用于本次渲染**，不污染真实缓冲；下一块用新全文重来。两个纯函数模块，可单测（喂各种半截输入断言输出）：
 
@@ -119,7 +119,7 @@ router.feed(response.body)                        // 单条流，自动解复用
 - 尽量抽出已到达字段，让卡片先渲染已有部分（标题先出、价格后补）。
 - `complete=false` 直到真正的闭合 ` ``` ` 到达；彻底无法解析 → 返回空 data，适配层渲染 loading 骨架，绝不抛错。
 
-## 6. 卡片系统（`@aigui/core`）
+## 6. 卡片系统（`@ai-gui/core`）
 
 一份注册，三件事：渲染 + 生成给 LLM 的规格 + action 事件。
 
@@ -167,7 +167,7 @@ const systemPrompt = `你是助手...\n\n${registry.toPromptSpec()}`
 
 原因：卡片要真正渲染就得有真实组件（开发者的设计、交互、框架）；LLM 凭空造 `type` 前端无从渲染。因此卡片是**封闭的、开发者掌控的集合**，LLM 经 `toPromptSpec()` 被约束其中；产未注册类型 → 走 §6.1 回退。核心**不内置**任何卡片。
 
-### 6.4 通用原语卡片（可选插件 `@aigui/plugin-primitives`）
+### 6.4 通用原语卡片（可选插件 `@ai-gui/plugin-primitives`）
 面向「不想为每种数据都建组件」的场景：插件提供一组通用原语卡片（`list` / `key-value` / `table` / `chart` / `layout` 容器），LLM 无需开发者预注册即可拼出临时 UI。作为**可选插件**，不进核心（保持核心 headless）；引入时其原语卡片自动注册进 registry，`toPromptSpec()` 也会带上它们的规格。原语卡片自带最小必需样式，遵循 §7 插件 CSS 约定。
 
 ### 6.5 卡片按钮 → 请求（action 事件机制）
@@ -292,7 +292,7 @@ r.feed(readableStream)   // 或 r.push(chunk)
 
 - pnpm workspace + Turborepo；每包用 **tsdown**（基于 Rolldown / Oxc，Rust 内核）出 ESM + CJS + d.ts。
 - 测试：Vitest（核心解析 / diff / 流式补全 / sanitizer 单测）；React/Vue 用 Testing Library；流式用「分片喂入」快照测。
-- 核心目标：`@aigui/core` gzip 尽量小（markdown-it + 容错 JSON + sanitizer），重功能全在可选插件。
+- 核心目标：`@ai-gui/core` gzip 尽量小（markdown-it + 容错 JSON + sanitizer），重功能全在可选插件。
 
 ## 10. 后端集成契约（语言无关）
 

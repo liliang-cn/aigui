@@ -2,7 +2,7 @@
 
 Publishing is automated: **pushing a `vX.Y.Z` git tag** triggers the
 [`Release`](.github/workflows/release.yml) workflow, which builds, tests, and
-publishes every public `@aigui/*` package to npm.
+publishes every public `@ai-gui/*` package to npm.
 
 ## One-time setup
 

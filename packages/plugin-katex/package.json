@@ -1,5 +1,5 @@
 {
-  "name": "@aigui/plugin-katex",
+  "name": "@ai-gui/plugin-katex",
   "version": "0.1.0",
   "description": "KaTeX math rendering plugin for AIGUI.",
   "keywords": [
@@ -46,7 +46,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aigui/core": "workspace:*",
+    "@ai-gui/core": "workspace:*",
     "katex": "^0.16.11"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 import { createElement, useEffect, useRef, useState, type ReactNode } from "react"
-import { sanitizeHtml, type RenderOutput } from "@aigui/core"
+import { sanitizeHtml, type RenderOutput } from "@ai-gui/core"
 
 /** Translate a framework-neutral RenderOutput into React nodes. */
 export function renderOutput(out: RenderOutput, key?: string): ReactNode {

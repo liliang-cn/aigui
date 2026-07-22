@@ -1,4 +1,4 @@
-import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardRegistry, type RenderOutput } from "@aigui/core"
+import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardRegistry, type RenderOutput } from "@ai-gui/core"
 import { renderOutputToElement } from "./render-output"
 
 export interface DomRenderContext {

@@ -14,7 +14,7 @@ AIGUI is a framework-agnostic TypeScript SDK that renders **streaming** LLM outp
 
 ## Integration checklist
 
-1. **Pick an adapter** and install: `@aigui/core` + one of `@aigui/react` / `@aigui/vue` / `@aigui/vanilla`. Add plugins as needed.
+1. **Pick an adapter** and install: `@ai-gui/core` + one of `@ai-gui/react` / `@ai-gui/vue` / `@ai-gui/vanilla`. Add plugins as needed.
 2. **Register cards** on a `CardRegistry` — `register({ type, description, schema?, example?, render })`. The app owns the render component; the LLM only fills data.
    - React render: component gets `{ data, onAction }`. Vue: props `data`, emits `action`. Vanilla: `(data, { onAction }) => HTMLElement`.
 3. **Mount the renderer**: `<AIRenderer ref registry plugins onCardAction />` (React/Vue) or `createRenderer(el, { registry, plugins, onCardAction })` (vanilla). Imperative API: `push` / `feed` / `reset` (+ `destroy` in vanilla).

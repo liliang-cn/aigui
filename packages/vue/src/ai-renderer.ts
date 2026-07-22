@@ -1,5 +1,5 @@
 import { defineComponent, h, type PropType } from "vue"
-import type { AIGuiPlugin, CardRegistry } from "@aigui/core"
+import type { AIGuiPlugin, CardRegistry } from "@ai-gui/core"
 import { useAIRenderer } from "./use-ai-renderer"
 import { renderNode, type RenderContext } from "./render-node"
 

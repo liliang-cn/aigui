@@ -1,13 +1,13 @@
 ---
-"@aigui/core": minor
-"@aigui/react": minor
-"@aigui/vue": minor
-"@aigui/vanilla": minor
-"@aigui/plugin-katex": minor
-"@aigui/plugin-highlight": minor
-"@aigui/plugin-mermaid": minor
-"@aigui/plugin-primitives": minor
-"@aigui/plugin-chart": minor
+"@ai-gui/core": minor
+"@ai-gui/react": minor
+"@ai-gui/vue": minor
+"@ai-gui/vanilla": minor
+"@ai-gui/plugin-katex": minor
+"@ai-gui/plugin-highlight": minor
+"@ai-gui/plugin-mermaid": minor
+"@ai-gui/plugin-primitives": minor
+"@ai-gui/plugin-chart": minor
 ---
 
 Initial public release of the AIGUI SDK.

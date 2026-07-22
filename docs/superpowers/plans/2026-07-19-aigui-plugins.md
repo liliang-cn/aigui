@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development. Steps use `- [ ]`.
 
-**Goal:** Ship the four plugin packages on top of the now-live plugin infrastructure: `@aigui/plugin-katex` (sync), `@aigui/plugin-highlight` (Shiki, async), `@aigui/plugin-mermaid` (async), `@aigui/plugin-primitives` (framework-neutral `RenderOutput` elements).
+**Goal:** Ship the four plugin packages on top of the now-live plugin infrastructure: `@ai-gui/plugin-katex` (sync), `@ai-gui/plugin-highlight` (Shiki, async), `@ai-gui/plugin-mermaid` (async), `@ai-gui/plugin-primitives` (framework-neutral `RenderOutput` elements).
 
 **Architecture:** Each plugin is a package exporting a factory returning an `AIGuiPlugin`. Two integration styles: (1) **markdown-it renderer** plugins (katex) hook `extendParser` and render to HTML during parse (flows through core's sanitized `html` pipeline); (2) **node renderer** plugins (highlight, mermaid, primitives) claim a node type via `nodeRenderers[type]` and return `RenderOutput | Promise<RenderOutput>`, which the adapters (5a) translate. Highlight/mermaid are async; primitives is sync and emits framework-neutral `element` descriptors.
 
@@ -14,18 +14,18 @@ Prereq: 5a done. Core exports `AIGuiPlugin`, `RenderOutput`, `NodeRenderer` (`(n
 
 ---
 
-## Task PL1: @aigui/plugin-primitives (sync, framework-neutral)
+## Task PL1: @ai-gui/plugin-primitives (sync, framework-neutral)
 
 Simplest and fully testable in Node. Provides node renderers for fenced primitives: `list`, `table`, `key-value`, `layout`. Each parses the fence body as JSON (tolerantly, via `parsePartialJSON`) and returns a `RenderOutput` `element` tree. Also exports a `primitivesPromptSpec()` string for the LLM.
 
 **Files:** `packages/plugin-primitives/{package.json,tsconfig.json,tsdown.config.ts}`, `src/index.ts`, `src/index.test.ts`; add project to `vitest.workspace.ts`.
 
-- [ ] **Step 1: package.json** (name `@aigui/plugin-primitives`, deps `{ "@aigui/core": "workspace:*" }`, scripts build/typecheck, tsdown ESM+CJS+dts). tsconfig extends base with DOM lib. Add `{ resolve:{alias}, test:{ name:"plugin-primitives", root:"packages/plugin-primitives" } }` to `vitest.workspace.ts`.
+- [ ] **Step 1: package.json** (name `@ai-gui/plugin-primitives`, deps `{ "@ai-gui/core": "workspace:*" }`, scripts build/typecheck, tsdown ESM+CJS+dts). tsconfig extends base with DOM lib. Add `{ resolve:{alias}, test:{ name:"plugin-primitives", root:"packages/plugin-primitives" } }` to `vitest.workspace.ts`.
 
 - [ ] **Step 2: failing test `src/index.test.ts`**
 ```ts
 import { describe, expect, it } from "vitest"
-import { collectNodeRenderers, type RenderOutput } from "@aigui/core"
+import { collectNodeRenderers, type RenderOutput } from "@ai-gui/core"
 import { primitives } from "./index"
 
 const rendererFor = (type: string) => collectNodeRenderers([primitives()])[type]
@@ -58,7 +58,7 @@ describe("plugin-primitives", () => {
 
 - [ ] **Step 3: implement `src/index.ts`**
 ```ts
-import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@aigui/core"
+import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@ai-gui/core"
 
 const el = (tag: string, props: Record<string, unknown> | undefined, children: RenderOutput[]): RenderOutput => ({ kind: "element", tag, props, children })
 const text = (s: string): RenderOutput => ({ kind: "html", html: escapeHtml(s) })
@@ -104,17 +104,17 @@ export function primitives(): AIGuiPlugin {
 
 ---
 
-## Task PL2: @aigui/plugin-katex (sync, markdown-it)
+## Task PL2: @ai-gui/plugin-katex (sync, markdown-it)
 
 Renders `$...$` (inline) and `$$...$$` (block) via KaTeX during parse. Uses `extendParser`. KaTeX renders with `output: "html"` (no MathML) so DOMPurify keeps it.
 
-**Files:** `packages/plugin-katex/*`, deps `{ "@aigui/core": "workspace:*", "katex": "^0.16.11" }`. Add to `vitest.workspace.ts`. Ships `css: katexCssString` (import KaTeX's CSS text or instruct consumer to import `katex/dist/katex.min.css`).
+**Files:** `packages/plugin-katex/*`, deps `{ "@ai-gui/core": "workspace:*", "katex": "^0.16.11" }`. Add to `vitest.workspace.ts`. Ships `css: katexCssString` (import KaTeX's CSS text or instruct consumer to import `katex/dist/katex.min.css`).
 
 - [ ] **Step 1: failing test `src/index.test.ts`**
 ```ts
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest"
-import { Renderer } from "@aigui/core"
+import { Renderer } from "@ai-gui/core"
 import { katex } from "./index"
 
 function collect(md: string) {
@@ -145,16 +145,16 @@ describe("plugin-katex", () => {
 
 ---
 
-## Task PL3: @aigui/plugin-highlight (async, Shiki)
+## Task PL3: @ai-gui/plugin-highlight (async, Shiki)
 
 Overrides `code` node rendering with Shiki-highlighted HTML. Async: lazy-create a singleton highlighter, then `codeToHtml`.
 
-**Files:** `packages/plugin-highlight/*`, deps `{ "@aigui/core": "workspace:*", "shiki": "^1.22.0" }`. Add to `vitest.workspace.ts`.
+**Files:** `packages/plugin-highlight/*`, deps `{ "@ai-gui/core": "workspace:*", "shiki": "^1.22.0" }`. Add to `vitest.workspace.ts`.
 
 - [ ] **Step 1: failing test `src/index.test.ts`** (Shiki works in Node)
 ```ts
 import { describe, expect, it } from "vitest"
-import { collectNodeRenderers, type ASTNode, type RenderOutput } from "@aigui/core"
+import { collectNodeRenderers, type ASTNode, type RenderOutput } from "@ai-gui/core"
 import { highlight } from "./index"
 
 describe("plugin-highlight", () => {
@@ -177,7 +177,7 @@ describe("plugin-highlight", () => {
 - [ ] **Step 3: implement `src/index.ts`** — verify Shiki v1 API via docs. Reference:
 ```ts
 import { createHighlighter, type Highlighter } from "shiki"
-import { sanitizeHtml, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@aigui/core"
+import { sanitizeHtml, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@ai-gui/core"
 
 export interface HighlightOptions { themes?: string[]; langs?: string[]; theme?: string }
 
@@ -208,17 +208,17 @@ Note: adapters sanitize plugin `html` output; Shiki `<pre class=... style=...>` 
 
 ---
 
-## Task PL4: @aigui/plugin-mermaid (async)
+## Task PL4: @ai-gui/plugin-mermaid (async)
 
 Claims the `mermaid` fence. Async render to SVG. NOTE: Mermaid needs a browser DOM and does not fully render in jsdom — so the unit test verifies the plugin CONTRACT (async node renderer for `mermaid`, graceful error handling), not a real diagram. Real rendering is validated in the demo app later.
 
-**Files:** `packages/plugin-mermaid/*`, deps `{ "@aigui/core": "workspace:*", "mermaid": "^11.4.0" }`. Add to `vitest.workspace.ts`.
+**Files:** `packages/plugin-mermaid/*`, deps `{ "@ai-gui/core": "workspace:*", "mermaid": "^11.4.0" }`. Add to `vitest.workspace.ts`.
 
 - [ ] **Step 1: failing test `src/index.test.ts`**
 ```ts
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest"
-import { collectNodeRenderers, type ASTNode, type RenderOutput } from "@aigui/core"
+import { collectNodeRenderers, type ASTNode, type RenderOutput } from "@ai-gui/core"
 import { mermaid } from "./index"
 
 describe("plugin-mermaid", () => {
@@ -239,7 +239,7 @@ describe("plugin-mermaid", () => {
 - [ ] **Step 2: FAIL**
 - [ ] **Step 3: implement `src/index.ts`** — verify Mermaid v11 API via docs. Reference:
 ```ts
-import type { AIGuiPlugin, ASTNode, RenderOutput } from "@aigui/core"
+import type { AIGuiPlugin, ASTNode, RenderOutput } from "@ai-gui/core"
 
 export interface MermaidOptions { theme?: string }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { collectNodeRenderers, type RenderOutput } from "@aigui/core"
+import { collectNodeRenderers, type RenderOutput } from "@ai-gui/core"
 import { primitives, primitivesPromptSpec } from "./index"
 
 const rendererFor = (type: string) => collectNodeRenderers([primitives()])[type]

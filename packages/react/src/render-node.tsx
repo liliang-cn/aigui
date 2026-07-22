@@ -1,5 +1,5 @@
 import { createElement, type ComponentType, type ReactNode } from "react"
-import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardRegistry, type RenderOutput } from "@aigui/core"
+import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardRegistry, type RenderOutput } from "@ai-gui/core"
 import { AsyncOutput, renderOutput } from "./render-output"
 
 export interface RenderContext {

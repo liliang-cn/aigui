@@ -1,5 +1,5 @@
 {
-  "name": "@aigui/plugin-primitives",
+  "name": "@ai-gui/plugin-primitives",
   "version": "0.1.0",
   "description": "Framework-neutral primitive UI cards (list/table/key-value/layout) for AIGUI.",
   "keywords": [
@@ -47,6 +47,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aigui/core": "workspace:*"
+    "@ai-gui/core": "workspace:*"
   }
 }

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest"
-import { Renderer, collectNodeRenderers, type ASTNode, type RenderOutput } from "@aigui/core"
+import { Renderer, collectNodeRenderers, type ASTNode, type RenderOutput } from "@ai-gui/core"
 import { chart, chartPromptSpec } from "./index"
 
 const barOption = JSON.stringify({ xAxis: { type: "category", data: ["A", "B"] }, yAxis: { type: "value" }, series: [{ type: "bar", data: [1, 2] }] })

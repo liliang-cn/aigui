@@ -42,7 +42,7 @@ importers:
 
   packages/plugin-chart:
     dependencies:
-      '@aigui/core':
+      '@ai-gui/core':
         specifier: workspace:*
         version: link:../core
       echarts:
@@ -54,7 +54,7 @@ importers:
 
   packages/plugin-highlight:
     dependencies:
-      '@aigui/core':
+      '@ai-gui/core':
         specifier: workspace:*
         version: link:../core
       shiki:
@@ -63,7 +63,7 @@ importers:
 
   packages/plugin-katex:
     dependencies:
-      '@aigui/core':
+      '@ai-gui/core':
         specifier: workspace:*
         version: link:../core
       katex:
@@ -79,7 +79,7 @@ importers:
 
   packages/plugin-mermaid:
     dependencies:
-      '@aigui/core':
+      '@ai-gui/core':
         specifier: workspace:*
         version: link:../core
       mermaid:
@@ -88,13 +88,13 @@ importers:
 
   packages/plugin-primitives:
     dependencies:
-      '@aigui/core':
+      '@ai-gui/core':
         specifier: workspace:*
         version: link:../core
 
   packages/react:
     dependencies:
-      '@aigui/core':
+      '@ai-gui/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -119,13 +119,13 @@ importers:
 
   packages/vanilla:
     dependencies:
-      '@aigui/core':
+      '@ai-gui/core':
         specifier: workspace:*
         version: link:../core
 
   packages/vue:
     dependencies:
-      '@aigui/core':
+      '@ai-gui/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:

@@ -2,7 +2,7 @@
 import { render, act } from "@testing-library/react"
 import { createRef } from "react"
 import { describe, expect, it, vi } from "vitest"
-import { CardRegistry } from "@aigui/core"
+import { CardRegistry } from "@ai-gui/core"
 import { AIRenderer, type AIRendererHandle } from "./ai-renderer"
 
 describe("AIRenderer", () => {

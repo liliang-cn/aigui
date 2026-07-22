@@ -1,18 +1,18 @@
-# @aigui/vanilla
+# @ai-gui/vanilla
 
 Vanilla-DOM adapter for [AIGUI](../../README.md) — renders a streaming LLM response into a plain DOM element, no framework required.
 
 ## Install
 
 ```sh
-pnpm add @aigui/core @aigui/vanilla
+pnpm add @ai-gui/core @ai-gui/vanilla
 ```
 
 ## Usage
 
 ```ts
-import { CardRegistry } from "@aigui/core"
-import { createRenderer } from "@aigui/vanilla"
+import { CardRegistry } from "@ai-gui/core"
+import { createRenderer } from "@ai-gui/vanilla"
 
 const registry = new CardRegistry()
 registry.register({

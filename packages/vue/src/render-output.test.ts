@@ -2,7 +2,7 @@
 import { mount } from "@vue/test-utils"
 import { nextTick } from "vue"
 import { describe, expect, it } from "vitest"
-import type { ASTNode, AIGuiPlugin } from "@aigui/core"
+import type { ASTNode, AIGuiPlugin } from "@ai-gui/core"
 import { renderNode } from "./render-node"
 
 const syncPlugin: AIGuiPlugin = { name: "s", nodeRenderers: { widget: () => ({ kind: "element", tag: "span", props: { class: "w" }, children: [] }) } }

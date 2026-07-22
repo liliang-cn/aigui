@@ -6,7 +6,7 @@
 
 **Architecture:** A plugin claims a node type by exposing `nodeRenderers[type]`. The core parser routes a fenced block whose info matches a plugin type to a `{ type }` node, and renders any other unknown top-level markdown-it token (from `extendParser`) to an `html` node. Each adapter, before its built-in switch, checks the plugin renderer map for `node.type`; the renderer returns `RenderOutput | Promise<RenderOutput>`, which the adapter translates into framework output. Async results render a placeholder first, then swap in.
 
-**Tech Stack:** existing (TS, tsdown, Vitest). Touches `@aigui/core`, `@aigui/react`, `@aigui/vue`, `@aigui/vanilla`.
+**Tech Stack:** existing (TS, tsdown, Vitest). Touches `@ai-gui/core`, `@ai-gui/react`, `@ai-gui/vue`, `@ai-gui/vanilla`.
 
 Prereq: 4 packages built & green (105 tests). Core exports `Renderer`, `createParser`, `sanitizeHtml`, `AIGuiPlugin`, `RenderOutput`, `NodeRenderer`, `ASTNode`. `AIGuiPlugin = { name, extendParser?, cards?, nodeRenderers?, isBlockComplete?, css? }`. `RenderOutput = {kind:'html',html} | {kind:'element',tag,props?,children?} | {kind:'card',type,data}`.
 
@@ -106,7 +106,7 @@ it("registers plugin cards into the registry", () => {
 // @vitest-environment jsdom
 import { render, act } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
-import type { ASTNode, AIGuiPlugin } from "@aigui/core"
+import type { ASTNode, AIGuiPlugin } from "@ai-gui/core"
 import { renderNode } from "./render-node"
 
 const syncPlugin: AIGuiPlugin = { name: "s", nodeRenderers: { widget: () => ({ kind: "element", tag: "span", props: { className: "w" }, children: [] }) } }

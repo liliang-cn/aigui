@@ -1,4 +1,4 @@
-import { sanitizeHtml, type ASTNode } from "@aigui/core"
+import { sanitizeHtml, type ASTNode } from "@ai-gui/core"
 import { renderNodeToElement, type DomRenderContext } from "./render-node-dom"
 
 export interface ReconcileState { els: Map<string, { el: HTMLElement; hash: string }> }

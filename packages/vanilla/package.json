@@ -1,5 +1,5 @@
 {
-  "name": "@aigui/vanilla",
+  "name": "@ai-gui/vanilla",
   "version": "0.1.0",
   "description": "Framework-free DOM adapter for AIGUI — stream LLM output straight into the DOM.",
   "keywords": [
@@ -45,6 +45,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aigui/core": "workspace:*"
+    "@ai-gui/core": "workspace:*"
   }
 }
