@@ -1,4 +1,5 @@
 import { parsePartialJSON } from "./partial-json"
+import { validateJSONSchema } from "./json-schema"
 import type { CardDef, JSONSchema } from "./types"
 
 export interface CardParseResult {
@@ -26,14 +27,19 @@ export class CardRegistry {
     const def = this.cards.get(type)
     const { data, complete } = parsePartialJSON(rawJson)
     if (!def) return { data, complete, valid: false }
-    const valid = complete && this.validate(def, data)
+    const valid = complete && this.validateDefinition(def, data)
     return { data, complete, valid }
   }
 
-  private validate(def: CardDef, data: unknown): boolean {
+  validate(type: string, data: unknown): boolean {
+    const def = this.cards.get(type)
+    return def ? this.validateDefinition(def, data) : false
+  }
+
+  private validateDefinition(def: CardDef, data: unknown): boolean {
     try {
       if (def.validate) return def.validate(data as never)
-      if (def.schema) return validateSchema(def.schema, data)
+      if (def.schema) return validateJSONSchema(def.schema, data).valid
       return true
     } catch {
       return false
@@ -69,25 +75,4 @@ export class CardRegistry {
     }
     return { type: "object", properties }
   }
-}
-
-/** Minimal JSON Schema validation: covers type / required / properties, enough for cards. */
-function validateSchema(schema: JSONSchema, data: unknown): boolean {
-  if (schema.type === "object") {
-    if (typeof data !== "object" || data === null || Array.isArray(data)) return false
-    const obj = data as Record<string, unknown>
-    for (const req of schema.required ?? []) if (!(req in obj)) return false
-    for (const [key, sub] of Object.entries(schema.properties ?? {})) {
-      if (key in obj && !validateSchema(sub, obj[key])) return false
-    }
-    return true
-  }
-  if (schema.type === "array") {
-    if (!Array.isArray(data)) return false
-    return schema.items ? data.every((d) => validateSchema(schema.items as JSONSchema, d)) : true
-  }
-  if (schema.type === "string") return typeof data === "string"
-  if (schema.type === "number") return typeof data === "number"
-  if (schema.type === "boolean") return typeof data === "boolean"
-  return true
 }

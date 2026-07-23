@@ -13,7 +13,7 @@ export interface ASTNode {
   /** Whether a streaming block has enough source to invoke its renderer. */
   complete?: boolean
   /** card-specific payload */
-  card?: { type: string; data: unknown; complete: boolean; valid: boolean }
+  card?: { id?: string; type: string; data: unknown; complete: boolean; valid: boolean }
 }
 
 /** Patch event produced by diffing. */
@@ -32,11 +32,23 @@ export type RenderOutput =
 
 export type NodeRenderer = (node: ASTNode) => RenderOutput | Promise<RenderOutput>
 
+type KnownJSONSchemaType = "object" | "array" | "string" | "number" | "integer" | "boolean" | "null"
+
 export interface JSONSchema {
-  type?: string
+  type?: KnownJSONSchemaType | (string & {})
   properties?: Record<string, JSONSchema>
   items?: JSONSchema
-  required?: string[]
+  required?: readonly string[]
+  additionalProperties?: boolean | JSONSchema
+  enum?: readonly unknown[]
+  const?: unknown
+  minLength?: number
+  maxLength?: number
+  pattern?: string
+  minimum?: number
+  maximum?: number
+  minItems?: number
+  maxItems?: number
   [k: string]: unknown
 }
 

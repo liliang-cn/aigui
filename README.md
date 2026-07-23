@@ -171,6 +171,81 @@ const plugins = [katex(), highlight(), mermaid(), chart({ interactive: true }), 
 
 By default `chart()` renders a static SSR SVG; `chart({ interactive: true })` renders a live ECharts instance (tooltip / dataZoom / click); `chart({ gl: true })` renders 3D charts via `echarts-gl` (WebGL, live-only). Charts are complete-gated: skeleton while streaming, full render when the option JSON is complete.
 
+## Actions
+
+Card actions can be executed through a registered, validated runtime instead of an ad-hoc callback:
+
+```tsx
+import { ActionRegistry, createActionRuntime, getActionKey } from "@ai-gui/core"
+import { AIRenderer, useActionState } from "@ai-gui/react"
+
+const actions = new ActionRegistry()
+actions.register<{ city: string }, unknown>({
+  type: "weather.refresh",
+  schema: {
+    type: "object",
+    required: ["city"],
+    properties: { city: { type: "string" } },
+    additionalProperties: false,
+  },
+  async run(params, { signal }) {
+    return fetch(`/api/weather?city=${encodeURIComponent(params.city)}`, { signal }).then((r) => r.json())
+  },
+})
+
+const actionRuntime = createActionRuntime({ registry: actions, timeoutMs: 10_000 })
+
+function WeatherActions() {
+  const state = useActionState(actionRuntime, getActionKey("weather.refresh", "weather"))
+  return <span>{state.status}</span>
+}
+
+<AIRenderer
+  registry={registry}
+  actionRuntime={actionRuntime}
+  onCardAction={(action) => console.log("action observed", action)}
+/>
+```
+
+The model still only declares an action name and parameters. Only handlers registered by the application can execute. Invalid parameters, unknown actions, cancellation, timeout, duplicate submission and stale results are handled by the core runtime. Automatic dispatch errors are observed through runtime state or adapter hooks; `onCardAction` / `card-action` only observe action events. `reset()` and component teardown cancel only actions started by that renderer, so one runtime can safely be shared.
+
+## Stateful cards
+
+Add a stable top-level `id` to opt a Card into session state:
+
+````md
+```card:weather
+{ "id": "weather-tokyo", "city": "Tokyo", "tempC": 24 }
+```
+````
+
+Create one `CardStore` and share it with the action runtime and renderers:
+
+```tsx
+import { ActionRegistry, CardStore, createActionRuntime } from "@ai-gui/core"
+
+const cardStore = new CardStore({ registry })
+const actions = new ActionRegistry()
+
+actions.register<{ city: string }, unknown>({
+  type: "weather.refresh",
+  async run(params, { signal, cardId }) {
+    const next = await fetchWeather(params.city, { signal })
+    return {
+      op: "merge",
+      cardId: cardId!,
+      data: { tempC: next.tempC },
+    }
+  },
+})
+
+const actionRuntime = createActionRuntime({ registry: actions, cardStore })
+
+<AIRenderer registry={registry} cardStore={cardStore} actionRuntime={actionRuntime} />
+```
+
+Card components receive `{ data, state, onAction }`. Store patches update the matching Card without reparsing Markdown or remounting the component. Supported patch operations are recursive object `merge`, full `replace`, and atomic batches. `cardStore.snapshot()` / `restore()` round-trip Card data and revisions; transient Action state is restored as idle. Cards without an `id` keep the existing stateless behavior.
+
 ## How the LLM should generate
 
 Don't hand-write generation rules — call `buildSystemPrompt({ base, registry, plugins })` and prepend the result to your system prompt. It assembles the card specs (from the registry) and each plugin's prompt spec, so the model is told exactly which fenced blocks it may emit. Everything else it writes is plain markdown.

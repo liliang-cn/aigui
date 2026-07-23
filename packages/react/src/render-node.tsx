@@ -1,12 +1,20 @@
-import { createElement, type ComponentType, type ReactNode } from "react"
-import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardRegistry, type NodeRenderer, type RendererOptions, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
+import { createElement, useCallback, useEffect, useSyncExternalStore, type ComponentType, type ReactNode } from "react"
+import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardAction, type CardRegistry, type CardStore, type NodeRenderer, type RendererOptions, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
 import { AsyncOutput, renderOutput } from "./render-output"
+
+export interface CardActionPayload {
+  type: string
+  params?: unknown
+  cardType: string
+  cardId?: string
+}
 
 export interface RenderContext {
   registry?: CardRegistry
+  cardStore?: CardStore
   plugins?: AIGuiPlugin[]
   nodeRenderers?: Record<string, NodeRenderer>
-  onCardAction?: (action: { type: string; params?: unknown; cardType: string }) => void
+  onCardAction?: (action: CardActionPayload) => void
   sanitize?: RendererOptions["sanitize"]
   sanitized?: boolean
 }
@@ -70,13 +78,20 @@ function renderCard(node: ASTNode, ctx: RenderContext): ReactNode {
     )
   }
   const Comp = getCardComponent(ctx.registry, card.type)
-  if (!Comp) {
+  if (card.id && ctx.cardStore) {
     return (
-      <pre key={node.key} data-aigui-card-fallback>
-        <code>{JSON.stringify(card.data, null, 2)}</code>
-      </pre>
+      <StatefulCardHost
+        key={node.key}
+        cardStore={ctx.cardStore}
+        cardId={card.id}
+        cardType={card.type}
+        initialData={card.data}
+        Comp={Comp}
+        onCardAction={ctx.onCardAction}
+      />
     )
   }
+  if (!Comp) return renderCardFallback(node.key, card.data)
   return (
     <Comp
       key={node.key}
@@ -86,10 +101,60 @@ function renderCard(node: ASTNode, ctx: RenderContext): ReactNode {
   )
 }
 
-type CardComponent = ComponentType<{
+export interface CardComponentProps {
   data: unknown
+  state?: CardAction
   onAction: (a: { type: string; params?: unknown }) => void
-}>
+}
+
+type CardComponent = ComponentType<CardComponentProps>
+
+const getServerCardSnapshot = (): undefined => undefined
+
+interface StatefulCardHostProps {
+  cardStore: CardStore
+  cardId: string
+  cardType: string
+  initialData: unknown
+  Comp?: CardComponent
+  onCardAction?: RenderContext["onCardAction"]
+}
+
+function StatefulCardHost({ cardStore, cardId, cardType, initialData, Comp, onCardAction }: StatefulCardHostProps): ReactNode {
+  const subscribe = useCallback((notify: () => void) => cardStore.subscribe(cardId, notify), [cardStore, cardId])
+  const getSnapshot = useCallback(() => cardStore.get(cardId), [cardStore, cardId])
+  const record = useSyncExternalStore(subscribe, getSnapshot, getServerCardSnapshot)
+  useEffect(() => {
+    if (cardStore.get(cardId)) return
+    try {
+      cardStore.register({ id: cardId, type: cardType, data: initialData })
+    } catch {}
+  }, [cardStore, cardId, cardType, initialData])
+  if (!record) return renderCardFallback(undefined, initialData)
+  if (record.type !== cardType) {
+    return (
+      <pre data-aigui-card-invalid data-card-type={cardType}>
+        <code>{JSON.stringify(initialData, null, 2)}</code>
+      </pre>
+    )
+  }
+  if (!Comp) return renderCardFallback(undefined, record.data)
+  return (
+    <Comp
+      data={record.data}
+      state={record.action}
+      onAction={(action) => onCardAction?.({ ...action, cardType, cardId })}
+    />
+  )
+}
+
+function renderCardFallback(key: string | undefined, data: unknown): ReactNode {
+  return (
+    <pre key={key} data-aigui-card-fallback>
+      <code>{JSON.stringify(data, null, 2)}</code>
+    </pre>
+  )
+}
 
 function getCardComponent(registry: CardRegistry | undefined, type: string): CardComponent | undefined {
   if (!registry) return undefined

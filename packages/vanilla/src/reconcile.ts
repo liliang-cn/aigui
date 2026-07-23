@@ -1,5 +1,5 @@
 import type { ASTNode } from "@ai-gui/core"
-import { renderNodeToElement, type DomRenderContext } from "./render-node-dom"
+import { renderNodeToElement, updateCardElement, type DomRenderContext } from "./render-node-dom"
 import type { ManagedElement } from "./render-output"
 
 export interface ReconcileState { els: Map<string, { el: HTMLElement; hash: string }> }
@@ -74,8 +74,7 @@ function updateElementInPlace(el: HTMLElement, node: ASTNode, ctx: DomRenderCont
       if (el.tagName !== "DIV") return false
       el.innerHTML = node.content ?? ""; return true
     case "card":
-      // Cards can change state (loading -> valid) or host user factory output; rebuild.
-      return false
+      return updateCardElement(el, node)
     default:
       if (el.tagName !== "DIV") return false
       el.innerHTML = node.html ?? node.content ?? ""; return true

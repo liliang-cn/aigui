@@ -11,24 +11,37 @@ pnpm add @ai-gui/core @ai-gui/vanilla
 ## Usage
 
 ```ts
-import { CardRegistry } from "@ai-gui/core"
+import { ActionRegistry, CardRegistry, CardStore, createActionRuntime } from "@ai-gui/core"
 import { createRenderer } from "@ai-gui/vanilla"
 
 const registry = new CardRegistry()
 registry.register({
   type: "weather",
   description: "Weather summary",
-  // card render = (data, { onAction }) => HTMLElement
-  render: (data: any, { onAction }: any) => {
+  // HTMLElement remains supported. Return a VanillaCardInstance for stateful cards.
+  render: (data: any, { state, onAction }: any) => {
     const el = document.createElement("div")
     el.textContent = `${data.city} — ${data.tempC}°C`
-    return el
+    return {
+      element: el,
+      update(next: any, context: any) {
+        el.textContent = `${next.city} — ${next.tempC}°C (${context.state.status})`
+      },
+      destroy() {},
+    }
   },
 })
 
+const actions = new ActionRegistry()
+actions.register({ type: "refresh", run: async (params, { signal }) => fetch("/api/weather", { signal }) })
+const cardStore = new CardStore({ registry })
+const actionRuntime = createActionRuntime({ registry: actions, cardStore })
+
 const r = createRenderer(document.getElementById("out")!, {
   registry,
-  onCardAction: ({ type, params, cardType }) => {/* app makes the real request */},
+  cardStore,
+  actionRuntime,
+  onCardAction: (action) => console.log("observed", action),
 })
 
 await r.feed(response.body!) // r.push(chunk) / r.reset() / r.destroy()
@@ -36,6 +49,9 @@ await r.feed(response.body!) // r.push(chunk) / r.reset() / r.destroy()
 
 ## Exports
 
-- `createRenderer(el, { registry?, plugins?, sanitize?, onCardAction? })` → `{ push, feed, reset, destroy }`.
+- `createRenderer(el, { registry?, cardStore?, plugins?, sanitize?, actionRuntime?, onCardAction? })` → `{ push, feed, reset, destroy }`.
+- `VanillaCardInstance` is `{ element, update(data, { state, onAction }), destroy? }`. Its host and `element` stay mounted while AST data, store data, or action state changes.
+- Legacy factories returning an `HTMLElement` remain supported. For cards with an `id` and a `cardStore`, the adapter may rebuild that child element after store updates so it displays current data.
+- Cards with a valid top-level `id` register their initial data in the supplied external `CardStore`. The adapter subscribes but never clears that store; a shared store updates every renderer displaying the same card id.
 
 `destroy()` tears down the host and cleans up any mounted interactive widgets. See the [root README](../../README.md) for cards, plugins, and `buildSystemPrompt`.

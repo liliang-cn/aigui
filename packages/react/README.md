@@ -11,8 +11,8 @@ pnpm add @ai-gui/core @ai-gui/react
 ## Usage
 
 ```tsx
-import { CardRegistry } from "@ai-gui/core"
-import { AIRenderer } from "@ai-gui/react"
+import { ActionRegistry, CardRegistry, CardStore, createActionRuntime } from "@ai-gui/core"
+import { AIRenderer, useActionState } from "@ai-gui/react"
 import { useRef } from "react"
 
 const registry = new CardRegistry()
@@ -28,6 +28,14 @@ registry.register({
   ),
 })
 
+const actions = new ActionRegistry()
+actions.register({
+  type: "refresh",
+  run: async (params, { signal }) => fetch("/api/weather", { signal }).then((r) => r.json()),
+})
+const cardStore = new CardStore({ registry })
+const actionRuntime = createActionRuntime({ registry: actions, cardStore })
+
 function Chat() {
   const ref = useRef<React.ComponentRef<typeof AIRenderer>>(null)
   // ref.current?.push(chunk) / feed(source) / reset()
@@ -35,7 +43,9 @@ function Chat() {
     <AIRenderer
       ref={ref}
       registry={registry}
-      onCardAction={({ type, params, cardType }) => {/* app makes the real request */}}
+      cardStore={cardStore}
+      actionRuntime={actionRuntime}
+      onCardAction={(action) => console.log("observed", action)}
     />
   )
 }
@@ -43,7 +53,10 @@ function Chat() {
 
 ## Exports
 
-- `<AIRenderer ref registry plugins sanitize onCardAction />` — imperative `ref.current.push/feed/reset`.
+- `<AIRenderer ref registry cardStore plugins sanitize actionRuntime onCardAction />` — imperative `ref.current.push/feed/reset`.
 - `useAIRenderer(options)` → `{ nodes, push, feed, reset }` — the hook form when you want to render `nodes` yourself.
+- `useActionState(runtime, key)` — subscribe to one action's `idle | pending | success | error | cancelled` state.
+
+Cards with a top-level `id` use the supplied `CardStore`. Their React component receives `{ data, state, onAction }`; patches update props while preserving component and DOM state.
 
 See the [root README](../../README.md) for cards, plugins, and `buildSystemPrompt`.

@@ -13,12 +13,17 @@ pnpm add @ai-gui/core @ai-gui/vue
 ```vue
 <script setup lang="ts">
 import { ref } from "vue"
-import { CardRegistry } from "@ai-gui/core"
-import { AIRenderer } from "@ai-gui/vue"
+import { ActionRegistry, CardRegistry, CardStore, createActionRuntime } from "@ai-gui/core"
+import { AIRenderer, useActionState } from "@ai-gui/vue"
 
 const registry = new CardRegistry()
 // A card render component receives props `data` and emits `action`.
 registry.register({ type: "weather", description: "Weather summary", render: WeatherCard })
+
+const actions = new ActionRegistry()
+actions.register({ type: "refresh", run: async (params, { signal }) => fetch("/api/weather", { signal }) })
+const cardStore = new CardStore({ registry })
+const actionRuntime = createActionRuntime({ registry: actions, cardStore })
 
 const r = ref<InstanceType<typeof AIRenderer>>()
 
@@ -30,13 +35,16 @@ async function ask() {
 </script>
 
 <template>
-  <AIRenderer ref="r" :registry="registry" @card-action="(a) => {/* app makes the real request */}" />
+  <AIRenderer ref="r" :registry="registry" :card-store="cardStore" :action-runtime="actionRuntime" @card-action="(a) => console.log(a)" />
 </template>
 ```
 
 ## Exports
 
-- `<AIRenderer :registry :plugins :sanitize @card-action />` — a render-function component; imperative `push` / `feed` / `reset` via a template ref (exposed).
+- `<AIRenderer :registry :card-store :plugins :sanitize :action-runtime @card-action />` — a render-function component; imperative `push` / `feed` / `reset` via a template ref (exposed).
 - `useAIRenderer()` — composable returning `{ nodes, push, feed, reset }`.
+- `useActionState(runtime, key)` — reactive action lifecycle state.
+
+Cards with a top-level `id` subscribe to the supplied `CardStore`. Their Vue component receives `data` and `state` props and emits `action`; store updates preserve the component instance and local refs.
 
 Card component contract: props `data`, `emits: ['action']`. See the [root README](../../README.md) for cards, plugins, and `buildSystemPrompt`.

@@ -74,9 +74,16 @@ export function createParserWithMetadata(
           const cardType = info.slice("card:".length)
           const res = options.registry.parse(cardType, t.content)
           const complete = res.complete && isClosedFence(rawSrc, t.map, t.markup)
+          const idResult = complete && res.valid ? getCardId(res.data) : undefined
           addNode({
             type: "card",
-            card: { type: cardType, data: res.data, complete, valid: complete && res.valid },
+            card: {
+              type: cardType,
+              data: res.data,
+              complete,
+              valid: complete && res.valid && idResult !== false,
+              ...(typeof idResult === "string" ? { id: idResult } : {}),
+            },
           }, t.map)
         } else if (pluginTypes.has(info)) {
           const predicate = completeness.get(info)
@@ -177,6 +184,12 @@ export function createParserWithMetadata(
       incrementalSafe: !hasParserExtensions && !hasReferenceSyntax(rawSrc),
     }
   }
+}
+
+function getCardId(data: unknown): string | false | undefined {
+  if (typeof data !== "object" || data === null || Array.isArray(data) || !Object.hasOwn(data, "id")) return undefined
+  const id = (data as Record<string, unknown>).id
+  return typeof id === "string" && id.trim().length > 0 && id.length <= 256 ? id : false
 }
 
 function getLineOffsets(src: string): number[] {

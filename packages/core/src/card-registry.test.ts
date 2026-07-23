@@ -49,4 +49,11 @@ describe("CardRegistry", () => {
   it("returns no prompt spec for an empty registry", () => {
     expect(new CardRegistry().toPromptSpec()).toBe("")
   })
+  it("exposes validation for already parsed card data", () => {
+    const r = new CardRegistry()
+    r.register(flight)
+    expect(r.validate("flight", { title: "x" })).toBe(true)
+    expect(r.validate("flight", {})).toBe(false)
+    expect(r.validate("missing", { title: "x" })).toBe(false)
+  })
 })

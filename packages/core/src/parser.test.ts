@@ -31,6 +31,35 @@ describe("createParser", () => {
     expect(parse('```card:weather\n{"city":"tokyo"}\n```')[0].card)
       .toMatchObject({ complete: true, valid: true })
   })
+  it("extracts an own top-level card id only from a closed valid card", () => {
+    const registry = new CardRegistry()
+    registry.register({
+      type: "weather",
+      description: "weather",
+      schema: { type: "object", required: ["id"], properties: { id: { type: "string" } } },
+    })
+    const parse = createParser({ registry })
+
+    expect(parse('```card:weather\n{"id":"tokyo"}\n```')[0].card)
+      .toMatchObject({ id: "tokyo", complete: true, valid: true })
+    expect(parse('```card:weather\n{"id":"tokyo"}', '```card:weather\n{"id":"tokyo"}')[0].card)
+      .toEqual(expect.not.objectContaining({ id: expect.anything() }))
+  })
+  it.each(["", " ", 1, null, "x".repeat(257)])("marks an invalid card id %j invalid", (id) => {
+    const registry = new CardRegistry()
+    registry.register({ type: "weather", description: "weather", schema: { type: "object" } })
+    const card = createParser({ registry })(`card:weather\n${JSON.stringify({ id })}\n`.replaceAll("", "`"))[0].card
+    expect(card).toMatchObject({ complete: true, valid: false })
+    expect(card).toEqual(expect.not.objectContaining({ id: expect.anything() }))
+  })
+  it("ignores inherited ids and remains compatible with cards without ids", () => {
+    const registry = new CardRegistry()
+    registry.register({ type: "weather", description: "weather", validate: () => true })
+    const parse = createParser({ registry })
+
+    expect(parse('```card:weather\n{"city":"tokyo"}\n```')[0].card)
+      .toEqual({ type: "weather", data: { city: "tokyo" }, complete: true, valid: true })
+  })
   it.each(["\n", "\r\n", "\r"])("marks card fences complete with %j line endings", (newline) => {
     const registry = new CardRegistry()
     registry.register({ type: "weather", description: "weather", schema: { type: "object" } })
