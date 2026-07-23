@@ -276,7 +276,7 @@ const simulator = createStreamSimulator("# Hello, 世界", { chunkSize: 3, delay
 await renderer.feed(simulator.stream)
 ```
 
-The timeline captures stream/feed lifecycle, repaired Markdown, AST snapshots and patches, parse/sanitize/diff timing, Action events and states, and CardStore changes/patches. Events have monotonic sequence numbers and timestamps. Core never serializes `Error.cause` or handler internals and redacts common credential fields before observers receive data; devtools adds custom redaction plus bounded string/depth/node/event limits. Use `snapshot()`, `clear()`, and `destroy()` for export and lifecycle cleanup. The private `@ai-gui/playground` workspace package contains React, Vue, and Vanilla fixtures plus minimal reproduction JSON helpers.
+The timeline captures stream/feed lifecycle, repaired Markdown, AST snapshots and patches, parse/sanitize/diff timing, Action events and states, and CardStore changes/patches. Events have monotonic sequence numbers and timestamps. Core applies bounded string/depth/node budgets while constructing every event and redacts credentials, Bearer tokens, and common query-string secrets before any observer receives data. Debug events can still contain business data and arbitrary form PII that cannot be identified automatically; use the `redact` callback for application-specific fields and do not enable debug telemetry where that data must not leave the process. Devtools adds bounded event retention and export helpers through `snapshot()`, `clear()`, and `destroy()`. The runnable [`apps/playground`](./apps/playground) app provides React, Vue, and Vanilla streaming previews, transport controls, Card actions, timeline/AST/patch inspection, and reproduction import/export.
 
 ## How the LLM should generate
 

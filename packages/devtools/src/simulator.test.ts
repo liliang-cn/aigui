@@ -35,4 +35,27 @@ describe("stream simulator", () => {
     expect(Object.keys(STREAM_FIXTURES)).toEqual(["markdown", "card", "unicode"])
     expect(STREAM_FIXTURES.card).toContain("```card:demo")
   })
+
+  it("cancels a pending delay immediately", async () => {
+    vi.useFakeTimers()
+    const simulator = createStreamSimulator("abcdef", { chunkSize: 2, delayMs: 60_000 })
+    const iterator = simulator.stream[Symbol.asyncIterator]()
+    const pending = iterator.next()
+    simulator.cancel()
+    await expect(pending).resolves.toEqual({ done: true, value: undefined })
+    expect(vi.getTimerCount()).toBe(0)
+    vi.useRealTimers()
+  })
+
+  it("iterator return clears a pending delay and settles next", async () => {
+    vi.useFakeTimers()
+    const simulator = createStreamSimulator("abcdef", { chunkSize: 2, delayMs: 60_000 })
+    const iterator = simulator.stream[Symbol.asyncIterator]()
+    const pending = iterator.next()
+    await expect(iterator.return?.()).resolves.toEqual({ done: true, value: undefined })
+    await expect(pending).resolves.toEqual({ done: true, value: undefined })
+    expect(vi.getTimerCount()).toBe(0)
+    expect(simulator.state()).toBe("cancelled")
+    vi.useRealTimers()
+  })
 })

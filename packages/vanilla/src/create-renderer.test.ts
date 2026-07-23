@@ -305,6 +305,17 @@ describe("createRenderer", () => {
     await Promise.resolve()
     expect(el.children).toHaveLength(0)
   })
+
+  it("exposes plugin events through the renderer debug target", () => {
+    const events: string[] = []
+    const plugin: AIGuiPlugin = { name: "debug-widget", nodeRenderers: { widget: () => ({ kind: "html", html: "ok" }) } }
+    const el = document.createElement("div")
+    const r = createRenderer(el, { plugins: [plugin], debug: true })
+    r.subscribeDebug((event) => events.push(event.type))
+    r.push("```widget\nready\n```")
+    expect(events).toContain("plugin-render-completed")
+    r.destroy()
+  })
   it("re-renders a plugin node when its streamed fence becomes complete", () => {
     const render = vi.fn(() => ({ kind: "html" as const, html: "<strong>ready</strong>" }))
     const plugin: AIGuiPlugin = { name: "widget", nodeRenderers: { widget: render } }

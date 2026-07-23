@@ -18,4 +18,4 @@ const simulator = createStreamSimulator(markdown, { chunkSize: 4, delayMs: 20 })
 await renderer.feed(simulator.stream)
 ```
 
-`snapshot()` returns a bounded, globally ordered timeline. Common credential fields are redacted in core before observers receive events; devtools also supports custom `redact`, string/depth/node limits, `clear()`, and `destroy()`.
+`snapshot()` returns a bounded, globally ordered timeline. Core redacts credentials and text-level Bearer/query secrets before observers receive events and bounds payload construction. Debug may still contain application business data or form PII that cannot be recognized automatically, so use custom `redact` rules for those fields. Devtools also supports bounded event retention, `clear()`, and `destroy()`.

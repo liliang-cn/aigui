@@ -17,7 +17,7 @@ export const AIRenderer = defineComponent({
   },
   setup(props, { emit, expose }) {
     const current = shallowRef(useAIRenderer({ registry: props.registry, sanitize: props.sanitize, plugins: props.plugins, debug: props.debug, onDebugEvent: props.onDebugEvent }))
-    const nodeRenderers = shallowRef(collectNodeRenderers(props.plugins, { debug: props.debug, onDebugEvent: props.onDebugEvent }))
+    const nodeRenderers = shallowRef(collectNodeRenderers(props.plugins, { debugTarget: current.value.renderer }))
     let actionScope = { controller: new AbortController(), owner: {} }
     const resetActionScope = () => {
       actionScope.controller.abort()
@@ -29,7 +29,7 @@ export const AIRenderer = defineComponent({
         resetActionScope()
         current.value.destroy()
         current.value = useAIRenderer({ registry: props.registry, sanitize: props.sanitize, plugins: props.plugins, debug: props.debug, onDebugEvent: props.onDebugEvent })
-        nodeRenderers.value = collectNodeRenderers(props.plugins, { debug: props.debug, onDebugEvent: props.onDebugEvent })
+        nodeRenderers.value = collectNodeRenderers(props.plugins, { debugTarget: current.value.renderer })
       },
     )
     watch(() => props.actionRuntime, resetActionScope)
@@ -43,7 +43,7 @@ export const AIRenderer = defineComponent({
       resetActionScope()
       current.value.reset()
     }
-    expose({ push, feed, reset })
+    expose({ debugSource: "renderer", subscribeDebug: (listener: Parameters<typeof current.value.renderer.subscribeDebug>[0]) => current.value.renderer.subscribeDebug(listener), push, feed, reset })
     return () => {
       const onCardAction: RenderContext["onCardAction"] = (action) => {
         if (props.actionRuntime) {

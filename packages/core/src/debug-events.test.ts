@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest"
-import { ActionRegistry, CardStore, Renderer, collectNodeRenderers, createActionRuntime } from "./index"
+import { ActionRegistry, CardStore, Renderer, collectNodeRenderers, createActionRuntime, safeDebugValue } from "./index"
 import type { DebugEvent } from "./index"
 
 describe("core debug events", () => {
@@ -29,6 +29,38 @@ describe("core debug events", () => {
     const renderer = new Renderer({ onDebugEvent: hook })
     renderer.push("hello")
     expect(hook).not.toHaveBeenCalled()
+  })
+
+  it("bounds and redacts payloads before the first observer", () => {
+    const events: DebugEvent[] = []
+    const renderer = new Renderer({
+      debug: true,
+      maxStringLength: 12,
+      maxDepth: 2,
+      maxNodes: 8,
+      onDebugEvent: (event) => events.push(event),
+    })
+    renderer.push("Bearer top-secret-token?api_key=query-secret " + "x".repeat(100))
+
+    const serialized = JSON.stringify(events)
+    expect(serialized).not.toContain("top-secret-token")
+    expect(serialized).not.toContain("query-secret")
+    expect(serialized).not.toContain("x".repeat(20))
+    expect(serialized).toContain("[REDACTED]")
+    expect(events.find((event) => event.type === "chunk-received")?.data.length).toBeGreaterThan(100)
+  })
+
+  it("matches normalized credential key substrings and enforces traversal budgets", () => {
+    const value = safeDebugValue({
+      oauthAccessTokenValue: "secret-1",
+      client_secret_text: "secret-2",
+      nested: { one: { two: { three: "too deep" } } },
+      many: Array.from({ length: 20 }, (_, index) => ({ index })),
+    }, { maxStringLength: 16, maxDepth: 2, maxNodes: 10 })
+    const serialized = JSON.stringify(value)
+    expect(serialized).not.toContain("secret-1")
+    expect(serialized).not.toContain("secret-2")
+    expect(serialized).toMatch(/MAX_DEPTH|MAX_NODES/)
   })
 
   it("reports action states without exposing Error causes", async () => {
@@ -95,4 +127,26 @@ describe("core debug events", () => {
       "plugin-render-completed",
     ])
   })
+
+  it("shares renderer instrumentation and sequence with plugin events", () => {
+    const events: DebugEvent[] = []
+    const renderer = new Renderer({ debug: true, onDebugEvent: (event) => events.push(event) })
+    const renderers = collectNodeRenderers([fakePlugin()], { debugTarget: renderer })
+    renderer.push("hello")
+    renderers.widget({ key: "widget-1", type: "widget" })
+
+    expect(events.some((event) => event.type === "plugin-render-completed")).toBe(true)
+    expect(events.map((event) => event.sequence)).toEqual(events.map((_, index) => index + 1))
+  })
+
+  it("preserves plugin renderer identity when instrumentation is inactive", () => {
+    const render = vi.fn(() => ({ kind: "html" as const, html: "ok" }))
+    expect(collectNodeRenderers([{ name: "identity", nodeRenderers: { widget: render } }]).widget).toBe(render)
+    const renderer = new Renderer()
+    expect(collectNodeRenderers([{ name: "identity", nodeRenderers: { widget: render } }], { debugTarget: renderer }).widget).toBe(render)
+  })
 })
+
+function fakePlugin() {
+  return { name: "shared", nodeRenderers: { widget: () => ({ kind: "html" as const, html: "ok" }) } }
+}

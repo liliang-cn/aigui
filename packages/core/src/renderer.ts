@@ -48,6 +48,14 @@ export class Renderer {
     this.parse = createParserWithMetadata({ registry: options.registry, plugins: options.plugins })
   }
 
+  get debugEnabled(): boolean {
+    return this.debug.available
+  }
+
+  emitDebug(type: string, data: Record<string, unknown> = {}): void {
+    this.debug.emit(type, data)
+  }
+
   push(chunk: string): void {
     this.buffer += chunk
     if (this.debug.active) this.debug.emit("chunk-received", { chunk, length: chunk.length, bufferLength: this.buffer.length })
@@ -205,7 +213,7 @@ export class Renderer {
       const stableNodeEnd = mutable.nodeStart
       const rawTail = this.buffer.slice(mutable.start)
       const repaired = repairMarkdown(rawTail)
-      if (debug) this.debug.emit("markdown-repaired", { mode: "mutable-tail", raw: rawTail, repaired, sourceOffset: mutable.start })
+      if (debug) this.debug.emit("markdown-repaired", { mode: "mutable-tail", raw: rawTail, rawLength: rawTail.length, repaired, repairedLength: repaired.length, sourceOffset: mutable.start })
       const parseStarted = debug ? now() : 0
       const tail = this.parse(repaired, rawTail, mutable.start)
       if (debug) this.debug.emit("mutable-tail-reparsed", { sourceOffset: mutable.start, durationMs: now() - parseStarted })
@@ -227,7 +235,7 @@ export class Renderer {
         if (debug) this.debug.emit("stable-prefix-committed", { blocks: stableBlocks.length, nodes: stableNodeEnd })
       } else {
         const fullRepaired = repairMarkdown(this.buffer)
-        if (debug) this.debug.emit("markdown-repaired", { mode: "full", raw: this.buffer, repaired: fullRepaired })
+        if (debug) this.debug.emit("markdown-repaired", { mode: "full", raw: this.buffer, rawLength: this.buffer.length, repaired: fullRepaired, repairedLength: fullRepaired.length })
         const fullParseStarted = debug ? now() : 0
         next = this.parse(fullRepaired, this.buffer)
         if (debug) this.debug.emit("parse-completed", { mode: "full", durationMs: now() - fullParseStarted })
@@ -235,7 +243,7 @@ export class Renderer {
       }
     } else {
       const repaired = repairMarkdown(this.buffer)
-      if (debug) this.debug.emit("markdown-repaired", { mode: "full", raw: this.buffer, repaired })
+      if (debug) this.debug.emit("markdown-repaired", { mode: "full", raw: this.buffer, rawLength: this.buffer.length, repaired, repairedLength: repaired.length })
       const parseStarted = debug ? now() : 0
       next = this.parse(repaired, this.buffer)
       if (debug) this.debug.emit("parse-completed", { mode: "full", durationMs: now() - parseStarted })
@@ -247,11 +255,13 @@ export class Renderer {
     const diffDurationMs = debug ? now() - diffStarted : 0
     this.parsed = next
     this.prevAst = nextAst
+    const patchDispatchStarted = debug ? now() : 0
     if (patches.length > 0) this.options.onPatch?.(patches, nextAst)
+    const patchDispatchDurationMs = debug ? now() - patchDispatchStarted : 0
     if (debug) {
       this.debug.emit("ast-snapshot", { mode, nodes: nextAst })
       this.debug.emit("ast-patches", { patches, durationMs: diffDurationMs })
-      this.debug.emit("adapter-commit", { patches: patches.length, durationMs: now() - renderStarted })
+      this.debug.emit("patch-dispatched", { patches: patches.length, durationMs: patchDispatchDurationMs, renderDurationMs: now() - renderStarted })
     }
   }
 

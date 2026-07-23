@@ -61,6 +61,6 @@ export default defineWorkspace([
   },
   {
     resolve: { alias },
-    test: { name: "playground", root: "packages/playground", coverage },
+    test: { name: "playground", root: "apps/playground", coverage },
   },
 ])

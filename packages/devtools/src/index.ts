@@ -38,7 +38,10 @@ export interface DevTools {
   destroy(): void
 }
 
-const DEFAULT_SENSITIVE_KEY = /^(?:authorization|cookie|password|passwd|secret|token|api[-_]?key|access[-_]?key|private[-_]?key)$/i
+const DEFAULT_SENSITIVE_KEY_PARTS = [
+  "authorization", "auth", "accesstoken", "refreshtoken", "clientsecret", "credentials",
+  "cookie", "setcookie", "proxyauthorization", "password", "passwd", "apikey", "secret", "token",
+]
 
 export function createDevTools(options: DevToolsOptions = {}): DevTools {
   const maxEvents = positiveInteger(options.maxEvents, 1_000, "maxEvents")
@@ -76,7 +79,14 @@ export function createDevTools(options: DevToolsOptions = {}): DevTools {
   const api: DevTools = {
     attach(...targets) {
       if (destroyed) throw new Error("DevTools has been destroyed")
-      const current = targets.map((target) => target.subscribeDebug(record))
+      const listener = (event: DebugEvent) => record(event)
+      const current: Array<() => void> = []
+      try {
+        for (const target of targets) current.push(target.subscribeDebug(listener))
+      } catch (error) {
+        for (const unsubscribe of current) unsubscribe()
+        throw error
+      }
       const detach = () => {
         if (!detachments.delete(detach)) return
         for (const unsubscribe of current) unsubscribe()
@@ -123,11 +133,12 @@ function limitValue(value: unknown, options: LimitOptions): unknown {
   const visit = (input: unknown, key: string, path: (string | number)[], depth: number): unknown => {
     nodes++
     if (nodes > options.maxNodes) return "[MAX_NODES]"
-    if (DEFAULT_SENSITIVE_KEY.test(key) || options.redact?.({ key, path, value: input })) return "[REDACTED]"
+    if (isSensitiveKey(key) || options.redact?.({ key, path, value: input })) return "[REDACTED]"
     if (typeof input === "string") {
-      return input.length > options.maxStringLength
-        ? `${input.slice(0, options.maxStringLength)}[TRUNCATED]`
-        : input
+      const safe = redactText(input)
+      return safe.length > options.maxStringLength
+        ? `${safe.slice(0, options.maxStringLength)}[TRUNCATED]`
+        : safe
     }
     if (input === null || typeof input === "number" || typeof input === "boolean") return input
     if (typeof input !== "object") return String(input)
@@ -146,6 +157,18 @@ function limitValue(value: unknown, options: LimitOptions): unknown {
     }
   }
   return visit(value, "", [], 0)
+}
+
+function isSensitiveKey(key: string): boolean {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, "")
+  return normalized !== "" && DEFAULT_SENSITIVE_KEY_PARTS.some((part) => normalized.includes(part))
+}
+
+function redactText(value: string): string {
+  return value
+    .replace(/\bBearer\s+[^\s,;]+/gi, "Bearer [REDACTED]")
+    .replace(/([?&](?:access[_-]?token|refresh[_-]?token|client[_-]?secret|api[_-]?key|password|passwd|token|secret)=)[^&#\s]*/gi, "$1[REDACTED]")
+    .replace(/\b((?:access[_-]?token|refresh[_-]?token|client[_-]?secret|api[_-]?key|password|passwd|token|secret)\s*[:=]\s*)[^\s,;]+/gi, "$1[REDACTED]")
 }
 
 function cloneValue(value: unknown): unknown {
@@ -190,32 +213,58 @@ export function createStreamSimulator(input: string, options: StreamSimulatorOpt
   let currentState: StreamSimulatorState = "running"
   let offset = 0
   let wake: (() => void) | undefined
+  let timer: ReturnType<typeof setTimeout> | undefined
+  let settleDelay: (() => void) | undefined
+  let pending: Promise<IteratorResult<Uint8Array>> | undefined
 
   const waitUntilRunning = async () => {
     while (currentState === "paused") await new Promise<void>((resolve) => { wake = resolve })
   }
-  const stream: AsyncIterable<Uint8Array> = {
-    async *[Symbol.asyncIterator]() {
-      try {
-        while (offset < bytes.length && !isCancelled()) {
-          await waitUntilRunning()
-          if (isCancelled()) return
-          if (delayMs > 0) await delay(delayMs)
-          if (isCancelled()) return
-          await waitUntilRunning()
-          if (isCancelled()) return
-          const chunk = bytes.slice(offset, Math.min(offset + chunkSize, bytes.length))
-          offset += chunk.length
-          yield chunk
+  const finishWaits = () => {
+    if (timer !== undefined) clearTimeout(timer)
+    timer = undefined
+    settleDelay?.()
+    settleDelay = undefined
+    wake?.()
+    wake = undefined
+  }
+  const waitDelay = () => new Promise<void>((resolve) => {
+    if (delayMs === 0 || isCancelled()) return resolve()
+    settleDelay = resolve
+    timer = setTimeout(() => {
+      timer = undefined
+      settleDelay = undefined
+      resolve()
+    }, delayMs)
+  })
+  const iterator: AsyncIterator<Uint8Array> = {
+    next() {
+      if (pending) return pending
+      pending = (async (): Promise<IteratorResult<Uint8Array>> => {
+        await waitUntilRunning()
+        if (isCancelled()) return { done: true, value: undefined }
+        await waitDelay()
+        if (isCancelled()) return { done: true, value: undefined }
+        await waitUntilRunning()
+        if (isCancelled()) return { done: true, value: undefined }
+        if (offset >= bytes.length) {
+          currentState = "completed"
+          return { done: true, value: undefined }
         }
-        if (currentState !== "cancelled") currentState = "completed"
-      } finally {
-        if (currentState !== "completed") currentState = "cancelled"
-        wake?.()
-        wake = undefined
-      }
+        const chunk = bytes.slice(offset, Math.min(offset + chunkSize, bytes.length))
+        offset += chunk.length
+        return { done: false, value: chunk }
+      })().finally(() => { pending = undefined })
+      return pending
+    },
+    async return() {
+      if (currentState !== "completed") currentState = "cancelled"
+      finishWaits()
+      await pending
+      return { done: true, value: undefined }
     },
   }
+  const stream: AsyncIterable<Uint8Array> = { [Symbol.asyncIterator]: () => iterator }
   return {
     stream,
     pause() { if (currentState === "running") currentState = "paused" },
@@ -228,8 +277,7 @@ export function createStreamSimulator(input: string, options: StreamSimulatorOpt
     cancel() {
       if (currentState === "completed" || currentState === "cancelled") return
       currentState = "cancelled"
-      wake?.()
-      wake = undefined
+      finishWaits()
     },
     state() { return currentState },
   }
@@ -243,8 +291,4 @@ function nonNegativeNumber(value: number | undefined, fallback: number, name: st
   if (value === undefined) return fallback
   if (!Number.isFinite(value) || value < 0) throw new TypeError(`${name} must be a non-negative number`)
   return value
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
 }

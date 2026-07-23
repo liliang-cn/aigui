@@ -45,11 +45,14 @@ describe("devtools timeline", () => {
     devtools.attach(runtime)
     await runtime.dispatch({
       type: "login",
-      params: { token: "top-secret", email: "a@example.com", note: "abcdefghijklmnop" },
+      params: { token: "top-secret", oauthAccessTokenValue: "normalized-secret", email: "a@example.com", note: "Bearer bearer-secret?api_key=query-secret abcdefghijklmnop" },
     })
 
     const serialized = JSON.stringify(devtools.snapshot())
     expect(serialized).not.toContain("top-secret")
+    expect(serialized).not.toContain("normalized-secret")
+    expect(serialized).not.toContain("bearer-secret")
+    expect(serialized).not.toContain("query-secret")
     expect(serialized).not.toContain("a@example.com")
     expect(serialized).not.toContain("abcdefghijklmnop")
     expect(serialized).toContain("[REDACTED]")
@@ -73,5 +76,28 @@ describe("devtools timeline", () => {
     devtools.destroy()
     devtools.destroy()
     expect(() => devtools.attach(renderer)).toThrow(/destroyed/i)
+  })
+
+  it("keeps duplicate attachments independent", () => {
+    const renderer = new Renderer({ debug: true })
+    const devtools = createDevTools()
+    const detachFirst = devtools.attach(renderer)
+    const detachSecond = devtools.attach(renderer)
+    detachFirst()
+    renderer.push("still attached")
+    expect(devtools.snapshot().length).toBeGreaterThan(0)
+    const retained = devtools.snapshot().length
+    detachSecond()
+    renderer.push("detached")
+    expect(devtools.snapshot()).toHaveLength(retained)
+  })
+
+  it("rolls back earlier subscriptions when a later target fails", () => {
+    const renderer = new Renderer({ debug: true })
+    const devtools = createDevTools()
+    const broken = { debugSource: "renderer" as const, subscribeDebug: () => { throw new Error("attach failed") } }
+    expect(() => devtools.attach(renderer, broken)).toThrow("attach failed")
+    renderer.push("not retained")
+    expect(devtools.snapshot()).toEqual([])
   })
 })

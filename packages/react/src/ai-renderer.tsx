@@ -1,9 +1,11 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react"
-import { collectNodeRenderers, type ActionRuntime, type AIGuiPlugin, type CardRegistry, type CardStore, type FeedOptions, type FeedSource, type RendererOptions } from "@ai-gui/core"
+import { collectNodeRenderers, type ActionRuntime, type AIGuiPlugin, type CardRegistry, type CardStore, type DebugEventListener, type FeedOptions, type FeedSource, type RendererOptions } from "@ai-gui/core"
 import { useAIRenderer } from "./use-ai-renderer"
 import { renderNode, type RenderContext } from "./render-node"
 
 export interface AIRendererHandle {
+  readonly debugSource: "renderer"
+  subscribeDebug: (listener: DebugEventListener) => () => void
   push: (chunk: string) => void
   feed: (source: FeedSource, options?: FeedOptions) => Promise<void>
   reset: () => void
@@ -33,7 +35,7 @@ function createActionScope(): ActionScope {
 export const AIRenderer = forwardRef<AIRendererHandle, AIRendererProps>(function AIRenderer(props, ref) {
   const { registry, cardStore, sanitize, plugins, actionRuntime, onCardAction, className, debug, onDebugEvent } = props
   const opts: Omit<RendererOptions, "onPatch"> = { registry, sanitize, plugins, debug, onDebugEvent }
-  const { nodes, push, feed, reset: resetRenderer } = useAIRenderer(opts)
+  const { renderer, nodes, push, feed, reset: resetRenderer } = useAIRenderer(opts)
   const actionScope = useRef(createActionScope())
   useEffect(() => () => {
     actionScope.current.controller.abort()
@@ -54,8 +56,8 @@ export const AIRenderer = forwardRef<AIRendererHandle, AIRendererProps>(function
     }
     onCardAction?.(action)
   }, [actionRuntime, onCardAction])
-  useImperativeHandle(ref, () => ({ push, feed, reset }), [push, feed, reset])
-  const nodeRenderers = useMemo(() => collectNodeRenderers(plugins, { debug, onDebugEvent }), [plugins, debug, onDebugEvent])
+  useImperativeHandle(ref, () => ({ debugSource: "renderer" as const, subscribeDebug: (listener) => renderer.subscribeDebug(listener), push, feed, reset }), [renderer, push, feed, reset])
+  const nodeRenderers = useMemo(() => collectNodeRenderers(plugins, { debugTarget: renderer }), [plugins, renderer])
   const ctx: RenderContext = { registry, cardStore, plugins, nodeRenderers, onCardAction: handleCardAction, sanitize, sanitized: true }
   return (
     <div className={className} data-aigui-renderer>
