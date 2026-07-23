@@ -56,4 +56,16 @@ export default defineWorkspace([
     resolve: { alias },
     test: { name: "plugin-form", root: "packages/plugin-form", coverage },
   },
+  {
+    resolve: { alias },
+    test: { name: "openai", root: "packages/openai", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "anthropic", root: "packages/anthropic", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "vercel-ai", root: "packages/vercel-ai", coverage },
+  },
 ])

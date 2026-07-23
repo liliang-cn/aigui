@@ -1,0 +1,16 @@
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","delta":"Hello "}
+
+event: response.reasoning_summary_text.delta
+data: {"type":"response.reasoning_summary_text.delta","delta":"brief thought"}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","item":{"type":"function_call","name":"lookup","arguments":"{}"}}
+
+event: response.output_text.annotation.added
+data: {"type":"response.output_text.annotation.added","annotation":{"type":"url_citation","url":"https://example.com/source","title":"Source"}}
+
+event: response.completed
+data: {"type":"response.completed","response":{"usage":{"input_tokens":10,"output_tokens":4,"total_tokens":14}}}
+
+data: [DONE]

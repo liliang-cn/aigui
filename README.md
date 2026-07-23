@@ -30,6 +30,9 @@ pnpm add @ai-gui/core @ai-gui/vanilla
 
 # plugins (optional)
 pnpm add @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-form
+
+# model stream adapters (optional, no provider SDK required)
+pnpm add @ai-gui/openai # or @ai-gui/anthropic / @ai-gui/vercel-ai
 ```
 
 ## Quick start — React
@@ -175,6 +178,20 @@ By default `chart()` renders a static SSR SVG; `chart({ interactive: true })` re
 
 Forms use the same `ActionRuntime` in every adapter: `const plugins = [form({ actionRuntime })]`. A closed valid `form` JSON fence mounts an accessible native form; incomplete fences remain a loading skeleton, invalid definitions render a safe fallback, and only actions already registered in the runtime can execute. See [`packages/plugin-form/README.md`](./packages/plugin-form/README.md) for the schema and lifecycle details.
 
+## Model streams
+
+Provider adapters normalize content, reasoning, citations, usage, and errors without importing a provider SDK:
+
+```ts
+import { contentDeltas } from "@ai-gui/core"
+import { openAIStream } from "@ai-gui/openai"
+
+const response = await fetch("/api/openai")
+await renderer.feed(contentDeltas(openAIStream(response)))
+```
+
+Use `anthropicStream(response)` or `vercelAIStream(response)` for the other providers. Each adapter also accepts the provider's standard SDK-shaped async event stream. Tool-call events are ignored; adapters never execute tools or network actions. Core exports `parseSSE`, `jsonLines`/`ndjson`, `textLines`, `readableBytes`, and `mockModelStream` for custom transports and deterministic tests.
+
 ## Actions
 
 Card actions can be executed through a registered, validated runtime instead of an ad-hoc callback:
@@ -295,6 +312,9 @@ LLM stream ──▶ @ai-gui/core (headless)
 | [`@ai-gui/plugin-mermaid`](./packages/plugin-mermaid/README.md) | Mermaid diagrams. |
 | [`@ai-gui/plugin-primitives`](./packages/plugin-primitives/README.md) | Primitive UI blocks: list / table / key-value / layout. |
 | [`@ai-gui/plugin-chart`](./packages/plugin-chart/README.md) | ECharts charts: static SVG, live interactive, or 3D. |
+| [`@ai-gui/openai`](./packages/openai/README.md) | OpenAI Responses and Chat Completions stream adapter. |
+| [`@ai-gui/anthropic`](./packages/anthropic/README.md) | Anthropic Messages stream adapter. |
+| [`@ai-gui/vercel-ai`](./packages/vercel-ai/README.md) | Vercel AI SDK full/data/UI stream adapter. |
 
 ## Testing & build
 
