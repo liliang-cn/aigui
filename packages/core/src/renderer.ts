@@ -5,6 +5,8 @@ import { repairMarkdown } from "./repair-markdown"
 import { sanitizeHtml } from "./sanitizer"
 import type { SanitizeHtmlOptions } from "./sanitizer"
 import type { ASTNode, FeedChunk, FeedOptions, FeedSource, Patch, RendererOptions } from "./types"
+import { DebugEmitter } from "./debug-events"
+import type { DebugEventListener } from "./debug-events"
 
 interface ActiveFeed {
   generation: number
@@ -17,6 +19,7 @@ interface ActiveFeed {
  * the resulting patches via `onPatch`.
  */
 export class Renderer {
+  readonly debugSource = "renderer" as const
   private buffer = ""
   private prevAst: ASTNode[] = []
   private parse: (src: string, rawSrc?: string, sourceOffset?: number) => ParseResult
@@ -27,9 +30,11 @@ export class Renderer {
   private activeFeed?: ActiveFeed
   private renderScheduled = false
   private scheduleGeneration = 0
+  private readonly debug: DebugEmitter
 
   constructor(options: RendererOptions = {}) {
     this.options = options
+    this.debug = new DebugEmitter(this.debugSource, options)
     // Sanitization is on by default; only an explicit `false` disables it.
     this.sanitize = options.sanitize === false
       ? false
@@ -43,9 +48,22 @@ export class Renderer {
     this.parse = createParserWithMetadata({ registry: options.registry, plugins: options.plugins })
   }
 
+  get debugEnabled(): boolean {
+    return this.debug.available
+  }
+
+  emitDebug(type: string, data: Record<string, unknown> = {}): void {
+    this.debug.emit(type, data)
+  }
+
   push(chunk: string): void {
     this.buffer += chunk
+    if (this.debug.active) this.debug.emit("chunk-received", { chunk, length: chunk.length, bufferLength: this.buffer.length })
     this.scheduleRender()
+  }
+
+  subscribeDebug(listener: DebugEventListener): () => void {
+    return this.debug.subscribe(listener)
   }
 
   async feed(
@@ -54,6 +72,7 @@ export class Renderer {
   ): Promise<void> {
     const generation = ++this.generation
     this.cancelActiveFeed(createAbortError("Superseded by a newer feed"))
+    if (this.debug.active) this.debug.emit("feed-started", { generation })
     const decoder = new TextDecoder()
     const signal = options.signal
     if (signal?.aborted) throw abortReason(signal)
@@ -125,8 +144,15 @@ export class Renderer {
         if (tail) this.push(tail)
         this.flush()
       }
-      if (aborted) throw abortError
+      if (aborted) {
+        if (this.debug.active) this.debug.emit("feed-cancelled", { generation, error: abortError })
+        throw abortError
+      }
+      if (generation === this.generation && this.debug.active) this.debug.emit("feed-completed", { generation, bufferLength: this.buffer.length })
     } finally {
+      if (!aborted && generation !== this.generation && this.debug.active) {
+        this.debug.emit("feed-cancelled", { generation, reason: "superseded-or-reset" })
+      }
       signal?.removeEventListener("abort", abort)
       if (this.activeFeed?.generation === generation) this.activeFeed = undefined
     }
@@ -143,6 +169,7 @@ export class Renderer {
     this.prevAst = []
     this.parsed = undefined
     this.options.onPatch?.(patches, [])
+    if (this.debug.active) this.debug.emit("renderer-reset", { patches })
   }
 
   /** Immediately render pending buffered input, bypassing the scheduler. */
@@ -175,16 +202,24 @@ export class Renderer {
   }
 
   private render(): void {
+    const debug = this.debug.active
+    const renderStarted = debug ? now() : 0
     const previous = this.parsed
     let next: ParseResult
+    let mode: "full" | "mutable-tail" = "full"
     if (previous?.incrementalSafe && previous.blocks.length > 1) {
       const mutable = previous.blocks.at(-1)!
       const stableBlocks = previous.blocks.slice(0, -1)
       const stableNodeEnd = mutable.nodeStart
       const rawTail = this.buffer.slice(mutable.start)
-      const tail = this.parse(repairMarkdown(rawTail), rawTail, mutable.start)
+      const repaired = repairMarkdown(rawTail)
+      if (debug) this.debug.emit("markdown-repaired", { mode: "mutable-tail", raw: rawTail, rawLength: rawTail.length, repaired, repairedLength: repaired.length, sourceOffset: mutable.start })
+      const parseStarted = debug ? now() : 0
+      const tail = this.parse(repaired, rawTail, mutable.start)
+      if (debug) this.debug.emit("mutable-tail-reparsed", { sourceOffset: mutable.start, durationMs: now() - parseStarted })
       if (tail.incrementalSafe) {
-        if (this.sanitize !== false) sanitizeNodes(tail.nodes, this.sanitize)
+        mode = "mutable-tail"
+        if (this.sanitize !== false) this.sanitizeNodesWithDebug(tail.nodes)
         next = {
           nodes: [...previous.nodes.slice(0, stableNodeEnd), ...tail.nodes],
           blocks: [
@@ -197,19 +232,49 @@ export class Renderer {
           ],
           incrementalSafe: true,
         }
+        if (debug) this.debug.emit("stable-prefix-committed", { blocks: stableBlocks.length, nodes: stableNodeEnd })
       } else {
-        next = this.parse(repairMarkdown(this.buffer), this.buffer)
-        if (this.sanitize !== false) sanitizeNodes(next.nodes, this.sanitize)
+        const fullRepaired = repairMarkdown(this.buffer)
+        if (debug) this.debug.emit("markdown-repaired", { mode: "full", raw: this.buffer, rawLength: this.buffer.length, repaired: fullRepaired, repairedLength: fullRepaired.length })
+        const fullParseStarted = debug ? now() : 0
+        next = this.parse(fullRepaired, this.buffer)
+        if (debug) this.debug.emit("parse-completed", { mode: "full", durationMs: now() - fullParseStarted })
+        if (this.sanitize !== false) this.sanitizeNodesWithDebug(next.nodes)
       }
     } else {
-      next = this.parse(repairMarkdown(this.buffer), this.buffer)
-      if (this.sanitize !== false) sanitizeNodes(next.nodes, this.sanitize)
+      const repaired = repairMarkdown(this.buffer)
+      if (debug) this.debug.emit("markdown-repaired", { mode: "full", raw: this.buffer, rawLength: this.buffer.length, repaired, repairedLength: repaired.length })
+      const parseStarted = debug ? now() : 0
+      next = this.parse(repaired, this.buffer)
+      if (debug) this.debug.emit("parse-completed", { mode: "full", durationMs: now() - parseStarted })
+      if (this.sanitize !== false) this.sanitizeNodesWithDebug(next.nodes)
     }
     const nextAst = next.nodes
+    const diffStarted = debug ? now() : 0
     const patches: Patch[] = diffAst(this.prevAst, nextAst)
+    const diffDurationMs = debug ? now() - diffStarted : 0
     this.parsed = next
     this.prevAst = nextAst
+    const patchDispatchStarted = debug ? now() : 0
     if (patches.length > 0) this.options.onPatch?.(patches, nextAst)
+    const patchDispatchDurationMs = debug ? now() - patchDispatchStarted : 0
+    if (debug) {
+      this.debug.emit("ast-snapshot", { mode, nodes: nextAst })
+      this.debug.emit("ast-patches", { patches, durationMs: diffDurationMs })
+      this.debug.emit("patch-dispatched", { patches: patches.length, durationMs: patchDispatchDurationMs, renderDurationMs: now() - renderStarted })
+    }
+  }
+
+  private sanitizeNodesWithDebug(nodes: ASTNode[]): void {
+    if (this.sanitize === false) return
+    if (!this.debug.active) {
+      sanitizeNodes(nodes, this.sanitize)
+      return
+    }
+    const inputSize = nodeMarkupSize(nodes)
+    const started = now()
+    sanitizeNodes(nodes, this.sanitize)
+    this.debug.emit("sanitizer-completed", { inputSize, outputSize: nodeMarkupSize(nodes), durationMs: now() - started })
   }
 }
 
@@ -241,4 +306,18 @@ function createAbortError(message: string): Error {
   const error = new Error(message)
   error.name = "AbortError"
   return error
+}
+
+function now(): number {
+  return typeof performance === "undefined" ? Date.now() : performance.now()
+}
+
+function nodeMarkupSize(nodes: ASTNode[]): number {
+  let size = 0
+  for (const node of nodes) {
+    size += node.content?.length ?? 0
+    size += node.html?.length ?? 0
+    if (node.children) size += nodeMarkupSize(node.children)
+  }
+  return size
 }

@@ -2,6 +2,8 @@ import { validateJSONSchema } from "./json-schema"
 import { isCardPatchResult } from "./card-store"
 import type { CardStore } from "./card-store"
 import type { JSONSchema } from "./types"
+import { DebugEmitter } from "./debug-events"
+import type { DebugEventListener, DebugOptions } from "./debug-events"
 
 let nextRuntimeId = 0
 
@@ -92,7 +94,7 @@ export type ActionStartEvent = ActionEventBase
 export type ActionSuccessEvent = ActionEventBase & { result: unknown }
 export type ActionErrorEvent = ActionEventBase & { error: ActionRuntimeError }
 
-export interface ActionRuntimeOptions {
+export interface ActionRuntimeOptions extends DebugOptions {
   registry: ActionRegistry
   cardStore?: CardStore
   timeoutMs?: number
@@ -109,6 +111,7 @@ interface PendingAction {
 }
 
 export class ActionRuntime {
+  readonly debugSource = "action-runtime" as const
   private readonly registry: ActionRegistry
   private readonly cardStore?: CardStore
   private readonly defaultTimeoutMs?: number
@@ -123,8 +126,10 @@ export class ActionRuntime {
   private generation = 0
   private nextActionId = 0
   private destroyed = false
+  private readonly debug: DebugEmitter
 
   constructor(options: ActionRuntimeOptions) {
+    this.debug = new DebugEmitter(this.debugSource, options)
     this.registry = options.registry
     this.cardStore = options.cardStore
     this.defaultTimeoutMs = options.timeoutMs
@@ -149,6 +154,7 @@ export class ActionRuntime {
       cardType: request.cardType,
       cardId: request.cardId,
     }
+    if (this.debug.active) this.debug.emit("action-dispatched", { ...event })
     const definition = this.registry.get(request.type)
     if (!definition) return this.rejectPreflight<TResult>(event, new ActionNotFoundError(request.type))
 
@@ -249,6 +255,7 @@ export class ActionRuntime {
           result,
         })
         callEventHandler(this.onActionSuccess, { ...event, result })
+        if (this.debug.active) this.debug.emit("action-success", { ...event, result })
       }
       if (request.cardId && this.cardStore && canAffectCard) {
         settleCardAction(() => this.cardStore?.succeedAction(request.cardId as string, actionId))
@@ -274,6 +281,7 @@ export class ActionRuntime {
         if (request.cardId) state.cardId = request.cardId
         runtime.commit(state)
         callEventHandler(runtime.onActionError, { ...event, error })
+        if (runtime.debug.active) runtime.debug.emit("action-error", { ...event, error })
       }
       rejectPromise(error)
     }
@@ -324,6 +332,10 @@ export class ActionRuntime {
     return () => this.listeners.delete(listener)
   }
 
+  subscribeDebug(listener: DebugEventListener): () => void {
+    return this.debug.subscribe(listener)
+  }
+
   cancel(key: string): boolean {
     const actions = this.pending.get(key)
     if (!actions?.size) return false
@@ -361,6 +373,7 @@ export class ActionRuntime {
     }
     this.commit(errorState)
     callEventHandler(this.onActionError, { ...event, error })
+    if (this.debug.active) this.debug.emit("action-error", { ...event, error })
     return Promise.reject(error)
   }
 
@@ -370,6 +383,7 @@ export class ActionRuntime {
 
   private commit(state: ActionState): void {
     this.states.set(state.key, state)
+    if (this.debug.active) this.debug.emit("action-state", { ...state })
     this.notify(state)
   }
 

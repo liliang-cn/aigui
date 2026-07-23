@@ -28,13 +28,9 @@ describe("plugin parsing", () => {
     expect(parse(`\`\`\`widget${newline}{"a":1${newline}\`\`\``).at(0)?.complete).toBe(false)
     expect(parse(`\`\`\`widget${newline}{"a":1}${newline}\`\`\``).at(0)?.complete).toBe(true)
   })
-  it("does not invoke a plugin renderer for an incomplete node", async () => {
+  it("keeps plugin renderer identity in the disabled hot path", () => {
     const render = vi.fn(() => ({ kind: "html" as const, html: "rendered" }))
-    const renderer = collectNodeRenderers([{ name: "x", nodeRenderers: { widget: render } }]).widget
-    const output = await renderer({ key: "0:widget", type: "widget", complete: false })
-    expect(render).not.toHaveBeenCalled()
-    expect(output).toMatchObject({ kind: "html" })
-    if (output.kind === "html") expect(output.html).toContain("data-aigui-block-loading")
+    expect(collectNodeRenderers([{ name: "x", nodeRenderers: { widget: render } }]).widget).toBe(render)
   })
   it("extendParser block tokens render to html nodes", () => {
     const plugin: AIGuiPlugin = {

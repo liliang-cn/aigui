@@ -35,6 +35,12 @@ export interface DomRenderContext {
 export function renderNodeToElement(node: ASTNode, ctx: DomRenderContext): HTMLElement {
   const r = (ctx.nodeRenderers ?? collectNodeRenderers(ctx.plugins))[node.type]
   if (r) {
+    if (node.complete === false) {
+      const loading = document.createElement("div")
+      loading.setAttribute("data-aigui-block-loading", "")
+      loading.setAttribute("data-block-type", node.type)
+      return loading
+    }
     try {
       const out = r(node)
       if (typeof (out as { then?: unknown })?.then === "function") {

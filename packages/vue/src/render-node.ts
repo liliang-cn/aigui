@@ -16,6 +16,7 @@ export function renderNode(node: ASTNode, ctx: RenderContext): VNode {
   // Plugin node renderers win over built-in types.
   const r = (ctx.nodeRenderers ?? collectNodeRenderers(ctx.plugins))[node.type]
   if (r) {
+    if (node.complete === false) return h("div", { key: node.key, "data-aigui-block-loading": "", "data-block-type": node.type })
     try {
       const out = r(node)
       if (out && typeof (out as { then?: unknown }).then === "function") {

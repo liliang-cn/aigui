@@ -5,6 +5,10 @@ import { defineWorkspace } from "vitest/config"
 const alias = {
   "@ai-gui/core": fileURLToPath(new URL("./packages/core/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-form": fileURLToPath(new URL("./packages/plugin-form/src/index.ts", import.meta.url)),
+  "@ai-gui/devtools": fileURLToPath(new URL("./packages/devtools/src/index.ts", import.meta.url)),
+  "@ai-gui/react": fileURLToPath(new URL("./packages/react/src/index.ts", import.meta.url)),
+  "@ai-gui/vue": fileURLToPath(new URL("./packages/vue/src/index.ts", import.meta.url)),
+  "@ai-gui/vanilla": fileURLToPath(new URL("./packages/vanilla/src/index.ts", import.meta.url)),
 }
 
 const coverage = {
@@ -67,5 +71,13 @@ export default defineWorkspace([
   {
     resolve: { alias },
     test: { name: "vercel-ai", root: "packages/vercel-ai", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "devtools", root: "packages/devtools", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "playground", root: "apps/playground", coverage },
   },
 ])

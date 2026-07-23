@@ -3,6 +3,7 @@ import { Renderer, type ASTNode, type FeedOptions, type FeedSource, type Patch, 
 import { applyPatches } from "./apply-patches"
 
 export interface UseAIRendererResult {
+  renderer: Renderer
   nodes: ASTNode[]
   push: (chunk: string) => void
   feed: (source: FeedSource, options?: FeedOptions) => Promise<void>
@@ -24,7 +25,7 @@ export function useAIRenderer(options: Omit<RendererOptions, "onPatch"> = {}): U
     active.current = token
     return { renderer, token }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options.registry, options.sanitize, options.plugins, options.scheduler])
+  }, [options.registry, options.sanitize, options.plugins, options.scheduler, options.debug, options.onDebugEvent])
 
   useEffect(() => {
     setNodes([])
@@ -47,5 +48,5 @@ export function useAIRenderer(options: Omit<RendererOptions, "onPatch"> = {}): U
     setNodes([])
   }, [session])
 
-  return { nodes, push, feed, reset }
+  return { renderer: session.renderer, nodes, push, feed, reset }
 }

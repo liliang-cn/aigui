@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process"
-import { mkdtemp, mkdir, readFile, readdir, rm, symlink } from "node:fs/promises"
+import { access, mkdtemp, mkdir, readFile, readdir, rm, symlink } from "node:fs/promises"
 import { createRequire } from "node:module"
 import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
@@ -15,6 +15,7 @@ try {
     .map((entry) => join(packagesRoot, entry.name))
 
   for (const directory of directories) {
+    try { await access(join(directory, "package.json")) } catch { continue }
     const manifest = JSON.parse(await readFile(join(directory, "package.json"), "utf8"))
     if (manifest.private) continue
 

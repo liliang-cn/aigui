@@ -1,5 +1,6 @@
 import type MarkdownIt from "markdown-it"
 import type { CardRegistry } from "./card-registry"
+import type { DebugOptions } from "./debug-events"
 
 /** Framework-agnostic render node. */
 export interface ASTNode {
@@ -72,7 +73,7 @@ export interface AIGuiPlugin {
   promptSpec?: string
 }
 
-export interface RendererOptions {
+export interface RendererOptions extends DebugOptions {
   registry?: CardRegistry
   plugins?: AIGuiPlugin[]
   sanitize?: boolean | import("./sanitizer").SanitizeHtmlOptions

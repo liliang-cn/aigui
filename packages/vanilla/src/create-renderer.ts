@@ -1,4 +1,4 @@
-import { collectNodeRenderers, Renderer, type ActionRuntime, type ASTNode, type CardStore, type FeedOptions, type FeedSource, type Patch, type RendererOptions } from "@ai-gui/core"
+import { collectNodeRenderers, Renderer, type ActionRuntime, type ASTNode, type CardStore, type DebugEventListener, type FeedOptions, type FeedSource, type Patch, type RendererOptions } from "@ai-gui/core"
 import { type DomRenderContext } from "./render-node-dom"
 import { createReconcileState, disposeEl, reconcile } from "./reconcile"
 
@@ -8,6 +8,8 @@ export interface CreateRendererOptions extends Omit<RendererOptions, "onPatch"> 
   onCardAction?: DomRenderContext["onCardAction"]
 }
 export interface VanillaRenderer {
+  readonly debugSource: "renderer"
+  subscribeDebug: (listener: DebugEventListener) => () => void
   push: (chunk: string) => void
   feed: (source: FeedSource, options?: FeedOptions) => Promise<void>
   reset: () => void
@@ -26,13 +28,13 @@ export function createRenderer(el: HTMLElement, options: CreateRendererOptions =
     }
     onCardAction?.(action)
   }
-  const ctx: DomRenderContext = { registry: options.registry, cardStore, onCardAction: handleCardAction, plugins: options.plugins, nodeRenderers: collectNodeRenderers(options.plugins), sanitize: options.sanitize, sanitized: true }
   const state = createReconcileState()
   let destroyed = false
   const renderer = new Renderer({
     ...rendererOpts,
     onPatch: (_patches: Patch[], nodes: ASTNode[]) => { if (!destroyed) reconcile(el, nodes, ctx, state) },
   })
+  const ctx: DomRenderContext = { registry: options.registry, cardStore, onCardAction: handleCardAction, plugins: options.plugins, nodeRenderers: collectNodeRenderers(options.plugins, { debugTarget: renderer }), sanitize: options.sanitize, sanitized: true }
   // Run cleanup for every mounted widget before tearing down tracked elements.
   const disposeAll = () => { for (const entry of state.els.values()) disposeEl(entry.el) }
   const resetActionScope = () => {
@@ -40,6 +42,8 @@ export function createRenderer(el: HTMLElement, options: CreateRendererOptions =
     actionScope = { owner: {}, controller: new AbortController() }
   }
   return {
+    debugSource: "renderer",
+    subscribeDebug: (listener) => renderer.subscribeDebug(listener),
     push: (c) => { if (!destroyed) renderer.push(c) },
     feed: (source, feedOptions) => destroyed ? Promise.resolve() : renderer.feed(source, feedOptions),
     reset: () => { if (!destroyed) { resetActionScope(); disposeAll(); renderer.reset(); state.els.clear(); el.replaceChildren() } },

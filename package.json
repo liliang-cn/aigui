@@ -18,10 +18,11 @@
     "test:release": "node --test scripts/release-tag.test.mjs",
     "typecheck": "turbo run typecheck",
     "validate:packages": "node scripts/validate-packages.mjs",
+    "validate:playground": "pnpm --filter @ai-gui/playground build",
     "validate:release-tag": "node scripts/release-tag.mjs",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm build && pnpm typecheck && pnpm test:unit && pnpm validate:packages && changeset publish"
+    "release": "pnpm build && pnpm typecheck && pnpm test:unit && pnpm validate:packages && pnpm validate:playground && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.1",
