@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises"
 import { fileURLToPath } from "node:url"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { readableBytes } from "@ai-gui/core"
 import { openAIStream } from "./index"
 
@@ -28,7 +28,50 @@ describe("openAIStream", () => {
       { type: "error", error: { message: "rate limited", type: "server_error" } },
     ])
   })
+
+  it("returns manual iterators on consumer break and [DONE] through prepend", async () => {
+    const objects = manualIterator([{ choices: [{ delta: { content: "Hi" } }] }, { choices: [] }])
+    for await (const event of openAIStream(objects.source)) {
+      expect(event).toEqual({ type: "content", delta: "Hi" })
+      break
+    }
+    expect(objects.returned).toHaveBeenCalledOnce()
+
+    const bytes = manualIterator(["data: {\"type\":\"response.output_text.delta\",\"delta\":\"Hi\"}\n\ndata: [DONE]\n\n", "ignored"])
+    await expect(collect(openAIStream(bytes.source))).resolves.toEqual([{ type: "content", delta: "Hi" }])
+    expect(bytes.returned).toHaveBeenCalledOnce()
+  })
+
+  it("returns manual iterators on iterator errors", async () => {
+    const returned = vi.fn().mockResolvedValue({ done: true, value: undefined })
+    const source = {
+      [Symbol.asyncIterator]() {
+        return { next: vi.fn().mockRejectedValue(new Error("failed")), return: returned }
+      },
+    }
+    await expect(collect(openAIStream(source))).rejects.toThrow("failed")
+    expect(returned).toHaveBeenCalledOnce()
+  })
+
+  it("aborts a pending manual iterator next and returns it", async () => {
+    const returned = vi.fn().mockResolvedValue({ done: true, value: undefined })
+    const source = { [Symbol.asyncIterator]: () => ({ next: vi.fn(() => new Promise<IteratorResult<unknown>>(() => {})), return: returned }) }
+    const controller = new AbortController()
+    const consuming = collect(openAIStream(source, { signal: controller.signal }))
+    await Promise.resolve()
+    controller.abort()
+    await expect(consuming).rejects.toMatchObject({ name: "AbortError" })
+    expect(returned).toHaveBeenCalledOnce()
+  })
 })
 
 async function collect<T>(source: AsyncIterable<T>): Promise<T[]> { const out = []; for await (const value of source) out.push(value); return out }
 async function* values<T>(items: T[]) { yield* items }
+function manualIterator<T>(items: T[]) {
+  let index = 0
+  const returned = vi.fn().mockResolvedValue({ done: true, value: undefined })
+  return {
+    returned,
+    source: { [Symbol.asyncIterator]: () => ({ next: async () => index < items.length ? { done: false as const, value: items[index++]! } : { done: true as const, value: undefined }, return: returned }) },
+  }
+}

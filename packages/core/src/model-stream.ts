@@ -89,42 +89,48 @@ export async function* parseSSE(
     return result
   }
 
-  for await (const chunk of decodedChunks(source, options.signal)) {
-    buffer += chunk
-    for (;;) {
-      const newline = buffer.indexOf("\n")
-      if (newline < 0) break
-      let line = buffer.slice(0, newline)
-      buffer = buffer.slice(newline + 1)
-      if (line.endsWith("\r")) line = line.slice(0, -1)
-      if (line === "") {
-        const event = dispatch()
-        if (event === "done") return
-        if (event) yield event
-        continue
-      }
-      if (line.startsWith(":")) continue
-      const colon = line.indexOf(":")
-      const field = colon < 0 ? line : line.slice(0, colon)
-      let value = colon < 0 ? "" : line.slice(colon + 1)
-      if (value.startsWith(" ")) value = value.slice(1)
-      if (field === "data") data.push(value)
-      else if (field === "event") eventName = value
-      else if (field === "id" && !value.includes("\0")) id = value
-      else if (field === "retry" && /^\d+$/.test(value)) retry = Number(value)
-    }
-  }
-
-  if (buffer.endsWith("\r")) buffer = buffer.slice(0, -1)
-  if (buffer) {
-    const colon = buffer.indexOf(":")
-    const field = colon < 0 ? buffer : buffer.slice(0, colon)
-    let value = colon < 0 ? "" : buffer.slice(colon + 1)
+  const processLine = (line: string): SSEEvent<unknown> | "done" | undefined => {
+    if (line === "") return dispatch()
+    if (line.startsWith(":")) return undefined
+    const colon = line.indexOf(":")
+    const field = colon < 0 ? line : line.slice(0, colon)
+    let value = colon < 0 ? "" : line.slice(colon + 1)
     if (value.startsWith(" ")) value = value.slice(1)
     if (field === "data") data.push(value)
     else if (field === "event") eventName = value
     else if (field === "id" && !value.includes("\0")) id = value
+    else if (field === "retry" && /^\d+$/.test(value)) retry = Number(value)
+    return undefined
   }
+
+  const drainLines = function* (eof = false): Generator<SSEEvent<unknown> | "done"> {
+    for (;;) {
+      const cr = buffer.indexOf("\r")
+      const lf = buffer.indexOf("\n")
+      let newline = cr < 0 ? lf : lf < 0 ? cr : Math.min(cr, lf)
+      if (newline < 0) break
+      if (!eof && buffer[newline] === "\r" && newline === buffer.length - 1) break
+      const width = buffer[newline] === "\r" && buffer[newline + 1] === "\n" ? 2 : 1
+      const line = buffer.slice(0, newline)
+      buffer = buffer.slice(newline + width)
+      const event = processLine(line)
+      if (event) yield event
+    }
+  }
+
+  for await (const chunk of decodedChunks(source, options.signal)) {
+    buffer += chunk
+    for (const event of drainLines()) {
+      if (event === "done") return
+      yield event
+    }
+  }
+
+  for (const event of drainLines(true)) {
+    if (event === "done") return
+    yield event
+  }
+  if (buffer) processLine(buffer)
   const event = dispatch()
   if (event && event !== "done") yield event
 }
@@ -214,18 +220,20 @@ async function* decodedChunks(source: ByteStreamSource, signal?: AbortSignal): A
   if (isReadableStream(body)) {
     const reader = body.getReader()
     let done = false
-    let cancelled = false
-    const cancel = (reason: unknown) => {
-      if (cancelled || done) return
-      cancelled = true
-      void Promise.resolve(reader.cancel(reason)).catch(() => {})
+    let primaryError: unknown
+    let cancelPromise: Promise<void> | undefined
+    const cancel = (reason: unknown): Promise<void> => {
+      if (done) return Promise.resolve()
+      cancelPromise ??= Promise.resolve().then(() => reader.cancel(reason))
+      return cancelPromise
     }
-    const abort = () => cancel(abortReason(signal))
+    const abort = () => { void cancel(abortReason(signal)).catch(() => {}) }
     signal?.addEventListener("abort", abort, { once: true })
     try {
       for (;;) {
         throwIfAborted(signal)
         const result = await reader.read()
+        throwIfAborted(signal)
         if (result.done) { done = true; break }
         const text = decoder.decode(result.value, { stream: true })
         if (text) yield text
@@ -233,20 +241,30 @@ async function* decodedChunks(source: ByteStreamSource, signal?: AbortSignal): A
       throwIfAborted(signal)
       const tail = decoder.decode()
       if (tail) yield tail
+    } catch (error) {
+      primaryError = error
+      throw error
     } finally {
       signal?.removeEventListener("abort", abort)
-      if (!done) cancel(abortReason(signal, "Stream iteration stopped"))
-      reader.releaseLock()
+      try {
+        if (!done) await cancel(abortReason(signal, "Stream iteration stopped"))
+      } catch (error) {
+        if (primaryError === undefined) throw error
+      } finally {
+        reader.releaseLock()
+      }
     }
     return
   }
 
   const iterator = body[Symbol.asyncIterator]()
   let done = false
+  let primaryError: unknown
   try {
     for (;;) {
       throwIfAborted(signal)
-      const result = await iterator.next()
+      const result = await nextWithAbort(iterator, signal)
+      throwIfAborted(signal)
       if (result.done) { done = true; break }
       const text = typeof result.value === "string"
         ? decoder.decode() + result.value
@@ -255,8 +273,30 @@ async function* decodedChunks(source: ByteStreamSource, signal?: AbortSignal): A
     }
     const tail = decoder.decode()
     if (tail) yield tail
+  } catch (error) {
+    primaryError = error
+    throw error
   } finally {
-    if (!done) await iterator.return?.()
+    if (!done) {
+      try { await iterator.return?.() }
+      catch (error) { if (primaryError === undefined) throw error }
+    }
+  }
+}
+
+async function nextWithAbort<T>(iterator: AsyncIterator<T>, signal?: AbortSignal): Promise<IteratorResult<T>> {
+  if (!signal) return iterator.next()
+  throwIfAborted(signal)
+  const next = Promise.resolve(iterator.next())
+  let abort!: () => void
+  const aborted = new Promise<never>((_resolve, reject) => {
+    abort = () => reject(abortReason(signal))
+    signal.addEventListener("abort", abort, { once: true })
+  })
+  try {
+    return await Promise.race([next, aborted])
+  } finally {
+    signal.removeEventListener("abort", abort)
   }
 }
 
@@ -310,9 +350,15 @@ function abortReason(signal?: AbortSignal, fallback = "The operation was aborted
 
 function delay(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(resolve, ms)
+    if (signal?.aborted) { reject(abortReason(signal)); return }
+    const finish = () => {
+      signal?.removeEventListener("abort", abort)
+      resolve()
+    }
+    const timer = setTimeout(finish, ms)
     const abort = () => {
       clearTimeout(timer)
+      signal?.removeEventListener("abort", abort)
       reject(abortReason(signal))
     }
     signal?.addEventListener("abort", abort, { once: true })

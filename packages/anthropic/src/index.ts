@@ -17,11 +17,6 @@ export async function* anthropicStream(source: AnthropicStreamSource, options: A
       if (text(delta?.type) === "text_delta" && text(delta?.text)) yield { type: "content", delta: text(delta?.text)! }
       else if (text(delta?.type) === "thinking_delta" && text(delta?.thinking)) yield { type: "reasoning", delta: text(delta?.thinking)! }
       else if (text(delta?.type) === "citations_delta") { const data = citation(delta?.citation); if (data) yield { type: "citation", data } }
-    } else if (type === "content_block_start") {
-      const block = object(event.content_block)
-      if (text(block?.type) === "web_search_tool_result") {
-        for (const item of Array.isArray(block?.content) ? block.content : []) { const data = citation(item); if (data) yield { type: "citation", data } }
-      }
     } else if (type === "message_delta") {
       const outputTokens = numeric(object(event.usage)?.output_tokens)
       const data = usage(inputTokens, outputTokens)
@@ -33,14 +28,21 @@ export async function* anthropicStream(source: AnthropicStreamSource, options: A
 async function* events(source: AnthropicStreamSource, options: AnthropicStreamOptions): AsyncGenerator<unknown> {
   if (isTransport(source)) { for await (const event of parseSSE(source, { ...options, parseJSON: true })) yield event.data; return }
   const iterator = source[Symbol.asyncIterator]()
-  const first = await iterator.next()
-  if (first.done) return
-  if (typeof first.value === "string" || first.value instanceof Uint8Array) {
-    for await (const event of parseSSE(prepend(first.value, iterator), { ...options, parseJSON: true })) yield event.data
-    return
+  let done = false
+  let delegated = false
+  try {
+    const first = await next(iterator, options.signal)
+    if (first.done) { done = true; return }
+    if (typeof first.value === "string" || first.value instanceof Uint8Array) {
+      delegated = true
+      for await (const event of parseSSE(prepend(first.value, iterator), { ...options, parseJSON: true })) yield event.data
+      return
+    }
+    yield first.value
+    for (;;) { const result = await next(iterator, options.signal); if (result.done) { done = true; return }; yield result.value }
+  } finally {
+    if (!done && !delegated) await iterator.return?.()
   }
-  yield first.value
-  for (;;) { const result = await iterator.next(); if (result.done) return; yield result.value }
 }
 function citation(value: unknown): Citation | undefined {
   const source = object(value)
@@ -50,7 +52,9 @@ function citation(value: unknown): Citation | undefined {
 }
 function usage(inputTokens?: number, outputTokens?: number): Usage | undefined { return inputTokens === undefined && outputTokens === undefined ? undefined : defined({ inputTokens, outputTokens, totalTokens: inputTokens !== undefined && outputTokens !== undefined ? inputTokens + outputTokens : undefined }) }
 function isTransport(value: AnthropicStreamSource): value is ByteStreamSource { return (typeof Response !== "undefined" && value instanceof Response) || (typeof value === "object" && value !== null && "getReader" in value) }
-async function* prepend(first: string | Uint8Array, iterator: AsyncIterator<unknown>): AsyncGenerator<string | Uint8Array> { yield first; for (;;) { const result = await iterator.next(); if (result.done) return; if (typeof result.value !== "string" && !(result.value instanceof Uint8Array)) throw new TypeError("Mixed Anthropic stream chunk types"); yield result.value } }
+async function* prepend(first: string | Uint8Array, iterator: AsyncIterator<unknown>): AsyncGenerator<string | Uint8Array> { let done = false; try { yield first; for (;;) { const result = await iterator.next(); if (result.done) { done = true; return }; if (typeof result.value !== "string" && !(result.value instanceof Uint8Array)) throw new TypeError("Mixed Anthropic stream chunk types"); yield result.value } } finally { if (!done) await iterator.return?.() } }
+async function next<T>(iterator: AsyncIterator<T>, signal?: AbortSignal): Promise<IteratorResult<T>> { if (!signal) return iterator.next(); if (signal.aborted) throw abortReason(signal); const pending = Promise.resolve(iterator.next()); let abort!: () => void; const aborted = new Promise<never>((_resolve, reject) => { abort = () => reject(abortReason(signal)); signal.addEventListener("abort", abort, { once: true }) }); try { const result = await Promise.race([pending, aborted]); if (signal.aborted) throw abortReason(signal); return result } finally { signal.removeEventListener("abort", abort) } }
+function abortReason(signal: AbortSignal): unknown { if (signal.reason !== undefined) return signal.reason; const error = new Error("The operation was aborted"); error.name = "AbortError"; return error }
 function object(value: unknown): Record<string, unknown> | undefined { return typeof value === "object" && value !== null ? value as Record<string, unknown> : undefined }
 function text(value: unknown): string | undefined { return typeof value === "string" ? value : undefined }
 function numeric(value: unknown): number | undefined { return typeof value === "number" && Number.isFinite(value) ? value : undefined }

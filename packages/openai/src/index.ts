@@ -14,14 +14,21 @@ async function* events(source: OpenAIStreamSource, options: OpenAIStreamOptions)
     return
   }
   const iterator = source[Symbol.asyncIterator]()
-  const first = await iterator.next()
-  if (first.done) return
-  if (typeof first.value === "string" || first.value instanceof Uint8Array) {
-    for await (const event of parseSSE(prepend(first.value, iterator), { ...options, parseJSON: true })) yield event.data
-    return
+  let done = false
+  let delegated = false
+  try {
+    const first = await next(iterator, options.signal)
+    if (first.done) { done = true; return }
+    if (typeof first.value === "string" || first.value instanceof Uint8Array) {
+      delegated = true
+      for await (const event of parseSSE(prepend(first.value, iterator), { ...options, parseJSON: true })) yield event.data
+      return
+    }
+    yield first.value
+    for (;;) { const result = await next(iterator, options.signal); if (result.done) { done = true; return }; yield result.value }
+  } finally {
+    if (!done && !delegated) await iterator.return?.()
   }
-  yield first.value
-  for (;;) { const result = await iterator.next(); if (result.done) return; yield result.value }
 }
 
 async function* convert(value: unknown): AsyncGenerator<ModelStreamEvent> {
@@ -83,7 +90,9 @@ function contentText(value: unknown): string | undefined {
   return value.map((part) => text(object(part)?.text) ?? "").join("") || undefined
 }
 function isTransport(value: OpenAIStreamSource): value is ByteStreamSource { return (typeof Response !== "undefined" && value instanceof Response) || (typeof value === "object" && value !== null && "getReader" in value) }
-async function* prepend(first: string | Uint8Array, iterator: AsyncIterator<unknown>): AsyncGenerator<string | Uint8Array> { yield first; for (;;) { const result = await iterator.next(); if (result.done) return; if (typeof result.value !== "string" && !(result.value instanceof Uint8Array)) throw new TypeError("Mixed OpenAI stream chunk types"); yield result.value } }
+async function* prepend(first: string | Uint8Array, iterator: AsyncIterator<unknown>): AsyncGenerator<string | Uint8Array> { let done = false; try { yield first; for (;;) { const result = await iterator.next(); if (result.done) { done = true; return }; if (typeof result.value !== "string" && !(result.value instanceof Uint8Array)) throw new TypeError("Mixed OpenAI stream chunk types"); yield result.value } } finally { if (!done) await iterator.return?.() } }
+async function next<T>(iterator: AsyncIterator<T>, signal?: AbortSignal): Promise<IteratorResult<T>> { if (!signal) return iterator.next(); if (signal.aborted) throw abortReason(signal); const pending = Promise.resolve(iterator.next()); let abort!: () => void; const aborted = new Promise<never>((_resolve, reject) => { abort = () => reject(abortReason(signal)); signal.addEventListener("abort", abort, { once: true }) }); try { const result = await Promise.race([pending, aborted]); if (signal.aborted) throw abortReason(signal); return result } finally { signal.removeEventListener("abort", abort) } }
+function abortReason(signal: AbortSignal): unknown { if (signal.reason !== undefined) return signal.reason; const error = new Error("The operation was aborted"); error.name = "AbortError"; return error }
 function object(value: unknown): Record<string, unknown> | undefined { return typeof value === "object" && value !== null ? value as Record<string, unknown> : undefined }
 function text(value: unknown): string | undefined { return typeof value === "string" ? value : undefined }
 function numeric(value: unknown): number | undefined { return typeof value === "number" && Number.isFinite(value) ? value : undefined }
