@@ -15,18 +15,23 @@ export function validateRelease(tag, packages) {
   }
 }
 
-async function readPublicPackages(root) {
-  const packageRoot = new URL("../packages/", root)
+export async function readPublicPackages(packageRoot = new URL("../packages/", import.meta.url)) {
   const entries = await readdir(packageRoot, { withFileTypes: true })
-  return Promise.all(entries.filter((entry) => entry.isDirectory()).map(async (entry) => {
-    const manifest = JSON.parse(await readFile(new URL(`${entry.name}/package.json`, packageRoot), "utf8"))
-    return { name: manifest.name, version: manifest.version, private: manifest.private }
-  })).then((packages) => packages.filter((pkg) => !pkg.private))
+  const packages = await Promise.all(entries.filter((entry) => entry.isDirectory()).map(async (entry) => {
+    try {
+      const manifest = JSON.parse(await readFile(new URL(`${entry.name}/package.json`, packageRoot), "utf8"))
+      return { name: manifest.name, version: manifest.version, private: manifest.private }
+    } catch (error) {
+      if (error?.code === "ENOENT") return null
+      throw error
+    }
+  }))
+  return packages.filter((pkg) => pkg && !pkg.private)
 }
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]
 if (isMain) {
   const tag = process.argv[2] ?? process.env.GITHUB_REF_NAME ?? ""
-  validateRelease(tag, await readPublicPackages(import.meta.url))
+  validateRelease(tag, await readPublicPackages())
   console.log(`Validated release ${tag}`)
 }

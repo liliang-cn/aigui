@@ -1,8 +1,14 @@
 {
   "name": "@ai-gui/devtools",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Framework-agnostic runtime timeline and stream simulator for AIGUI.",
-  "keywords": ["aigui", "devtools", "timeline", "debug", "streaming"],
+  "keywords": [
+    "aigui",
+    "devtools",
+    "timeline",
+    "debug",
+    "streaming"
+  ],
   "license": "MIT",
   "author": "Liang Li <ll_faw@hotmail.com>",
   "repository": {
@@ -12,22 +18,38 @@
   },
   "type": "module",
   "sideEffects": false,
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
-  "publishConfig": { "access": "public" },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsdown",
     "test": "pnpm --dir ../.. exec vitest run --project devtools",
     "typecheck": "tsc --noEmit"
   },
-  "dependencies": { "@ai-gui/core": "workspace:*" }
+  "dependencies": {
+    "@ai-gui/core": "workspace:*"
+  }
 }
