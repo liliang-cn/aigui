@@ -90,6 +90,11 @@ export function form(options: FormPluginOptions): AIGuiPlugin {
   const render = (node: ASTNode): RenderOutput => {
     const cached = outputs.get(node)
     if (cached) return cached
+    if (!node.complete) {
+      const output: RenderOutput = { kind: "html", html: '<div data-aigui-block-loading data-block-type="form"></div>' }
+      outputs.set(node, output)
+      return output
+    }
     const parsed = parseFormDefinition(node.content ?? "")
     if (!parsed.valid) {
       const output = invalidOutput(parsed.issues)

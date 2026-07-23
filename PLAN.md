@@ -317,6 +317,8 @@ apps/playground
 
 ### Phase 3：Form Plugin
 
+状态：已完成。
+
 交付内容：
 
 - Form schema
@@ -333,7 +335,17 @@ apps/playground
 - 键盘提交和错误提示可访问。
 - 不允许提交未注册 Action。
 
+已交付：
+
+- `@ai-gui/plugin-form` 与 complete-gated `form` fence。
+- 七类字段、本地约束校验和 Action allowlist。
+- 实例级 pending/cancel 隔离、键盘提交和 accessible errors。
+- React、Vue、Vanilla 共用的安全 native form mount。
+- ReDoS 防护、唯一 DOM ID 和安全错误信息。
+
 ### Phase 4：Model Adapters
+
+状态：已完成。
 
 交付内容：
 
@@ -349,7 +361,17 @@ apps/playground
 - 不安装某 provider SDK 时，其他 adapter 不受影响。
 - Tree shaking 和 packed artifact 验证通过。
 
+已交付：
+
+- Core SSE、JSONL、NDJSON、text line 和 mock stream helpers。
+- 统一 `ModelStreamEvent` 与 content delta adapter。
+- OpenAI、Anthropic、Vercel AI 三个 provider packages。
+- UTF-8、取消、reader/iterator cleanup 和录制 fixtures。
+- Tool call 事件只转换或忽略，从不执行。
+
 ### Phase 5：DevTools 与 Playground
+
+状态：已完成。
 
 交付内容：
 
@@ -365,6 +387,15 @@ apps/playground
 - 可导出并重新加载最小复现。
 - Playground 在桌面和移动端可用。
 - CI 构建 packed packages 后再构建 Playground。
+
+已交付：
+
+- Core debug event API、统一 sequence 和受限安全 payload。
+- `@ai-gui/devtools` bounded timeline、redaction 和 attach lifecycle。
+- 可暂停、恢复、取消的 UTF-8 stream simulator。
+- React、Vue、Vanilla debug integration。
+- 响应式 `apps/playground`，支持流控制、timeline、AST 和 patch inspection。
+- Reproduction 导入/导出与独立 Playground 构建门禁。
 
 ## TDD 工作流
 
