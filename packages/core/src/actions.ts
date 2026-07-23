@@ -313,6 +313,11 @@ export class ActionRuntime {
     return this.states.get(key) ?? getIdleActionState(key)
   }
 
+  /** Check the runtime allowlist without exposing executable action definitions. */
+  hasAction(type: string): boolean {
+    return !this.destroyed && this.registry.has(type)
+  }
+
   subscribe(listener: ActionStateListener): () => void {
     if (this.destroyed) return () => {}
     this.listeners.add(listener)

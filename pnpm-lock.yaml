@@ -59,6 +59,12 @@ importers:
         specifier: ^2.0.9
         version: 2.1.0(echarts@5.6.0)
 
+  packages/plugin-form:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/plugin-highlight:
     dependencies:
       '@ai-gui/core':

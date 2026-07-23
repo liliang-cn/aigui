@@ -4,6 +4,7 @@ import { defineWorkspace } from "vitest/config"
 // Resolve @ai-gui/* to TS source so tests never run against a stale dist build.
 const alias = {
   "@ai-gui/core": fileURLToPath(new URL("./packages/core/src/index.ts", import.meta.url)),
+  "@ai-gui/plugin-form": fileURLToPath(new URL("./packages/plugin-form/src/index.ts", import.meta.url)),
 }
 
 const coverage = {
@@ -50,5 +51,9 @@ export default defineWorkspace([
   {
     resolve: { alias },
     test: { name: "plugin-chart", root: "packages/plugin-chart", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "plugin-form", root: "packages/plugin-form", coverage },
   },
 ])

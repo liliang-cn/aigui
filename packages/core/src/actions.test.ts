@@ -56,6 +56,14 @@ describe("ActionRegistry", () => {
 })
 
 describe("ActionRuntime", () => {
+  it("reports whether an action is registered without exposing its definition", () => {
+    const registry = new ActionRegistry()
+    registry.register({ type: "save", run: () => undefined })
+    const runtime = createActionRuntime({ registry })
+
+    expect(runtime.hasAction("save")).toBe(true)
+    expect(runtime.hasAction("missing")).toBe(false)
+  })
   it("dispatches a validated action with context and observable lifecycle", async () => {
     const registry = new ActionRegistry()
     const run = vi.fn(async (_params, context) => ({ actionId: context.actionId, cardType: context.cardType }))

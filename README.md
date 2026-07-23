@@ -29,7 +29,7 @@ pnpm add @ai-gui/core @ai-gui/vue
 pnpm add @ai-gui/core @ai-gui/vanilla
 
 # plugins (optional)
-pnpm add @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-primitives @ai-gui/plugin-chart
+pnpm add @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-form
 ```
 
 ## Quick start — React
@@ -150,6 +150,7 @@ await r.feed(res.body!)
 | `@ai-gui/plugin-mermaid` | `mermaid({ theme? })` | ` ```mermaid ` diagrams |
 | `@ai-gui/plugin-primitives` | `primitives()` | ` ```list `, ` ```table `, ` ```key-value `, ` ```layout ` UI blocks |
 | `@ai-gui/plugin-chart` | `chart({ interactive?, gl?, width?, height? })` | ` ```chart ` ECharts blocks — static SVG, live interactive, or 3D |
+| `@ai-gui/plugin-form` | `form({ actionRuntime })` | Safe interactive ` ```form ` blocks with local validation and registered actions |
 
 Pass plugins to any adapter:
 
@@ -159,6 +160,7 @@ import { highlight } from "@ai-gui/plugin-highlight"
 import { mermaid } from "@ai-gui/plugin-mermaid"
 import { primitives } from "@ai-gui/plugin-primitives"
 import { chart } from "@ai-gui/plugin-chart"
+import { form } from "@ai-gui/plugin-form"
 
 // Keep plugin instances stable across component renders.
 const plugins = [katex(), highlight(), mermaid(), chart({ interactive: true }), primitives()]
@@ -170,6 +172,8 @@ const plugins = [katex(), highlight(), mermaid(), chart({ interactive: true }), 
 ```
 
 By default `chart()` renders a static SSR SVG; `chart({ interactive: true })` renders a live ECharts instance (tooltip / dataZoom / click); `chart({ gl: true })` renders 3D charts via `echarts-gl` (WebGL, live-only). Charts are complete-gated: skeleton while streaming, full render when the option JSON is complete.
+
+Forms use the same `ActionRuntime` in every adapter: `const plugins = [form({ actionRuntime })]`. A closed valid `form` JSON fence mounts an accessible native form; incomplete fences remain a loading skeleton, invalid definitions render a safe fallback, and only actions already registered in the runtime can execute. See [`packages/plugin-form/README.md`](./packages/plugin-form/README.md) for the schema and lifecycle details.
 
 ## Actions
 
