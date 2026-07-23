@@ -130,20 +130,27 @@ async function start(): Promise<void> {
   timeline = []
   devtools.clear()
   const options = currentReproduction()
-  simulator = createStreamSimulator(options.markdown, { chunkSize: options.chunkSize, delayMs: options.delayMs })
+  const activeSimulator = createStreamSimulator(options.markdown, { chunkSize: options.chunkSize, delayMs: options.delayMs })
+  simulator = activeSimulator
   setStatus("Streaming", "running")
   try {
-    await handle.feed(simulator.stream)
-    setStatus(simulator.state() === "cancelled" ? "Cancelled" : "Complete", simulator.state() === "cancelled" ? "cancelled" : "ready")
+    await handle.feed(activeSimulator.stream)
+    if (simulator !== activeSimulator) return
+    simulator = undefined
+    const cancelled = activeSimulator.state() === "cancelled"
+    setStatus(cancelled ? "Cancelled" : "Complete", cancelled ? "cancelled" : "ready")
   } catch (error) {
+    if (simulator !== activeSimulator) return
+    simulator = undefined
     setStatus(error instanceof Error ? error.message : "Stream failed", "error")
   }
 }
 
 function cancel(): void {
-  simulator?.cancel()
+  if (!simulator) return
+  simulator.cancel()
   simulator = undefined
-  if (handle) setStatus("Cancelled", "cancelled")
+  setStatus("Cancelled", "cancelled")
 }
 
 function mountReact(): { handle: RendererHandle; cleanup: () => void } {
