@@ -20,4 +20,10 @@ describe("applyPatches", () => {
       { op: "insert", index: 1, node: n("1:p", "b") },
     ] as Patch[])).toEqual([n("0:p", "A"), n("1:p", "b")])
   })
+  it("moves an existing node by key", () => {
+    expect(applyPatches(
+      [n("0:p", "a"), n("1:p", "b")],
+      [{ op: "move", key: "1:p", index: 0 }],
+    )).toEqual([n("1:p", "b"), n("0:p", "a")])
+  })
 })

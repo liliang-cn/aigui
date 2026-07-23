@@ -9,6 +9,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20, 22]
     steps:
       - uses: actions/checkout@v4
 
@@ -16,7 +20,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node-version }}
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -25,4 +29,9 @@ jobs:
 
       - run: pnpm typecheck
 
-      - run: pnpm exec vitest run
+      - run: pnpm test:unit
+
+      - run: pnpm test:release
+
+      - if: matrix.node-version == 20
+        run: pnpm validate:packages

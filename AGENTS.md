@@ -2,7 +2,7 @@
 
 This guide has two independent parts. Read the one that matches your job:
 
-- **Part A** — you are a coding agent **integrating** `@aigui` into a project.
+- **Part A** — you are a coding agent **integrating** `@ai-gui` into a project.
 - **Part B** — you are the **LLM generating content** that an AIGUI frontend will render.
 
 For the human-facing overview see [README.md](./README.md); for the checklist form see [SKILL.md](./SKILL.md).

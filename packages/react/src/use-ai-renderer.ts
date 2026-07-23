@@ -1,33 +1,51 @@
-import { useCallback, useMemo, useState } from "react"
-import { Renderer, type ASTNode, type Patch, type RendererOptions } from "@ai-gui/core"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { Renderer, type ASTNode, type FeedOptions, type FeedSource, type Patch, type RendererOptions } from "@ai-gui/core"
+import { applyPatches } from "./apply-patches"
 
 export interface UseAIRendererResult {
   nodes: ASTNode[]
   push: (chunk: string) => void
-  feed: (source: AsyncIterable<string> | ReadableStream) => Promise<void>
+  feed: (source: FeedSource, options?: FeedOptions) => Promise<void>
   reset: () => void
 }
 
 export function useAIRenderer(options: Omit<RendererOptions, "onPatch"> = {}): UseAIRendererResult {
   const [nodes, setNodes] = useState<ASTNode[]>([])
+  const active = useRef<object | null>(null)
 
-  const renderer = useMemo(() => {
-    return new Renderer({
+  const session = useMemo(() => {
+    const token = {}
+    const renderer = new Renderer({
       ...options,
-      onPatch: (_patches: Patch[], nextNodes: ASTNode[]) => setNodes(nextNodes),
+      onPatch: (patches: Patch[]) => {
+        if (active.current === token) setNodes((current) => applyPatches(current, patches))
+      },
     })
+    active.current = token
+    return { renderer, token }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options.registry, options.sanitize, options.plugins])
+  }, [options.registry, options.sanitize, options.plugins, options.scheduler])
 
-  const push = useCallback((chunk: string) => renderer.push(chunk), [renderer])
-  const feed = useCallback(
-    (source: AsyncIterable<string> | ReadableStream) => renderer.feed(source as never),
-    [renderer],
-  )
-  const reset = useCallback(() => {
-    renderer.reset()
+  useEffect(() => {
     setNodes([])
-  }, [renderer])
+    return () => {
+      session.renderer.reset()
+      if (active.current === session.token) {
+        active.current = null
+      }
+    }
+  }, [session])
+
+  const push = useCallback((chunk: string) => {
+    if (active.current === session.token) session.renderer.push(chunk)
+  }, [session])
+  const feed = useCallback((source: FeedSource, feedOptions?: FeedOptions) => (
+    active.current === session.token ? session.renderer.feed(source, feedOptions) : Promise.resolve()
+  ), [session])
+  const reset = useCallback(() => {
+    session.renderer.reset()
+    setNodes([])
+  }, [session])
 
   return { nodes, push, feed, reset }
 }

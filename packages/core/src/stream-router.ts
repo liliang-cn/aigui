@@ -1,152 +1,141 @@
-/**
- * A consumer of a channel's text stream. `Renderer` satisfies this shape.
- */
+/** A consumer of a channel's text stream. `Renderer` satisfies this shape. */
 export interface ChannelSink { push(chunk: string): void }
 
 /** Handler for structured data values (and text deltas as raw strings). */
 type ChannelHandler = (value: unknown) => void
+type StreamChunk = string | Uint8Array
 
 const DEFAULT_CHANNEL = "content"
 
-/**
- * Demultiplexes one incoming stream into multiple named channels so different
- * UI regions can update independently (e.g. `progress` + `content` from a single
- * SSE). Framing is auto-detected per line and supports:
- *
- *  1. JSON envelope: `{"ch":"<channel>","delta":"text"}` (a text delta) or
- *     `{"ch":"<channel>","data":<any>}` (a structured value). May appear bare or
- *     after a `data: ` prefix.
- *  2. SSE `event: <name>` sets the channel for the following `data:` line(s).
- *  3. A plain `data: <text>` line with no `ch` and no preceding `event:` is a
- *     text delta on the default `content` channel.
- */
+/** Demultiplex JSON-lines and standards-compliant SSE into named channels. */
 export class StreamRouter {
   private readonly sinks = new Map<string, ChannelSink>()
   private readonly handlers = new Map<string, ChannelHandler>()
 
-  /** Bind a text-stream sink to a channel: text deltas call `sink.push(delta)`. */
+  /** Most recently received SSE `id` field. */
+  lastEventId = ""
+  /** Most recently received valid non-negative SSE reconnection delay. */
+  retry: number | undefined
+
   channel(name: string, sink: ChannelSink): this {
     this.sinks.set(name, sink)
     return this
   }
 
-  /** Bind a handler to a channel: data values (and deltas as strings) call it. */
   on(name: string, handler: ChannelHandler): this {
     this.handlers.set(name, handler)
     return this
   }
 
-  /**
-   * Consume a stream to completion, dispatching each parsed line to its channel.
-   * Accepts an async iterable of strings, or a `ReadableStream` of either strings
-   * or `Uint8Array` bytes (decoded as UTF-8).
-   */
-  async feed(source: AsyncIterable<string> | ReadableStream<Uint8Array | string>): Promise<void> {
+  async feed(source: AsyncIterable<StreamChunk> | ReadableStream<StreamChunk>): Promise<void> {
     let buffer = ""
-    let currentEvent: string | undefined
+    let eventName = ""
+    let dataLines: string[] = []
+    const decoder = new TextDecoder()
 
-    const consume = (chunk: string) => {
-      buffer += chunk
-      let index: number
-      while ((index = buffer.indexOf("\n")) !== -1) {
-        const line = buffer.slice(0, index)
-        buffer = buffer.slice(index + 1)
-        currentEvent = this.processLine(line, currentEvent)
+    const dispatchEvent = () => {
+      if (dataLines.length === 0) {
+        eventName = ""
+        return
+      }
+      const payload = dataLines.join("\n")
+      const channel = eventName || DEFAULT_CHANNEL
+      dataLines = []
+      eventName = ""
+      this.dispatchPayload(channel, payload, channel === DEFAULT_CHANNEL)
+    }
+
+    const processLine = (rawLine: string) => {
+      const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine
+      if (line === "") {
+        dispatchEvent()
+        return
+      }
+      if (line.startsWith(":")) return
+      const bareJson = tryParseJson(line)
+      if (isEnvelope(bareJson)) {
+        this.dispatchEnvelope(bareJson)
+        return
+      }
+
+      const colon = line.indexOf(":")
+      const field = colon === -1 ? line : line.slice(0, colon)
+      let value = colon === -1 ? "" : line.slice(colon + 1)
+      if (value.startsWith(" ")) value = value.slice(1)
+
+      if (field === "event") {
+        eventName = value
+      } else if (field === "data") {
+        const envelope = tryParseJson(value)
+        if (!eventName && isEnvelope(envelope)) this.dispatchEnvelope(envelope)
+        else dataLines.push(value)
+      } else if (field === "id") {
+        if (!value.includes("\0")) this.lastEventId = value
+      } else if (field === "retry") {
+        if (/^\d+$/.test(value)) this.retry = Number(value)
+      } else if (colon === -1) {
+        dataLines.push(line)
       }
     }
 
-    // Prefer the reader path: a `ReadableStream` may also be async-iterable in
-    // some runtimes, but only the reader lets us decode bytes correctly.
-    if ("getReader" in source && typeof source.getReader === "function") {
+    const consume = (chunk: StreamChunk) => {
+      const text = typeof chunk === "string"
+        ? decoder.decode() + chunk
+        : decoder.decode(chunk, { stream: true })
+      buffer += text
+      let newline: number
+      while ((newline = buffer.indexOf("\n")) !== -1) {
+        processLine(buffer.slice(0, newline))
+        buffer = buffer.slice(newline + 1)
+      }
+    }
+
+    if (isReadableStream(source)) {
       const reader = source.getReader()
-      const decoder = new TextDecoder()
-      for (;;) {
-        const { done, value } = await reader.read()
-        if (done) break
-        if (value == null) continue
-        consume(
-          typeof value === "string" ? value : decoder.decode(value, { stream: true }),
-        )
-      }
-      // Flush any bytes held by the streaming decoder.
-      const tail = decoder.decode()
-      if (tail) consume(tail)
-    } else {
-      for await (const chunk of source as AsyncIterable<string>) consume(chunk)
-    }
-
-    // Process any trailing partial line left without a terminating newline.
-    if (buffer.length > 0) this.processLine(buffer, currentEvent)
-  }
-
-  /** Process a single raw line; returns the (possibly updated) current event. */
-  private processLine(rawLine: string, currentEvent: string | undefined): string | undefined {
-    // Strip an optional trailing CR (CRLF line endings).
-    const line = rawLine.endsWith("\r") ? rawLine.slice(0, -1) : rawLine
-
-    // A blank line resets the current SSE event name (SSE semantics).
-    if (line.trim() === "") return undefined
-
-    // `event: <name>` sets the channel for the following data line(s).
-    if (line.startsWith("event:")) return line.slice("event:".length).trim()
-
-    // Strip an optional `data:` / `data: ` prefix to get the payload.
-    let payload = line
-    if (payload.startsWith("data:")) {
-      payload = payload.slice("data:".length)
-      if (payload.startsWith(" ")) payload = payload.slice(1)
-    }
-
-    // JSON envelope: an object possibly carrying a `ch` field.
-    if (payload.startsWith("{")) {
-      const parsed = tryParseJson(payload)
-      if (parsed !== undefined && isRecord(parsed) && typeof parsed.ch === "string") {
-        if ("delta" in parsed) {
-          this.routeDelta(parsed.ch, String(parsed.delta))
-        } else {
-          this.routeData(parsed.ch, parsed.data)
+      try {
+        for (;;) {
+          const { done, value } = await reader.read()
+          if (done) break
+          if (value != null) consume(value)
         }
-        return currentEvent
+      } finally {
+        reader.releaseLock()
       }
-      // A JSON object without a `ch` field: route as data to the current
-      // event channel, or default content.
-      if (parsed !== undefined) {
-        this.routeData(currentEvent ?? DEFAULT_CHANNEL, parsed)
-        return currentEvent
-      }
-      // Not valid JSON despite the leading brace: fall through to text/raw.
+    } else {
+      for await (const chunk of source) consume(chunk)
     }
-
-    // An SSE event name is set: route the payload as a data value, parsing JSON
-    // when possible and otherwise passing the raw string.
-    if (currentEvent !== undefined) {
-      const parsed = tryParseJson(payload)
-      this.routeData(currentEvent, parsed !== undefined ? parsed : payload)
-      return currentEvent
-    }
-
-    // Default: a plain text delta on the content channel.
-    this.routeDelta(DEFAULT_CHANNEL, payload)
-    return currentEvent
+    const tail = decoder.decode()
+    if (tail) consume(tail)
+    if (buffer.length > 0) processLine(buffer)
+    dispatchEvent()
   }
 
-  /** Route a text delta: to a bound sink and/or an on() handler (either/both). */
+  private dispatchPayload(channel: string, payload: string, defaultIsDelta: boolean): void {
+    const parsed = tryParseJson(payload)
+    if (isEnvelope(parsed)) {
+      this.dispatchEnvelope(parsed)
+    } else if (defaultIsDelta) {
+      this.routeDelta(channel, payload)
+    } else {
+      this.routeData(channel, parsed !== undefined ? parsed : payload)
+    }
+  }
+
+  private dispatchEnvelope(envelope: Record<string, unknown>): void {
+    const channel = envelope.ch as string
+    if ("delta" in envelope) this.routeDelta(channel, String(envelope.delta))
+    else this.routeData(channel, envelope.data)
+  }
+
   private routeDelta(channel: string, text: string): void {
-    const sink = this.sinks.get(channel)
-    const handler = this.handlers.get(channel)
-    if (sink) sink.push(text)
-    if (handler) handler(text)
+    this.sinks.get(channel)?.push(text)
+    this.handlers.get(channel)?.(text)
   }
 
-  /** Route a structured value: to the handler, or a string value to a lone sink. */
   private routeData(channel: string, value: unknown): void {
     const handler = this.handlers.get(channel)
-    if (handler) {
-      handler(value)
-      return
-    }
-    const sink = this.sinks.get(channel)
-    if (sink && typeof value === "string") sink.push(value)
+    if (handler) handler(value)
+    else if (typeof value === "string") this.sinks.get(channel)?.push(value)
   }
 }
 
@@ -158,6 +147,12 @@ function tryParseJson(text: string): unknown {
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null
+function isEnvelope(value: unknown): value is Record<string, unknown> & { ch: string } {
+  return typeof value === "object" && value !== null && typeof (value as Record<string, unknown>).ch === "string"
+}
+
+function isReadableStream(
+  source: AsyncIterable<StreamChunk> | ReadableStream<StreamChunk>,
+): source is ReadableStream<StreamChunk> {
+  return "getReader" in source && typeof source.getReader === "function"
 }

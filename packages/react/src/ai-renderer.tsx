@@ -1,17 +1,17 @@
-import { forwardRef, useImperativeHandle } from "react"
-import type { AIGuiPlugin, CardRegistry, RendererOptions } from "@ai-gui/core"
+import { forwardRef, useImperativeHandle, useMemo } from "react"
+import { collectNodeRenderers, type AIGuiPlugin, type CardRegistry, type FeedOptions, type FeedSource, type RendererOptions } from "@ai-gui/core"
 import { useAIRenderer } from "./use-ai-renderer"
 import { renderNode, type RenderContext } from "./render-node"
 
 export interface AIRendererHandle {
   push: (chunk: string) => void
-  feed: (source: AsyncIterable<string> | ReadableStream) => Promise<void>
+  feed: (source: FeedSource, options?: FeedOptions) => Promise<void>
   reset: () => void
 }
 
 export interface AIRendererProps {
   registry?: CardRegistry
-  sanitize?: boolean
+  sanitize?: RendererOptions["sanitize"]
   plugins?: AIGuiPlugin[]
   onCardAction?: RenderContext["onCardAction"]
   className?: string
@@ -22,7 +22,8 @@ export const AIRenderer = forwardRef<AIRendererHandle, AIRendererProps>(function
   const opts: Omit<RendererOptions, "onPatch"> = { registry, sanitize, plugins }
   const { nodes, push, feed, reset } = useAIRenderer(opts)
   useImperativeHandle(ref, () => ({ push, feed, reset }), [push, feed, reset])
-  const ctx: RenderContext = { registry, plugins, onCardAction }
+  const nodeRenderers = useMemo(() => collectNodeRenderers(plugins), [plugins])
+  const ctx: RenderContext = { registry, plugins, nodeRenderers, onCardAction, sanitize, sanitized: true }
   return (
     <div className={className} data-aigui-renderer>
       {nodes.map((n) => renderNode(n, ctx))}

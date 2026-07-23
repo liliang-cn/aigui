@@ -1,17 +1,76 @@
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import { collectNodeRenderers, type ASTNode, type RenderOutput } from "@ai-gui/core"
-import { highlight } from "./index"
+
+const mocks = vi.hoisted(() => ({
+  codeToHtml: vi.fn((code: string) => `<pre>${code}</pre>`),
+  createHighlighter: vi.fn(),
+}))
+
+vi.mock("shiki", () => ({ createHighlighter: mocks.createHighlighter }))
 
 describe("plugin-highlight", () => {
+  beforeEach(() => {
+    vi.resetModules()
+    mocks.codeToHtml.mockClear()
+    mocks.createHighlighter.mockReset()
+    mocks.createHighlighter.mockResolvedValue({ codeToHtml: mocks.codeToHtml })
+  })
+
   it("renders a code node to highlighted html (async)", async () => {
+    const { highlight } = await import("./index")
     const r = collectNodeRenderers([highlight({ themes: ["github-light"], langs: ["ts"] })]).code
     const out = (await r({ key: "0:c", type: "code", content: "const a = 1", attrs: { lang: "ts" } } as ASTNode)) as RenderOutput
     expect(out.kind).toBe("html")
     if (out.kind === "html") { expect(out.html).toContain("<pre"); expect(out.html).toContain("a") }
   })
   it("falls back gracefully for an unknown language", async () => {
+    const { highlight } = await import("./index")
     const r = collectNodeRenderers([highlight({ themes: ["github-light"], langs: ["ts"] })]).code
     const out = (await r({ key: "0:c", type: "code", content: "x", attrs: { lang: "unknownlang" } } as ASTNode)) as RenderOutput
     expect(out.kind).toBe("html")
+    expect(mocks.codeToHtml).toHaveBeenCalledWith("x", { lang: "text", theme: "github-light" })
+  })
+
+  it("does not load Shiki until the first code node is rendered", async () => {
+    const { highlight } = await import("./index")
+    const r = collectNodeRenderers([highlight()]).code
+
+    expect(mocks.createHighlighter).not.toHaveBeenCalled()
+    await r({ key: "0:c", type: "code", content: "x" } as ASTNode)
+    expect(mocks.createHighlighter).toHaveBeenCalledOnce()
+  })
+
+  it("shares one in-flight highlighter creation across concurrent renders", async () => {
+    let resolve!: (value: { codeToHtml: typeof mocks.codeToHtml }) => void
+    mocks.createHighlighter.mockReturnValue(new Promise((r) => { resolve = r }))
+    const { highlight } = await import("./index")
+    const render = collectNodeRenderers([highlight()]).code
+
+    const first = render({ key: "0:a", type: "code", content: "a" } as ASTNode)
+    const second = render({ key: "0:b", type: "code", content: "b" } as ASTNode)
+    await vi.waitFor(() => expect(mocks.createHighlighter).toHaveBeenCalledOnce())
+    resolve({ codeToHtml: mocks.codeToHtml })
+    await Promise.all([first, second])
+  })
+
+  it("converts a rejected Shiki load into fallback HTML without an unhandled rejection", async () => {
+    mocks.createHighlighter.mockRejectedValue(new Error("load failed"))
+    const unhandled = vi.fn()
+    process.on("unhandledRejection", unhandled)
+    try {
+      const { highlight } = await import("./index")
+      const render = collectNodeRenderers([highlight()]).code
+      const results = await Promise.all([
+        render({ key: "0:a", type: "code", content: "<a>" } as ASTNode),
+        render({ key: "0:b", type: "code", content: "&b" } as ASTNode),
+      ]) as RenderOutput[]
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(results[0]).toEqual({ kind: "html", html: "<pre><code>&lt;a&gt;</code></pre>" })
+      expect(results[1]).toEqual({ kind: "html", html: "<pre><code>&amp;b</code></pre>" })
+      expect(unhandled).not.toHaveBeenCalled()
+    } finally {
+      process.off("unhandledRejection", unhandled)
+    }
   })
 })

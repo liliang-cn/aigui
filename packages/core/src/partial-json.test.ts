@@ -47,4 +47,7 @@ describe("parsePartialJSON", () => {
   it("keeps a complete trailing number value", () => {
     expect(parsePartialJSON('{"a":12')).toEqual({ data: { a: 12 }, complete: false })
   })
+  it("drops a dangling string escape before closing the partial string", () => {
+    expect(parsePartialJSON('{"path":"abc\\')).toEqual({ data: { path: "abc" }, complete: false })
+  })
 })

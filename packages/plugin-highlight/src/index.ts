@@ -1,4 +1,4 @@
-import { createHighlighter, type Highlighter } from "shiki"
+import type { Highlighter } from "shiki"
 import type { AIGuiPlugin, ASTNode, RenderOutput } from "@ai-gui/core"
 
 /** Options for the Shiki-backed code highlighter plugin. */
@@ -32,7 +32,9 @@ export function highlight(opts: HighlightOptions = {}): AIGuiPlugin {
   const theme = opts.theme ?? themes[0]
 
   let highlighterPromise: Promise<Highlighter> | null = null
-  const getHighlighter = () => (highlighterPromise ??= createHighlighter({ themes, langs }))
+  const getHighlighter = () => (highlighterPromise ??= import("shiki").then(({ createHighlighter }) =>
+    createHighlighter({ themes, langs }),
+  ))
 
   const render = async (node: ASTNode): Promise<RenderOutput> => {
     const code = node.content ?? ""

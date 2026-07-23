@@ -40,4 +40,10 @@ describe("renderNode", () => {
     w.find("button").trigger("click")
     expect(onCardAction).toHaveBeenCalledWith({ type: "vote", params: { q: "x" }, cardType: "poll" })
   })
+  it("honors sanitize false and custom sanitizers", () => {
+    const raw = wrap({ key: "raw", type: "custom", content: '<img src="x" data-raw="yes">' }, { sanitize: false })
+    expect(raw.find("img").attributes("data-raw")).toBe("yes")
+    const custom = wrap({ key: "custom", type: "custom", content: "raw" }, { sanitize: { sanitizer: () => "<b>custom</b>" } })
+    expect(custom.find("b").text()).toBe("custom")
+  })
 })

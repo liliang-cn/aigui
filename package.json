@@ -11,14 +11,22 @@
   "type": "module",
   "scripts": {
     "build": "turbo run build",
-    "test": "vitest run",
+    "benchmark": "pnpm build && node scripts/benchmark.mjs",
+    "test": "turbo run test",
+    "test:unit": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:release": "node --test scripts/release-tag.test.mjs",
     "typecheck": "turbo run typecheck",
+    "validate:packages": "node scripts/validate-packages.mjs",
+    "validate:release-tag": "node scripts/release-tag.mjs",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "turbo run build && changeset publish"
+    "release": "pnpm build && pnpm typecheck && pnpm test:unit && pnpm validate:packages && changeset publish"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.1",
+    "@vitest/coverage-v8": "^2.1.0",
+    "publint": "^0.3.0",
     "tsdown": "^0.9.0",
     "turbo": "^2.5.0",
     "typescript": "^5.6.0",

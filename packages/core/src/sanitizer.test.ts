@@ -12,4 +12,7 @@ describe("sanitizeHtml", () => {
   it("keeps safe tags", () => {
     expect(sanitizeHtml("<strong>bold</strong>")).toBe("<strong>bold</strong>")
   })
+  it("supports an injected sanitization strategy", () => {
+    expect(sanitizeHtml("<b>x</b>", { sanitizer: (html) => `safe:${html}` })).toBe("safe:<b>x</b>")
+  })
 })

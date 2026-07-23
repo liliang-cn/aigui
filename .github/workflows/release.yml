@@ -1,11 +1,15 @@
 name: Release
 
-# Publishes all public @aigui/* packages to npm when a version tag (vX.Y.Z) is pushed.
+# Publishes all public @ai-gui/* packages to npm when a version tag (vX.Y.Z) is pushed.
 # The npm token is read from the NPM_TOKEN repository secret — never hardcoded.
 on:
   push:
     tags:
       - "v*"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   publish:
@@ -26,9 +30,15 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - run: pnpm validate:release-tag
+
       - run: pnpm build
 
-      - run: pnpm exec vitest run
+      - run: pnpm typecheck
+
+      - run: pnpm test:unit
+
+      - run: pnpm validate:packages
 
       # Publishes every workspace package whose version is not yet on the registry.
       # pnpm skips packages already published at their current version.

@@ -1,37 +1,65 @@
-import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardRegistry, type RenderOutput } from "@ai-gui/core"
-import { renderOutputToElement } from "./render-output"
+import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardRegistry, type NodeRenderer, type RendererOptions, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
+import { renderOutputToElement, type ManagedElement } from "./render-output"
 
 export interface DomRenderContext {
   registry?: CardRegistry
   onCardAction?: (action: { type: string; params?: unknown; cardType: string }) => void
   plugins?: AIGuiPlugin[]
+  nodeRenderers?: Record<string, NodeRenderer>
+  sanitize?: RendererOptions["sanitize"]
+  sanitized?: boolean
 }
 
 export function renderNodeToElement(node: ASTNode, ctx: DomRenderContext): HTMLElement {
-  const r = collectNodeRenderers(ctx.plugins)[node.type]
+  const r = (ctx.nodeRenderers ?? collectNodeRenderers(ctx.plugins))[node.type]
   if (r) {
-    const out = r(node)
-    if (typeof (out as { then?: unknown })?.then === "function") {
-      // Async: render a placeholder now and swap in the resolved output on settle.
-      const ph = document.createElement("div")
-      ph.setAttribute("data-aigui-async-pending", "")
-      void (out as Promise<RenderOutput>).then((res) => ph.replaceWith(renderOutputToElement(res)))
-      return ph
+    try {
+      const out = r(node)
+      if (typeof (out as { then?: unknown })?.then === "function") {
+        const host = document.createElement("div") as ManagedElement
+        host.setAttribute("data-aigui-async-pending", "")
+        void (out as Promise<RenderOutput>).then(
+          (res) => {
+            if (host.__aiguiDisposed) return
+            host.removeAttribute("data-aigui-async-pending")
+            host.replaceChildren(renderOutputToElement(res, ctx.sanitize))
+          },
+          () => {
+            if (host.__aiguiDisposed) return
+            host.removeAttribute("data-aigui-async-pending")
+            host.setAttribute("data-aigui-async-error", "")
+          },
+        )
+        return host
+      }
+      return renderOutputToElement(out as RenderOutput, ctx.sanitize)
+    } catch {
+      return renderFallback(node, ctx)
     }
-    return renderOutputToElement(out as RenderOutput)
   }
   switch (node.type) {
-    case "heading": { const el = document.createElement(node.tag ?? "h1"); el.innerHTML = node.html ?? ""; return el }
-    case "paragraph": { const el = document.createElement("p"); el.innerHTML = node.html ?? ""; return el }
+    case "heading": { const el = document.createElement(node.tag ?? "h1"); el.innerHTML = renderHtml(node.html ?? "", ctx); return el }
+    case "paragraph": { const el = document.createElement("p"); el.innerHTML = renderHtml(node.html ?? "", ctx); return el }
     case "code": {
       const pre = document.createElement("pre"); if (node.attrs?.lang) pre.setAttribute("data-lang", node.attrs.lang)
       const code = document.createElement("code"); code.textContent = node.content ?? ""; pre.appendChild(code); return pre
     }
     case "hr": return document.createElement("hr")
-    case "html": { const el = document.createElement("div"); el.innerHTML = node.content ?? ""; return el }
+    case "html": { const el = document.createElement("div"); el.innerHTML = renderHtml(node.content ?? "", ctx); return el }
     case "card": return renderCardElement(node, ctx)
-    default: { const el = document.createElement("div"); el.innerHTML = node.html ?? sanitizeHtml(node.content ?? ""); return el }
+    default: return renderFallback(node, ctx)
   }
+}
+
+function renderFallback(node: ASTNode, ctx: DomRenderContext): HTMLElement {
+  const el = document.createElement("div")
+  el.innerHTML = renderHtml(node.html ?? node.content ?? "", ctx)
+  return el
+}
+
+function renderHtml(html: string, ctx: DomRenderContext): string {
+  if (ctx.sanitized || ctx.sanitize === false) return html
+  return sanitizeHtml(html, typeof ctx.sanitize === "object" ? ctx.sanitize as SanitizeHtmlOptions : undefined)
 }
 
 function renderCardElement(node: ASTNode, ctx: DomRenderContext): HTMLElement {

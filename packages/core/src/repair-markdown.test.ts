@@ -21,4 +21,20 @@ describe("repairMarkdown", () => {
   it("leaves a dangling link text as-is (does not turn into a link)", () => {
     expect(repairMarkdown("see [docs")).toBe("see [docs")
   })
+  it("does not treat escaped backticks as inline-code delimiters", () => {
+    expect(repairMarkdown("use \\` literally")).toBe("use \\` literally")
+  })
+  it("does not repair emphasis inside inline code", () => {
+    expect(repairMarkdown("`const glob = '**'")).toBe("`const glob = '**'`")
+  })
+  it("supports tilde fences and closes with the same marker", () => {
+    expect(repairMarkdown("~~~~js\nconst x = 1")).toBe("~~~~js\nconst x = 1\n~~~~")
+  })
+  it("does not mistake inline triple backticks for a block fence", () => {
+    expect(repairMarkdown("text ``` literal")).toBe("text ``` literal```")
+  })
+  it("closes nested inline code before outer emphasis", () => {
+    expect(repairMarkdown("**bold `code")).toBe("**bold `code`**")
+    expect(repairMarkdown("~~gone ``code")).toBe("~~gone ``code``~~")
+  })
 })

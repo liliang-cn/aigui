@@ -10,6 +10,8 @@ export interface ASTNode {
   html?: string
   attrs?: Record<string, string>
   children?: ASTNode[]
+  /** Whether a streaming block has enough source to invoke its renderer. */
+  complete?: boolean
   /** card-specific payload */
   card?: { type: string; data: unknown; complete: boolean; valid: boolean }
 }
@@ -18,6 +20,7 @@ export interface ASTNode {
 export type Patch =
   | { op: "insert"; index: number; node: ASTNode }
   | { op: "update"; key: string; node: ASTNode }
+  | { op: "move"; key: string; index: number }
   | { op: "remove"; key: string }
 
 /** Framework-neutral render descriptor returned by plugin node renderers. */
@@ -60,6 +63,15 @@ export interface AIGuiPlugin {
 export interface RendererOptions {
   registry?: CardRegistry
   plugins?: AIGuiPlugin[]
-  sanitize?: boolean
+  sanitize?: boolean | import("./sanitizer").SanitizeHtmlOptions
+  /** Coalesce multiple pushes by scheduling one render callback. */
+  scheduler?: (render: () => void) => void
   onPatch?: (patches: Patch[], nodes: ASTNode[]) => void
 }
+
+export interface FeedOptions {
+  signal?: AbortSignal
+}
+
+export type FeedChunk = string | Uint8Array
+export type FeedSource = AsyncIterable<FeedChunk> | ReadableStream<FeedChunk>

@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-chart",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "ECharts chart plugin for AIGUI — static SVG, interactive, and 3D (echarts-gl).",
   "keywords": [
     "llm",
@@ -24,14 +24,23 @@
   "homepage": "https://github.com/liliang-cn/aigui#readme",
   "bugs": "https://github.com/liliang-cn/aigui/issues",
   "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "files": [
@@ -44,11 +53,22 @@
   },
   "scripts": {
     "build": "tsdown",
+    "test": "pnpm --dir ../.. exec vitest run --project plugin-chart",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-gui/core": "workspace:*",
-    "echarts": "^5.5.1",
+    "echarts": "^5.5.1"
+  },
+  "peerDependencies": {
+    "echarts-gl": "^2.0.9"
+  },
+  "peerDependenciesMeta": {
+    "echarts-gl": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
     "echarts-gl": "^2.0.9"
   }
 }

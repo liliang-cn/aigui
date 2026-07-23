@@ -16,13 +16,7 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions = {}): strin
   const parts: string[] = []
   if (options.base) parts.push(options.base)
   const cardSpec = options.registry?.toPromptSpec()
-  // toPromptSpec always returns a header line; only include it if there are cards.
-  if (options.registry && hasCards(options.registry) && cardSpec) parts.push(cardSpec)
+  if (cardSpec) parts.push(cardSpec)
   for (const p of options.plugins ?? []) if (p.promptSpec) parts.push(p.promptSpec)
   return parts.join("\n\n")
-}
-
-function hasCards(registry: CardRegistry): boolean {
-  // toPromptSpec lists one "- `card:...`" line per card; detect presence.
-  return registry.toPromptSpec().includes("card:")
 }

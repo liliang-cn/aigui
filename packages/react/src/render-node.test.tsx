@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
-import type { ASTNode } from "@ai-gui/core"
+import type { AIGuiPlugin, ASTNode } from "@ai-gui/core"
 import { CardRegistry } from "@ai-gui/core"
 import { renderNode } from "./render-node"
 
@@ -50,6 +50,16 @@ describe("renderNode", () => {
     const { container } = render(<>{renderNode(node, {})}</>)
     expect(container.innerHTML).not.toContain("onerror")
   })
+  it("honors sanitize false for trusted direct rendering", () => {
+    const node: ASTNode = { key: "0:x", type: "callout", content: '<img src="x" data-raw="yes">' }
+    const { container } = render(<>{renderNode(node, { sanitize: false })}</>)
+    expect(container.querySelector("img")?.getAttribute("data-raw")).toBe("yes")
+  })
+  it("honors a custom sanitizer", () => {
+    const node: ASTNode = { key: "0:x", type: "callout", content: "raw" }
+    const { container } = render(<>{renderNode(node, { sanitize: { sanitizer: () => "<b>custom</b>" } })}</>)
+    expect(container.querySelector("b")?.textContent).toBe("custom")
+  })
   it("renders an hr node", () => {
     const node: ASTNode = { key: "0:hr", type: "hr" }
     const { container } = render(<>{renderNode(node, {})}</>)
@@ -59,5 +69,10 @@ describe("renderNode", () => {
     const node: ASTNode = { key: "0:html", type: "html", content: "<span>raw</span>" }
     const { container } = render(<>{renderNode(node, {})}</>)
     expect(container.querySelector("span")?.textContent).toBe("raw")
+  })
+  it("contains plugin renderer exceptions", () => {
+    const plugin: AIGuiPlugin = { name: "bad", nodeRenderers: { bad: () => { throw new Error("boom") } } }
+    const node: ASTNode = { key: "bad", type: "bad", content: "safe fallback" }
+    expect(() => render(<>{renderNode(node, { plugins: [plugin] })}</>)).not.toThrow()
   })
 })

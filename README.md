@@ -160,9 +160,12 @@ import { mermaid } from "@ai-gui/plugin-mermaid"
 import { primitives } from "@ai-gui/plugin-primitives"
 import { chart } from "@ai-gui/plugin-chart"
 
+// Keep plugin instances stable across component renders.
+const plugins = [katex(), highlight(), mermaid(), chart({ interactive: true }), primitives()]
+
 <AIRenderer
   registry={registry}
-  plugins={[katex(), highlight(), mermaid(), chart({ interactive: true }), primitives()]}
+  plugins={plugins}
 />
 ```
 

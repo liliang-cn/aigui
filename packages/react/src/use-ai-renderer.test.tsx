@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { act, renderHook } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
+import type { AIGuiPlugin } from "@ai-gui/core"
 import { useAIRenderer } from "./use-ai-renderer"
 
 describe("useAIRenderer", () => {
@@ -39,5 +40,70 @@ describe("useAIRenderer", () => {
     const headings = result.current.nodes.filter((n) => n.type === "heading")
     expect(headings).toHaveLength(1)
     expect(headings[0].html).toContain("Second")
+  })
+  it("clears old content when renderer configuration changes", () => {
+    const first: AIGuiPlugin[] = []
+    const second: AIGuiPlugin[] = []
+    const { result, rerender } = renderHook(({ plugins }) => useAIRenderer({ plugins }), { initialProps: { plugins: first } })
+    act(() => result.current.push("old"))
+    rerender({ plugins: second })
+    expect(result.current.nodes).toEqual([])
+  })
+  it("ignores an old feed after configuration changes", async () => {
+    let release!: () => void
+    const source = (async function* () {
+      yield "old"
+      await new Promise<void>((resolve) => { release = resolve })
+      yield " late"
+    })()
+    const first: AIGuiPlugin[] = []
+    const second: AIGuiPlugin[] = []
+    const { result, rerender } = renderHook(({ plugins }) => useAIRenderer({ plugins }), { initialProps: { plugins: first } })
+    let feeding!: Promise<void>
+    await act(async () => { feeding = result.current.feed(source); await Promise.resolve() })
+    rerender({ plugins: second })
+    act(() => result.current.push("new"))
+    await act(async () => { release(); await feeding })
+    expect(result.current.nodes.map((node) => node.content ?? node.html).join(" ")).toContain("new")
+    expect(result.current.nodes.map((node) => node.content ?? node.html).join(" ")).not.toContain("late")
+  })
+  it("cancels an old feed when renderer configuration changes", async () => {
+    let resolveRead!: (result: ReadableStreamReadResult<string>) => void
+    const cancel = vi.fn().mockResolvedValue(undefined)
+    const reader = {
+      read: vi.fn(() => new Promise<ReadableStreamReadResult<string>>((resolve) => { resolveRead = resolve })),
+      cancel,
+      releaseLock: vi.fn(),
+    }
+    const first: AIGuiPlugin[] = []
+    const second: AIGuiPlugin[] = []
+    const { result, rerender } = renderHook(({ plugins }) => useAIRenderer({ plugins }), { initialProps: { plugins: first } })
+    const feeding = result.current.feed({ getReader: () => reader } as unknown as ReadableStream<string>)
+    await act(async () => { await Promise.resolve() })
+    rerender({ plugins: second })
+    expect(cancel).toHaveBeenCalledOnce()
+    resolveRead({ done: true, value: undefined })
+    await feeding
+  })
+  it("decodes a fetch byte stream across UTF-8 chunk boundaries", async () => {
+    const bytes = new TextEncoder().encode("你好")
+    const source = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes.slice(0, 2))
+        controller.enqueue(bytes.slice(2))
+        controller.close()
+      },
+    })
+    const { result } = renderHook(() => useAIRenderer())
+    await act(async () => { await result.current.feed(source) })
+    expect(result.current.nodes[0]?.content).toBe("你好")
+  })
+  it("await feed observes the final scheduled state update", async () => {
+    const scheduled: Array<() => void> = []
+    const scheduler = (render: () => void) => scheduled.push(render)
+    const { result } = renderHook(() => useAIRenderer({ scheduler }))
+    await act(async () => { await result.current.feed((async function* () { yield "ready" })()) })
+    expect(result.current.nodes[0]?.content).toBe("ready")
+    expect(scheduled).toHaveLength(1)
   })
 })

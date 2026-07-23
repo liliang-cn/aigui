@@ -31,12 +31,17 @@ export class CardRegistry {
   }
 
   private validate(def: CardDef, data: unknown): boolean {
-    if (def.validate) return def.validate(data as never)
-    if (def.schema) return validateSchema(def.schema, data)
-    return true
+    try {
+      if (def.validate) return def.validate(data as never)
+      if (def.schema) return validateSchema(def.schema, data)
+      return true
+    } catch {
+      return false
+    }
   }
 
   toPromptSpec(): string {
+    if (this.cards.size === 0) return ""
     const lines: string[] = [
       "You can output cards. Format: a ```card:<type> fenced block with JSON inside. Available cards:",
     ]
@@ -51,6 +56,10 @@ export class CardRegistry {
       if (def.example !== undefined) lines.push(`  example: ${JSON.stringify(def.example)}`)
     }
     return lines.join("\n")
+  }
+
+  get size(): number {
+    return this.cards.size
   }
 
   toJSONSchema(): JSONSchema {

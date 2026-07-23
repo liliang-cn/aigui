@@ -1,5 +1,6 @@
-import { sanitizeHtml, type ASTNode } from "@ai-gui/core"
+import type { ASTNode } from "@ai-gui/core"
 import { renderNodeToElement, type DomRenderContext } from "./render-node-dom"
+import type { ManagedElement } from "./render-output"
 
 export interface ReconcileState { els: Map<string, { el: HTMLElement; hash: string }> }
 
@@ -7,7 +8,16 @@ export function createReconcileState(): ReconcileState { return { els: new Map()
 
 /** Run a mounted widget's cleanup (if any) before the element leaves the DOM. */
 export function disposeEl(el: HTMLElement): void {
-  (el as { __aiguiCleanup?: () => void }).__aiguiCleanup?.()
+  for (const child of el.querySelectorAll<HTMLElement>("*")) disposeManagedEl(child)
+  disposeManagedEl(el)
+}
+
+function disposeManagedEl(el: HTMLElement): void {
+  const managed = el as ManagedElement
+  if (managed.__aiguiDisposed) return
+  managed.__aiguiDisposed = true
+  managed.__aiguiCleanup?.()
+  managed.__aiguiCleanup = undefined
 }
 
 export function reconcile(container: HTMLElement, nodes: ASTNode[], ctx: DomRenderContext, state: ReconcileState): void {
@@ -42,6 +52,8 @@ export function reconcile(container: HTMLElement, nodes: ASTNode[], ctx: DomRend
 
 /** Mutate an existing element to reflect the node without replacing it. Returns false when a fresh element is required. */
 function updateElementInPlace(el: HTMLElement, node: ASTNode, ctx: DomRenderContext): boolean {
+  // Plugin renderers own their complete gate, async state, sanitization, and mount lifecycle.
+  if (ctx.nodeRenderers?.[node.type]) return false
   switch (node.type) {
     case "heading":
       if (el.tagName !== (node.tag ?? "h1").toUpperCase()) return false
@@ -66,6 +78,6 @@ function updateElementInPlace(el: HTMLElement, node: ASTNode, ctx: DomRenderCont
       return false
     default:
       if (el.tagName !== "DIV") return false
-      el.innerHTML = node.html ?? sanitizeHtml(node.content ?? ""); return true
+      el.innerHTML = node.html ?? node.content ?? ""; return true
   }
 }

@@ -35,4 +35,10 @@ describe("renderNodeToElement", () => {
     el.querySelector("button")!.click()
     expect(onCardAction).toHaveBeenCalledWith({ type: "vote", params: { q: "x" }, cardType: "poll" })
   })
+  it("honors sanitize false and custom sanitizers", () => {
+    const raw = renderNodeToElement({ key: "raw", type: "custom", content: '<img src="x" data-raw="yes">' }, { sanitize: false })
+    expect(raw.querySelector("img")?.getAttribute("data-raw")).toBe("yes")
+    const custom = renderNodeToElement({ key: "custom", type: "custom", content: "raw" }, { sanitize: { sanitizer: () => "<b>custom</b>" } })
+    expect(custom.querySelector("b")?.textContent).toBe("custom")
+  })
 })

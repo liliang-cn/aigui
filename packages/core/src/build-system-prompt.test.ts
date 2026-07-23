@@ -19,4 +19,7 @@ describe("buildSystemPrompt", () => {
   it("omits empty sections (no registry, no plugins)", () => {
     expect(buildSystemPrompt({ base: "Base only." })).toBe("Base only.")
   })
+  it("omits card instructions for an empty registry", () => {
+    expect(buildSystemPrompt({ base: "Base.", registry: new CardRegistry() })).toBe("Base.")
+  })
 })

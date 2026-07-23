@@ -25,6 +25,8 @@ The model emits, e.g.:
 
 ## Options
 
-- `theme?: string` — Mermaid theme.
+- `theme?: string` — Mermaid theme. Mermaid has process-global configuration, so the theme of the first render wins across plugin instances; later instances share that initialization.
+
+Renders are queued across instances because Mermaid mutates global state while rendering. This also guarantees unique diagram IDs for concurrent renders.
 
 See the [root README](../../README.md) for the full plugin list.

@@ -70,6 +70,21 @@ describe("plugin-chart", () => {
     expect(out.kind).toBe("html")
     if (out.kind === "html") expect(out.html).toContain("<svg")
   })
+  it.each(["gauge", "radar", "heatmap", "treemap"])("supports the %s series from the public ECharts option API", (type) => {
+    const options: Record<string, unknown> = {
+      gauge: { series: [{ type: "gauge", data: [{ value: 70 }] }] },
+      radar: { radar: { indicator: [{ name: "A", max: 10 }] }, series: [{ type: "radar", data: [{ value: [5] }] }] },
+      heatmap: { xAxis: { type: "category", data: ["A"] }, yAxis: { type: "category", data: ["B"] }, visualMap: { min: 0, max: 10 }, series: [{ type: "heatmap", data: [[0, 0, 5]] }] },
+      treemap: { series: [{ type: "treemap", data: [{ name: "A", value: 5 }] }] },
+    }
+    const render = collectNodeRenderers([chart()]).chart
+    const out = render({ key: `chart:${type}`, type: "chart", content: JSON.stringify(options[type]) } as ASTNode) as RenderOutput
+    expect(out.kind).toBe("html")
+    if (out.kind === "html") {
+      expect(out.html).toContain("<svg")
+      expect(out.html).not.toContain("data-aigui-chart-error")
+    }
+  })
   it("gl mode returns a mount RenderOutput for a complete 3D option", () => {
     const r = collectNodeRenderers([chart({ gl: true })]).chart
     const out = r({ key: "0:c", type: "chart", content: bar3DOption } as ASTNode) as RenderOutput

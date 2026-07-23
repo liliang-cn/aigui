@@ -1,6 +1,6 @@
 ---
 name: aigui
-description: Use when integrating the @aigui SDK to render streaming LLM output (markdown, cards, charts, math, diagrams) in React/Vue/vanilla, or when generating content for an @aigui frontend (card/chart/primitive/math/mermaid fences).
+description: Use when integrating the @ai-gui SDK to render streaming LLM output (markdown, cards, charts, math, diagrams) in React/Vue/vanilla, or when generating content for an @ai-gui frontend (card/chart/primitive/math/mermaid fences).
 ---
 
 # AIGUI
@@ -9,7 +9,7 @@ AIGUI is a framework-agnostic TypeScript SDK that renders **streaming** LLM outp
 
 ## When to use
 
-- **Integrating**: adding `@aigui` to an app to render a streaming model response (markdown + cards + charts + math + diagrams).
+- **Integrating**: adding `@ai-gui` to an app to render a streaming model response (markdown + cards + charts + math + diagrams).
 - **Generating**: you are the LLM producing content that an AIGUI frontend will render.
 
 ## Integration checklist
@@ -19,7 +19,7 @@ AIGUI is a framework-agnostic TypeScript SDK that renders **streaming** LLM outp
    - React render: component gets `{ data, onAction }`. Vue: props `data`, emits `action`. Vanilla: `(data, { onAction }) => HTMLElement`.
 3. **Mount the renderer**: `<AIRenderer ref registry plugins onCardAction />` (React/Vue) or `createRenderer(el, { registry, plugins, onCardAction })` (vanilla). Imperative API: `push` / `feed` / `reset` (+ `destroy` in vanilla).
 4. **Wire `onCardAction({ type, params, cardType })`** to your real APIs. Buttons are declarative — the app makes the request, never the LLM.
-5. **Add plugins**: `plugins={[katex(), highlight(), mermaid(), chart({ interactive: true }), primitives()]}`.
+5. **Add plugins**: create a stable array outside render, then pass `plugins={plugins}`.
 6. **Build the system prompt** from the same registry + plugins: `buildSystemPrompt({ base, registry, plugins })`; prepend it to your system prompt. Backend just streams text.
 7. **Feed the stream**: `reset()` then `feed(response.body)` — accepts a `ReadableStream` or `AsyncIterable<string>`. Renders progressively.
 

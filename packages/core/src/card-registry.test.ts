@@ -41,4 +41,12 @@ describe("CardRegistry", () => {
     r.register(flight)
     expect(r.toJSONSchema().properties).toHaveProperty("flight")
   })
+  it("treats a throwing custom validator as invalid instead of throwing", () => {
+    const r = new CardRegistry()
+    r.register({ type: "unsafe", description: "x", validate: () => { throw new Error("bad validator") } })
+    expect(r.parse("unsafe", "{}")).toEqual({ data: {}, complete: true, valid: false })
+  })
+  it("returns no prompt spec for an empty registry", () => {
+    expect(new CardRegistry().toPromptSpec()).toBe("")
+  })
 })

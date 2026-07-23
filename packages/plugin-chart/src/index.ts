@@ -1,5 +1,108 @@
-import * as echarts from "echarts"
+import {
+  BarChart,
+  BoxplotChart,
+  CandlestickChart,
+  CustomChart,
+  EffectScatterChart,
+  FunnelChart,
+  GaugeChart,
+  GraphChart,
+  HeatmapChart,
+  LineChart,
+  LinesChart,
+  MapChart,
+  ParallelChart,
+  PictorialBarChart,
+  PieChart,
+  RadarChart,
+  SankeyChart,
+  ScatterChart,
+  SunburstChart,
+  ThemeRiverChart,
+  TreeChart,
+  TreemapChart,
+} from "echarts/charts"
+import {
+  AriaComponent,
+  AxisPointerComponent,
+  BrushComponent,
+  CalendarComponent,
+  DataZoomComponent,
+  DatasetComponent,
+  GeoComponent,
+  GraphicComponent,
+  GridComponent,
+  LegendComponent,
+  MarkAreaComponent,
+  MarkLineComponent,
+  MarkPointComponent,
+  ParallelComponent,
+  PolarComponent,
+  RadarComponent,
+  SingleAxisComponent,
+  TimelineComponent,
+  TitleComponent,
+  ToolboxComponent,
+  TooltipComponent,
+  TransformComponent,
+  VisualMapComponent,
+} from "echarts/components"
+import { init, use, type ECharts, type EChartsCoreOption } from "echarts/core"
+import { LabelLayout, UniversalTransition } from "echarts/features"
+import { CanvasRenderer, SVGRenderer } from "echarts/renderers"
 import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@ai-gui/core"
+
+use([
+  BarChart,
+  BoxplotChart,
+  CandlestickChart,
+  CustomChart,
+  EffectScatterChart,
+  FunnelChart,
+  GaugeChart,
+  GraphChart,
+  HeatmapChart,
+  LineChart,
+  LinesChart,
+  MapChart,
+  ParallelChart,
+  PictorialBarChart,
+  PieChart,
+  RadarChart,
+  SankeyChart,
+  ScatterChart,
+  SunburstChart,
+  ThemeRiverChart,
+  TreeChart,
+  TreemapChart,
+  AriaComponent,
+  AxisPointerComponent,
+  BrushComponent,
+  CalendarComponent,
+  DataZoomComponent,
+  DatasetComponent,
+  GeoComponent,
+  GraphicComponent,
+  GridComponent,
+  LegendComponent,
+  MarkAreaComponent,
+  MarkLineComponent,
+  MarkPointComponent,
+  ParallelComponent,
+  PolarComponent,
+  RadarComponent,
+  SingleAxisComponent,
+  TimelineComponent,
+  TitleComponent,
+  ToolboxComponent,
+  TooltipComponent,
+  TransformComponent,
+  VisualMapComponent,
+  LabelLayout,
+  UniversalTransition,
+  CanvasRenderer,
+  SVGRenderer,
+])
 
 export interface ChartOptions {
   width?: number
@@ -49,11 +152,11 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
       return { kind: "html", html: `<div data-aigui-chart-loading></div>` }
     }
     if (gl) {
-      const opt = option as echarts.EChartsCoreOption
+      const opt = option as EChartsCoreOption
       return {
         kind: "mount",
         mount: (el: HTMLElement) => {
-          let inst: echarts.ECharts | undefined
+          let inst: ECharts | undefined
           let disposed = false
           // `echarts-gl` (WebGL) has no static SSR form and its import is async,
           // so init inside the resolved promise. `.catch` swallows failures in
@@ -62,11 +165,12 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
             .then(() => {
               if (disposed) return
               // NOTE: no `renderer:"svg"` — WebGL requires the canvas renderer.
-              inst = echarts.init(el, undefined, { width, height })
+              inst = init(el, undefined, { width, height })
               inst.setOption(opt)
             })
             .catch(() => {
-              /* no WebGL (e.g. headless/jsdom) or gl import failed — swallow */
+              inst?.dispose()
+              inst = undefined
             })
           return () => {
             disposed = true
@@ -76,24 +180,31 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
       }
     }
     if (interactive) {
-      const opt = option as echarts.EChartsCoreOption
+      const opt = option as EChartsCoreOption
       return {
         kind: "mount",
         mount: (el: HTMLElement) => {
-          const inst = echarts.init(el, undefined, { renderer: "svg", width, height })
-          inst.setOption(opt)
+          const inst = init(el, undefined, { renderer: "svg", width, height })
+          try {
+            inst.setOption(opt)
+          } catch {
+            inst.dispose()
+            return
+          }
           return () => inst.dispose()
         },
       }
     }
+    let inst: ECharts | undefined
     try {
-      const inst = echarts.init(null, null, { renderer: "svg", ssr: true, width, height })
-      inst.setOption(option as echarts.EChartsCoreOption)
+      inst = init(null, null, { renderer: "svg", ssr: true, width, height })
+      inst.setOption(option as EChartsCoreOption)
       const svg = inst.renderToSVGString()
-      inst.dispose()
       return { kind: "html", html: svg }
     } catch (e) {
       return { kind: "html", html: `<pre data-aigui-chart-error>${String((e as Error)?.message ?? e)}</pre>` }
+    } finally {
+      inst?.dispose()
     }
   }
   return { name: "chart", nodeRenderers: { chart: render }, promptSpec: chartPromptSpec() }

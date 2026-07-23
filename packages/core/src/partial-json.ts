@@ -127,7 +127,8 @@ function repair(str: string): string[] {
 
   // An unclosed value string: keep the received characters and close it.
   if (inString && !stringIsKey) {
-    return [closeContainers(str + '"', stack)]
+    const body = escaped ? str.slice(0, -1) : str
+    return [closeContainers(body + '"', stack)]
   }
   // A truncation back to the last safe point, dropping any dangling
   // key/colon/comma, then auto-closing the open containers.

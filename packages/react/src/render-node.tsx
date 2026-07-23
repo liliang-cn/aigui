@@ -1,28 +1,35 @@
 import { createElement, type ComponentType, type ReactNode } from "react"
-import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardRegistry, type RenderOutput } from "@ai-gui/core"
+import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardRegistry, type NodeRenderer, type RendererOptions, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
 import { AsyncOutput, renderOutput } from "./render-output"
 
 export interface RenderContext {
   registry?: CardRegistry
   plugins?: AIGuiPlugin[]
+  nodeRenderers?: Record<string, NodeRenderer>
   onCardAction?: (action: { type: string; params?: unknown; cardType: string }) => void
+  sanitize?: RendererOptions["sanitize"]
+  sanitized?: boolean
 }
 
 export function renderNode(node: ASTNode, ctx: RenderContext): ReactNode {
   // Plugin node renderers win over built-in types.
-  const r = collectNodeRenderers(ctx.plugins)[node.type]
+  const r = (ctx.nodeRenderers ?? collectNodeRenderers(ctx.plugins))[node.type]
   if (r) {
-    const out: RenderOutput | Promise<RenderOutput> = r(node)
-    if (out && typeof (out as { then?: unknown }).then === "function") {
-      return <AsyncOutput key={node.key} promise={out as Promise<RenderOutput>} />
+    try {
+      const out: RenderOutput | Promise<RenderOutput> = r(node)
+      if (out && typeof (out as { then?: unknown }).then === "function") {
+        return <AsyncOutput key={node.key} promise={out as Promise<RenderOutput>} sanitize={ctx.sanitize} />
+      }
+      return renderOutput(out as RenderOutput, node.key, ctx.sanitize)
+    } catch {
+      return renderFallback(node, ctx)
     }
-    return renderOutput(out as RenderOutput, node.key)
   }
   switch (node.type) {
     case "heading":
-      return createElement(node.tag ?? "h1", { key: node.key, dangerouslySetInnerHTML: { __html: node.html ?? "" } })
+      return createElement(node.tag ?? "h1", { key: node.key, dangerouslySetInnerHTML: { __html: renderHtml(node.html ?? "", ctx) } })
     case "paragraph":
-      return <p key={node.key} dangerouslySetInnerHTML={{ __html: node.html ?? "" }} />
+      return <p key={node.key} dangerouslySetInnerHTML={{ __html: renderHtml(node.html ?? "", ctx) }} />
     case "code":
       return (
         <pre key={node.key} data-lang={node.attrs?.lang}>
@@ -32,12 +39,21 @@ export function renderNode(node: ASTNode, ctx: RenderContext): ReactNode {
     case "hr":
       return <hr key={node.key} />
     case "html":
-      return <div key={node.key} dangerouslySetInnerHTML={{ __html: node.content ?? "" }} />
+      return <div key={node.key} dangerouslySetInnerHTML={{ __html: renderHtml(node.content ?? "", ctx) }} />
     case "card":
       return renderCard(node, ctx)
     default:
-      return <div key={node.key} dangerouslySetInnerHTML={{ __html: node.html ?? sanitizeHtml(node.content ?? "") }} />
+      return renderFallback(node, ctx)
   }
+}
+
+function renderFallback(node: ASTNode, ctx: RenderContext): ReactNode {
+  return <div key={node.key} dangerouslySetInnerHTML={{ __html: renderHtml(node.html ?? node.content ?? "", ctx) }} />
+}
+
+function renderHtml(html: string, ctx: RenderContext): string {
+  if (ctx.sanitized || ctx.sanitize === false) return html
+  return sanitizeHtml(html, typeof ctx.sanitize === "object" ? ctx.sanitize as SanitizeHtmlOptions : undefined)
 }
 
 function renderCard(node: ASTNode, ctx: RenderContext): ReactNode {

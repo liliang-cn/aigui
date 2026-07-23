@@ -1,24 +1,27 @@
 import { shallowRef, type ShallowRef } from "vue"
-import { Renderer, type ASTNode, type Patch, type RendererOptions } from "@ai-gui/core"
+import { Renderer, type ASTNode, type FeedOptions, type FeedSource, type Patch, type RendererOptions } from "@ai-gui/core"
 
 export interface UseAIRendererResult {
   nodes: ShallowRef<ASTNode[]>
   push: (chunk: string) => void
-  feed: (source: AsyncIterable<string> | ReadableStream) => Promise<void>
+  feed: (source: FeedSource, options?: FeedOptions) => Promise<void>
   reset: () => void
+  destroy: () => void
 }
 
 export function useAIRenderer(options: Omit<RendererOptions, "onPatch"> = {}): UseAIRendererResult {
   const nodes = shallowRef<ASTNode[]>([])
+  let active = true
   const renderer = new Renderer({
     ...options,
     plugins: options.plugins,
-    onPatch: (_patches: Patch[], snapshot: ASTNode[]) => { nodes.value = snapshot },
+    onPatch: (_patches: Patch[], snapshot: ASTNode[]) => { if (active) nodes.value = snapshot },
   })
   return {
     nodes,
-    push: (c) => renderer.push(c),
-    feed: (s) => renderer.feed(s as never),
-    reset: () => { renderer.reset(); nodes.value = [] },
+    push: (c) => { if (active) renderer.push(c) },
+    feed: (source, feedOptions) => active ? renderer.feed(source, feedOptions) : Promise.resolve(),
+    reset: () => { if (active) { renderer.reset(); nodes.value = [] } },
+    destroy: () => { active = false; renderer.reset(); nodes.value = [] },
   }
 }

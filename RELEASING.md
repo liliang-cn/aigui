@@ -12,7 +12,7 @@ publishes every public `@ai-gui/*` package to npm.
    git remote add origin git@github.com:<owner>/aigui.git
    git push -u origin main
    ```
-2. **Own the `@aigui` npm scope** (or rename the packages to a scope you own),
+2. **Own the `@ai-gui` npm scope** (or rename the packages to a scope you own),
    and be a member able to publish to it.
 3. **Add the npm token as a repository secret** named `NPM_TOKEN`
    (Settings → Secrets and variables → Actions → New repository secret), or:
@@ -29,6 +29,8 @@ publishes every public `@ai-gui/*` package to npm.
    pnpm changeset version    # applies bumps to package.json + writes CHANGELOGs
    git commit -am "release: vX.Y.Z"
    ```
+   For the initial `0.1.0` publish, the package versions are already correct, so
+   do not run `changeset version`. Start recording changesets after that release.
 2. Tag and push — this is what triggers publishing:
    ```bash
    git tag vX.Y.Z            # match the version in package.json
@@ -42,8 +44,9 @@ re-running a tag is safe.
 ## Notes
 
 - The tag only **triggers** the release; the actual published versions come from
-  each `package.json`. Keep the tag in sync with the version you bumped to.
+  each `package.json`. The workflow rejects non-semver tags and tags that do not
+  match the single version shared by all public packages.
 - `--provenance` is enabled; it requires a public repo + the `id-token: write`
   permission (already set in the workflow).
-- For the very first `0.1.0` release you can skip `changeset version` and just
-  tag `v0.1.0` — the package.jsons are already at `0.1.0`.
+- Before publishing, the workflow builds, typechecks, tests, runs `publint`, and
+  verifies each packed tarball contains working ESM, CommonJS, and type exports.

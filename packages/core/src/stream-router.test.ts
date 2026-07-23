@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest"
 import { StreamRouter } from "./stream-router"
 
-async function* gen(...chunks: string[]) { for (const c of chunks) yield c }
+async function* gen(...chunks: Array<string | Uint8Array>) { for (const c of chunks) yield c }
 
 describe("StreamRouter", () => {
   it("routes JSON-envelope delta to a bound channel sink", async () => {
@@ -45,6 +45,12 @@ describe("StreamRouter", () => {
     await router.feed(gen("data: hello world\n"))
     expect(pushed.join("")).toBe("hello world")
   })
+  it("keeps JSON-shaped default content as text deltas", async () => {
+    const pushed: string[] = []
+    const router = new StreamRouter().channel("content", { push: (s) => pushed.push(s) })
+    await router.feed(gen("data: 42\n\ndata: true\n\ndata: {\"answer\":1}\n\n"))
+    expect(pushed).toEqual(["42", "true", '{"answer":1}'])
+  })
 
   it("handles a line split across chunks", async () => {
     const handler = vi.fn()
@@ -77,5 +83,33 @@ describe("StreamRouter", () => {
     const router = new StreamRouter().channel("content", { push: (s) => pushed.push(s) })
     await router.feed(stream)
     expect(pushed.join("")).toBe("hi")
+  })
+  it("decodes UTF-8 split across async-iterable byte chunks", async () => {
+    const pushed: string[] = []
+    const bytes = new TextEncoder().encode("data: 你好\n\n")
+    const router = new StreamRouter().channel("content", { push: (s) => pushed.push(s) })
+    await router.feed(gen(bytes.slice(0, 8), bytes.slice(8, 10), bytes.slice(10)))
+    expect(pushed).toEqual(["你好"])
+  })
+  it("implements standard SSE multi-data events and ignores comments/id/retry fields", async () => {
+    const handler = vi.fn()
+    const router = new StreamRouter().on("message", handler)
+    await router.feed(gen(
+      ": keep-alive\n",
+      "id: 42\n",
+      "retry: 1500\n",
+      "event: message\n",
+      "data: first\n",
+      "data: second\n\n",
+    ))
+    expect(handler).toHaveBeenCalledOnce()
+    expect(handler).toHaveBeenCalledWith("first\nsecond")
+    expect(router.lastEventId).toBe("42")
+    expect(router.retry).toBe(1500)
+  })
+  it("dispatches the final SSE event even without a trailing blank line", async () => {
+    const handler = vi.fn()
+    await new StreamRouter().on("status", handler).feed(gen("event: status\ndata: done"))
+    expect(handler).toHaveBeenCalledWith("done")
   })
 })

@@ -8,6 +8,12 @@ Chart plugin for [AIGUI](../../README.md), powered by [ECharts](https://echarts.
 pnpm add @ai-gui/plugin-chart
 ```
 
+Install `echarts-gl` only when using `chart({ gl: true })`:
+
+```sh
+pnpm add echarts-gl
+```
+
 ## Usage
 
 ```tsx
@@ -24,7 +30,7 @@ The model emits, e.g.:
 ## Options
 
 - `interactive?: boolean` — when true, complete options render a **live** ECharts instance (tooltip / dataZoom / click) via a `mount` output. When false/omitted, they render a static SSR SVG.
-- `gl?: boolean` — when true, render 3D charts via `echarts-gl` (WebGL, live-only; implies interactive). Enables 3D series like `bar3D`, `scatter3D`, `surface`, `line3D`, `globe`, `map3D`.
+- `gl?: boolean` — when true, render 3D charts via the optional `echarts-gl` peer dependency (WebGL, live-only; implies interactive). Enables 3D series like `bar3D`, `scatter3D`, `surface`, `line3D`, `globe`, `map3D`.
 - `width?: number` / `height?: number` — chart dimensions (default 600 × 400).
 
 ## Exports

@@ -1,11 +1,16 @@
-import { sanitizeHtml, type RenderOutput } from "@ai-gui/core"
+import { sanitizeHtml, type RendererOptions, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
+
+export interface ManagedElement extends HTMLElement {
+  __aiguiCleanup?: () => void
+  __aiguiDisposed?: boolean
+}
 
 /** Translate a framework-neutral RenderOutput (from a plugin node renderer) into a DOM element. */
-export function renderOutputToElement(out: RenderOutput): HTMLElement {
+export function renderOutputToElement(out: RenderOutput, sanitize?: RendererOptions["sanitize"]): HTMLElement {
   switch (out.kind) {
     case "html": {
       const el = document.createElement("div")
-      el.innerHTML = sanitizeHtml(out.html)
+      el.innerHTML = sanitizeOutput(out.html, sanitize)
       return el
     }
     case "element": {
@@ -14,7 +19,7 @@ export function renderOutputToElement(out: RenderOutput): HTMLElement {
         if (key === "class" || key === "className") el.className = String(value)
         else el.setAttribute(key, String(value))
       }
-      for (const child of out.children ?? []) el.appendChild(renderOutputToElement(child))
+      for (const child of out.children ?? []) el.appendChild(renderOutputToElement(child, sanitize))
       return el
     }
     case "card": {
@@ -32,10 +37,19 @@ export function renderOutputToElement(out: RenderOutput): HTMLElement {
       const el = document.createElement("div")
       el.setAttribute("data-aigui-mount", "")
       queueMicrotask(() => {
+        if ((el as ManagedElement).__aiguiDisposed) return
         const c = out.mount(el)
-        if (typeof c === "function") (el as { __aiguiCleanup?: () => void }).__aiguiCleanup = c
+        if (typeof c === "function") {
+          if ((el as ManagedElement).__aiguiDisposed) c()
+          else (el as ManagedElement).__aiguiCleanup = c
+        }
       })
       return el
     }
   }
+}
+
+function sanitizeOutput(html: string, sanitize: RendererOptions["sanitize"]): string {
+  if (sanitize === false) return html
+  return sanitizeHtml(html, typeof sanitize === "object" ? sanitize as SanitizeHtmlOptions : undefined)
 }
