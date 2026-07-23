@@ -1,0 +1,22 @@
+{
+  "name": "@ai-gui/anthropic",
+  "version": "0.2.0",
+  "description": "Anthropic model stream adapter for AIGUI.",
+  "keywords": ["anthropic", "claude", "llm", "streaming", "aigui"],
+  "license": "MIT",
+  "author": "Liang Li <ll_faw@hotmail.com>",
+  "repository": { "type": "git", "url": "git+https://github.com/liliang-cn/aigui.git", "directory": "packages/anthropic" },
+  "homepage": "https://github.com/liliang-cn/aigui#readme",
+  "bugs": "https://github.com/liliang-cn/aigui/issues",
+  "type": "module",
+  "sideEffects": false,
+  "engines": { "node": ">=18" },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": { ".": { "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }, "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" } } },
+  "files": ["dist", "README.md", "LICENSE"],
+  "publishConfig": { "access": "public" },
+  "scripts": { "build": "tsdown", "test": "pnpm --dir ../.. exec vitest run --project anthropic", "typecheck": "tsc --noEmit" },
+  "dependencies": { "@ai-gui/core": "workspace:*" }
+}

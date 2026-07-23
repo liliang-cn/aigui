@@ -1,5 +1,19 @@
 # @ai-gui/core
 
+The core also exposes provider-neutral model stream primitives:
+
+```ts
+import { contentDeltas, mockModelStream, parseSSE } from "@ai-gui/core"
+
+const events = mockModelStream([
+  { type: "content", delta: "Hello" },
+  { type: "usage", data: { outputTokens: 1 } },
+])
+await renderer.feed(contentDeltas(events))
+```
+
+`parseSSE`, `jsonLines`/`ndjson`, and `textLines` accept fetch responses, byte streams, and async byte iterables. They preserve split UTF-8 characters, support cancellation, release readers, and let callers reject or skip malformed records. `readableBytes` and `mockModelStream` are deterministic helpers for tests and examples.
+
 The headless streaming engine behind [AIGUI](../../README.md) — framework-agnostic. It parses a streaming LLM response into an AST + patches, runs plugin node renderers, sanitizes HTML, and builds the system prompt. Use it directly, or via an adapter (`@ai-gui/react`, `@ai-gui/vue`, `@ai-gui/vanilla`).
 
 ## Install

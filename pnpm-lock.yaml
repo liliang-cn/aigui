@@ -30,6 +30,12 @@ importers:
         specifier: ^2.1.0
         version: 2.1.9(jsdom@29.1.1)(lightningcss@1.32.0)
 
+  packages/anthropic:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/core:
     dependencies:
       dompurify:
@@ -45,6 +51,12 @@ importers:
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
+
+  packages/openai:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/plugin-chart:
     dependencies:
@@ -125,6 +137,12 @@ importers:
         version: 18.3.1(react@18.3.1)
 
   packages/vanilla:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/vercel-ai:
     dependencies:
       '@ai-gui/core':
         specifier: workspace:*
