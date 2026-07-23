@@ -3,6 +3,8 @@ export type { PartialJSONResult } from "./partial-json"
 export { repairMarkdown } from "./repair-markdown"
 export { sanitizeHtml } from "./sanitizer"
 export type { SanitizeHtmlOptions } from "./sanitizer"
+export { DebugEmitter, safeDebugValue } from "./debug-events"
+export type { DebugEvent, DebugEventListener, DebugEventTarget, DebugOptions, DebugSource } from "./debug-events"
 export { CardRegistry } from "./card-registry"
 export type { CardParseResult } from "./card-registry"
 export {

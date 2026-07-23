@@ -1,4 +1,6 @@
 import type { CardRegistry } from "./card-registry"
+import { DebugEmitter } from "./debug-events"
+import type { DebugEventListener, DebugOptions } from "./debug-events"
 
 export const CARD_ID_MAX_LENGTH = 256
 export const CARD_JSON_MAX_DEPTH = 32
@@ -43,7 +45,7 @@ export interface CardSnapshot {
   cards: Array<Pick<CardRecord, "id" | "type" | "data" | "revision">>
 }
 
-export interface CardStoreOptions {
+export interface CardStoreOptions extends DebugOptions {
   registry?: CardRegistry
 }
 
@@ -51,15 +53,18 @@ export type CardListener = (card: CardRecord | undefined) => void
 export type CardStoreListener = (cards: readonly CardRecord[]) => void
 
 export class CardStore {
+  readonly debugSource = "card-store" as const
   private readonly registry?: CardRegistry
   private cards = new Map<string, CardRecord>()
   private lastMutationEpoch = new Map<string, number>()
   private mutationEpoch = 0
   private readonly listeners = new Map<string, Set<CardListener>>()
   private readonly allListeners = new Set<CardStoreListener>()
+  private readonly debug: DebugEmitter
 
   constructor(options: CardStoreOptions = {}) {
     this.registry = options.registry
+    this.debug = new DebugEmitter(this.debugSource, options)
   }
 
   register(input: { id: string; type: string; data: unknown }): CardRecord {
@@ -106,11 +111,16 @@ export class CardStore {
     return () => this.allListeners.delete(listener)
   }
 
+  subscribeDebug(listener: DebugEventListener): () => void {
+    return this.debug.subscribe(listener)
+  }
+
   apply(patch: CardPatch): CardRecord {
     const next = this.preparePatch(this.cards, patch)
     this.cards.set(next.id, next)
     this.lastMutationEpoch.set(next.id, this.nextMutationEpoch())
     this.notify(next.id)
+    if (this.debug.active) this.debug.emit("card-store-patch", { patch, cards: this.list() })
     return next
   }
 
@@ -129,6 +139,11 @@ export class CardStore {
     for (const id of changed.keys()) this.lastMutationEpoch.set(id, this.nextMutationEpoch())
     for (const id of changed.keys()) this.notifyOne(id)
     if (changed.size) this.notifyAll()
+    if (changed.size && this.debug.active) {
+      const cards = this.list()
+      this.debug.emit("card-store-change", { cardIds: [...changed.keys()], cards })
+      this.debug.emit("card-store-patch", { patch: { op: "batch", patches }, cards })
+    }
     return [...changed.values()]
   }
 
@@ -148,6 +163,7 @@ export class CardStore {
     this.nextMutationEpoch()
     for (const id of ids) this.notifyOne(id)
     this.notifyAll()
+    if (this.debug.active) this.debug.emit("card-store-change", { operation: "clear", cardIds: ids, cards: [] })
   }
 
   snapshot(): CardSnapshot {
@@ -183,6 +199,7 @@ export class CardStore {
     if (restored.size === 0 && ids.size > 0) this.nextMutationEpoch()
     for (const id of ids) this.notifyOne(id)
     if (ids.size) this.notifyAll()
+    if (ids.size && this.debug.active) this.debug.emit("card-store-change", { operation: "restore", cardIds: [...ids], cards: this.list() })
   }
 
   beginAction(id: string, actionId: string): boolean {
@@ -265,6 +282,7 @@ export class CardStore {
   private notify(id: string): void {
     this.notifyOne(id)
     this.notifyAll()
+    if (this.debug.active) this.debug.emit("card-store-change", { cardId: id, cards: this.list() })
   }
 
   private notifyOne(id: string): void {

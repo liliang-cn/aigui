@@ -12,6 +12,7 @@ AIGUI turns a raw model stream into a live, structured UI. Text and markdown ren
 - **Pluggable blocks** — KaTeX math, Shiki syntax highlighting, Mermaid diagrams, primitive UI (list/table/key-value/layout), and ECharts charts (static SVG, live interactive, or 3D via WebGL).
 - **Prompt assembly** — `buildSystemPrompt` produces the system-prompt guidance (card specs + each plugin's prompt spec) so the model knows exactly what it may emit.
 - **Safe by default** — the core sanitizes all HTML output.
+- **Observable when requested** — opt-in debug events and `@ai-gui/devtools` provide a bounded, redacted runtime timeline and deterministic stream simulator.
 - **Tiny surface, well tested** — 150+ tests, built with [tsdown](https://github.com/rolldown/tsdown).
 
 ## Install
@@ -30,6 +31,9 @@ pnpm add @ai-gui/core @ai-gui/vanilla
 
 # plugins (optional)
 pnpm add @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-primitives @ai-gui/plugin-chart
+
+# development diagnostics (optional)
+pnpm add -D @ai-gui/devtools
 ```
 
 ## Quick start — React
@@ -246,6 +250,34 @@ const actionRuntime = createActionRuntime({ registry: actions, cardStore })
 
 Card components receive `{ data, state, onAction }`. Store patches update the matching Card without reparsing Markdown or remounting the component. Supported patch operations are recursive object `merge`, full `replace`, and atomic batches. `cardStore.snapshot()` / `restore()` round-trip Card data and revisions; transient Action state is restored as idle. Cards without an `id` keep the existing stateless behavior.
 
+## DevTools and stream simulation
+
+Enable debug instrumentation on the runtime objects you want to inspect, then attach them to one timeline:
+
+```ts
+import { ActionRegistry, CardStore, Renderer, createActionRuntime } from "@ai-gui/core"
+import { createDevTools, createStreamSimulator } from "@ai-gui/devtools"
+
+const registry = new ActionRegistry()
+const cardStore = new CardStore({ debug: true })
+const actionRuntime = createActionRuntime({ registry, cardStore, debug: true })
+const renderer = new Renderer({ debug: true })
+
+const devtools = createDevTools({
+  maxEvents: 500,
+  maxStringLength: 2_000,
+  redact: ({ key }) => key === "email",
+})
+
+devtools.attach(renderer, actionRuntime, cardStore)
+devtools.subscribe((event) => console.log(event.sequence, event.type, event.data))
+
+const simulator = createStreamSimulator("# Hello, 世界", { chunkSize: 3, delayMs: 25 })
+await renderer.feed(simulator.stream)
+```
+
+The timeline captures stream/feed lifecycle, repaired Markdown, AST snapshots and patches, parse/sanitize/diff timing, Action events and states, and CardStore changes/patches. Events have monotonic sequence numbers and timestamps. Core never serializes `Error.cause` or handler internals and redacts common credential fields before observers receive data; devtools adds custom redaction plus bounded string/depth/node/event limits. Use `snapshot()`, `clear()`, and `destroy()` for export and lifecycle cleanup. The private `@ai-gui/playground` workspace package contains React, Vue, and Vanilla fixtures plus minimal reproduction JSON helpers.
+
 ## How the LLM should generate
 
 Don't hand-write generation rules — call `buildSystemPrompt({ base, registry, plugins })` and prepend the result to your system prompt. It assembles the card specs (from the registry) and each plugin's prompt spec, so the model is told exactly which fenced blocks it may emit. Everything else it writes is plain markdown.
@@ -291,6 +323,7 @@ LLM stream ──▶ @ai-gui/core (headless)
 | [`@ai-gui/plugin-mermaid`](./packages/plugin-mermaid/README.md) | Mermaid diagrams. |
 | [`@ai-gui/plugin-primitives`](./packages/plugin-primitives/README.md) | Primitive UI blocks: list / table / key-value / layout. |
 | [`@ai-gui/plugin-chart`](./packages/plugin-chart/README.md) | ECharts charts: static SVG, live interactive, or 3D. |
+| [`@ai-gui/devtools`](./packages/devtools/README.md) | Opt-in runtime timeline, redaction/limits, and deterministic stream simulation. |
 
 ## Testing & build
 

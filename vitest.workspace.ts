@@ -4,6 +4,10 @@ import { defineWorkspace } from "vitest/config"
 // Resolve @ai-gui/* to TS source so tests never run against a stale dist build.
 const alias = {
   "@ai-gui/core": fileURLToPath(new URL("./packages/core/src/index.ts", import.meta.url)),
+  "@ai-gui/devtools": fileURLToPath(new URL("./packages/devtools/src/index.ts", import.meta.url)),
+  "@ai-gui/react": fileURLToPath(new URL("./packages/react/src/index.ts", import.meta.url)),
+  "@ai-gui/vue": fileURLToPath(new URL("./packages/vue/src/index.ts", import.meta.url)),
+  "@ai-gui/vanilla": fileURLToPath(new URL("./packages/vanilla/src/index.ts", import.meta.url)),
 }
 
 const coverage = {
@@ -50,5 +54,13 @@ export default defineWorkspace([
   {
     resolve: { alias },
     test: { name: "plugin-chart", root: "packages/plugin-chart", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "devtools", root: "packages/devtools", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "playground", root: "packages/playground", coverage },
   },
 ])

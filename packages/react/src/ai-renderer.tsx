@@ -17,6 +17,8 @@ export interface AIRendererProps {
   actionRuntime?: ActionRuntime
   onCardAction?: RenderContext["onCardAction"]
   className?: string
+  debug?: RendererOptions["debug"]
+  onDebugEvent?: RendererOptions["onDebugEvent"]
 }
 
 interface ActionScope {
@@ -29,8 +31,8 @@ function createActionScope(): ActionScope {
 }
 
 export const AIRenderer = forwardRef<AIRendererHandle, AIRendererProps>(function AIRenderer(props, ref) {
-  const { registry, cardStore, sanitize, plugins, actionRuntime, onCardAction, className } = props
-  const opts: Omit<RendererOptions, "onPatch"> = { registry, sanitize, plugins }
+  const { registry, cardStore, sanitize, plugins, actionRuntime, onCardAction, className, debug, onDebugEvent } = props
+  const opts: Omit<RendererOptions, "onPatch"> = { registry, sanitize, plugins, debug, onDebugEvent }
   const { nodes, push, feed, reset: resetRenderer } = useAIRenderer(opts)
   const actionScope = useRef(createActionScope())
   useEffect(() => () => {
@@ -53,7 +55,7 @@ export const AIRenderer = forwardRef<AIRendererHandle, AIRendererProps>(function
     onCardAction?.(action)
   }, [actionRuntime, onCardAction])
   useImperativeHandle(ref, () => ({ push, feed, reset }), [push, feed, reset])
-  const nodeRenderers = useMemo(() => collectNodeRenderers(plugins), [plugins])
+  const nodeRenderers = useMemo(() => collectNodeRenderers(plugins, { debug, onDebugEvent }), [plugins, debug, onDebugEvent])
   const ctx: RenderContext = { registry, cardStore, plugins, nodeRenderers, onCardAction: handleCardAction, sanitize, sanitized: true }
   return (
     <div className={className} data-aigui-renderer>

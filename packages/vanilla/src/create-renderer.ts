@@ -26,7 +26,7 @@ export function createRenderer(el: HTMLElement, options: CreateRendererOptions =
     }
     onCardAction?.(action)
   }
-  const ctx: DomRenderContext = { registry: options.registry, cardStore, onCardAction: handleCardAction, plugins: options.plugins, nodeRenderers: collectNodeRenderers(options.plugins), sanitize: options.sanitize, sanitized: true }
+  const ctx: DomRenderContext = { registry: options.registry, cardStore, onCardAction: handleCardAction, plugins: options.plugins, nodeRenderers: collectNodeRenderers(options.plugins, options), sanitize: options.sanitize, sanitized: true }
   const state = createReconcileState()
   let destroyed = false
   const renderer = new Renderer({

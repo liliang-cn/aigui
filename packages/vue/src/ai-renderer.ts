@@ -12,22 +12,24 @@ export const AIRenderer = defineComponent({
     sanitize: { type: [Boolean, Object] as PropType<RendererOptions["sanitize"]>, default: undefined },
     actionRuntime: { type: Object as PropType<ActionRuntime>, default: undefined },
     cardStore: { type: Object as PropType<CardStore>, default: undefined },
+    debug: { type: Boolean, default: false },
+    onDebugEvent: { type: Function as PropType<NonNullable<RendererOptions["onDebugEvent"]>>, default: undefined },
   },
   setup(props, { emit, expose }) {
-    const current = shallowRef(useAIRenderer({ registry: props.registry, sanitize: props.sanitize, plugins: props.plugins }))
-    const nodeRenderers = shallowRef(collectNodeRenderers(props.plugins))
+    const current = shallowRef(useAIRenderer({ registry: props.registry, sanitize: props.sanitize, plugins: props.plugins, debug: props.debug, onDebugEvent: props.onDebugEvent }))
+    const nodeRenderers = shallowRef(collectNodeRenderers(props.plugins, { debug: props.debug, onDebugEvent: props.onDebugEvent }))
     let actionScope = { controller: new AbortController(), owner: {} }
     const resetActionScope = () => {
       actionScope.controller.abort()
       actionScope = { controller: new AbortController(), owner: {} }
     }
     watch(
-      () => [props.registry, props.sanitize, props.plugins] as const,
+      () => [props.registry, props.sanitize, props.plugins, props.debug, props.onDebugEvent] as const,
       () => {
         resetActionScope()
         current.value.destroy()
-        current.value = useAIRenderer({ registry: props.registry, sanitize: props.sanitize, plugins: props.plugins })
-        nodeRenderers.value = collectNodeRenderers(props.plugins)
+        current.value = useAIRenderer({ registry: props.registry, sanitize: props.sanitize, plugins: props.plugins, debug: props.debug, onDebugEvent: props.onDebugEvent })
+        nodeRenderers.value = collectNodeRenderers(props.plugins, { debug: props.debug, onDebugEvent: props.onDebugEvent })
       },
     )
     watch(() => props.actionRuntime, resetActionScope)
