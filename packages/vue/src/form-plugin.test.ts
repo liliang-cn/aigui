@@ -19,4 +19,22 @@ describe("Vue form plugin", () => {
     await Promise.resolve()
     expect(run).toHaveBeenCalledWith({ name: "Ada" }, expect.anything())
   })
+
+  it("cancels a pending form action when the renderer unmounts", async () => {
+    const aborted = vi.fn()
+    const registry = new ActionRegistry()
+    registry.register({
+      type: "save",
+      run: (_params, { signal }) => new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => { aborted(); reject(signal.reason) }, { once: true })
+      }),
+    })
+    const wrapper = mount(AIRenderer, { props: { plugins: [form({ actionRuntime: createActionRuntime({ registry }) })] } })
+    wrapper.vm.push('```form\n{"id":"profile","fields":[],"submitAction":"save"}\n```')
+    await wrapper.vm.$nextTick()
+    wrapper.element.querySelector("form")!.requestSubmit()
+    wrapper.unmount()
+    await Promise.resolve()
+    expect(aborted).toHaveBeenCalledOnce()
+  })
 })

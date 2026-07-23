@@ -24,4 +24,23 @@ describe("React form plugin", () => {
     await act(async () => { await Promise.resolve() })
     expect(run).toHaveBeenCalledWith({ name: "Ada" }, expect.anything())
   })
+
+  it("cancels a pending form action when the renderer unmounts", async () => {
+    const aborted = vi.fn()
+    const registry = new ActionRegistry()
+    registry.register({
+      type: "save",
+      run: (_params, { signal }) => new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => { aborted(); reject(signal.reason) }, { once: true })
+      }),
+    })
+    const plugin = form({ actionRuntime: createActionRuntime({ registry }) })
+    const ref = createRef<AIRendererHandle>()
+    const view = render(<AIRenderer ref={ref} plugins={[plugin]} />)
+    act(() => ref.current?.push('```form\n{"id":"profile","fields":[],"submitAction":"save"}\n```'))
+    view.container.querySelector("form")!.requestSubmit()
+    view.unmount()
+    await Promise.resolve()
+    expect(aborted).toHaveBeenCalledOnce()
+  })
 })

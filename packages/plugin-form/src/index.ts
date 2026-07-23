@@ -8,6 +8,8 @@ const SAFE_NAME = /^[A-Za-z][A-Za-z0-9_.-]{0,127}$/
 const SAFE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,127}$/
 const MAX_SOURCE_LENGTH = 64 * 1024
 const MAX_FIELDS = 100
+const MAX_PATTERN_LENGTH = 128
+let nextFormInstanceId = 0
 
 export type FormFieldType = "text" | "textarea" | "number" | "date" | "select" | "checkbox" | "radio"
 
@@ -224,12 +226,13 @@ function parseField(value: unknown, index: number, issues: string[]): FormField 
   if (min !== undefined && max !== undefined && min > max) issues.push(`${path}.min cannot exceed max.`)
   let pattern: string | undefined
   if (value.pattern !== undefined) {
-    pattern = readString(value.pattern, `${path}.pattern`, issues, 256)
+    pattern = readString(value.pattern, `${path}.pattern`, issues, MAX_PATTERN_LENGTH)
     if (pattern !== undefined) {
-      try {
-        new RegExp(pattern)
-        if (!isSafePattern(pattern)) issues.push(`${path}.pattern uses unsupported regular expression features.`)
-      } catch { issues.push(`${path}.pattern must be a valid regular expression.`) }
+      if (!isSafePattern(pattern)) issues.push(`${path}.pattern uses unsupported regular expression features.`)
+      else {
+        try { new RegExp(pattern) }
+        catch { issues.push(`${path}.pattern must be a valid regular expression.`) }
+      }
     }
   }
   if (!name || !label || !type) return undefined
@@ -289,6 +292,9 @@ function parseOptions(value: unknown, path: string, issues: string[]): FormOptio
 }
 
 function mountForm(host: HTMLElement, definition: FormDefinition, runtime: ActionRuntime): () => void {
+  const instanceId = String(++nextFormInstanceId)
+  const instancePrefix = `aigui-form-${instanceId}-${definition.id}`
+  const cardType = `form:${definition.id}:${instanceId}`
   const owner = {}
   const controller = new AbortController()
   let pending = false
@@ -296,10 +302,11 @@ function mountForm(host: HTMLElement, definition: FormDefinition, runtime: Actio
   const formElement = document.createElement("form")
   formElement.noValidate = true
   formElement.setAttribute("data-aigui-form", definition.id)
+  formElement.setAttribute("data-aigui-form-instance", instanceId)
   const controls = new Map<string, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>()
   const errorElements = new Map<string, HTMLElement>()
   for (const field of definition.fields) {
-    const rendered = createField(definition.id, field)
+    const rendered = createField(instancePrefix, field)
     formElement.appendChild(rendered.container)
     controls.set(field.name, rendered.control)
     errorElements.set(field.name, rendered.error)
@@ -340,7 +347,7 @@ function mountForm(host: HTMLElement, definition: FormDefinition, runtime: Actio
       formElement.removeAttribute("aria-busy")
     }
     void runtime.dispatch(
-      { type: definition.submitAction, params: validation.values },
+      { type: definition.submitAction, params: validation.values, cardType },
       { owner, signal: controller.signal },
     ).then(
       settle,
@@ -503,9 +510,7 @@ function invalidOutput(issues: string[]): RenderOutput {
 }
 
 function actionErrorMessage(error: unknown): string {
-  const cause = error instanceof Error ? error.cause : undefined
-  if (error instanceof ActionRuntimeError && cause instanceof Error) return cause.message
-  return error instanceof Error ? error.message : "The action failed."
+  return error instanceof ActionRuntimeError ? error.message : "The action failed."
 }
 
 function rejectUnknownKeys(value: Record<string, unknown>, allowed: Set<string>, path: string, issues: string[]): void {
@@ -549,5 +554,82 @@ function escapeHtml(value: string): string {
 }
 
 function isSafePattern(pattern: string): boolean {
-  return !/\\[1-9]|\(\?[=!<]|\(\?:.*[+*}].*\)[+*{]/.test(pattern)
+  let index = 0
+  let hasAtom = false
+  let canQuantify = false
+  let hasQuantifier = false
+
+  if (pattern[index] === "^") index++
+  while (index < pattern.length) {
+    const char = pattern[index]
+    if (char === "$" && index === pattern.length - 1) return hasAtom
+    if (char === "[") {
+      const end = readCharacterClass(pattern, index)
+      if (end === -1) return false
+      index = end
+      hasAtom = true
+      canQuantify = true
+      continue
+    }
+    if (char === "\\") {
+      if (!isSafeEscape(pattern[index + 1])) return false
+      index += 2
+      hasAtom = true
+      canQuantify = true
+      continue
+    }
+    if (char === "*" || char === "+" || char === "?") {
+      if (!canQuantify || hasQuantifier) return false
+      index++
+      canQuantify = false
+      hasQuantifier = true
+      continue
+    }
+    if (char === "{") {
+      if (!canQuantify || hasQuantifier) return false
+      const end = readBoundedQuantifier(pattern, index)
+      if (end === -1) return false
+      index = end
+      canQuantify = false
+      hasQuantifier = true
+      continue
+    }
+    if (".^$|()]}".includes(char)) return false
+    index++
+    hasAtom = true
+    canQuantify = true
+  }
+  return hasAtom
+}
+
+function readCharacterClass(pattern: string, start: number): number {
+  let index = start + 1
+  if (pattern[index] === "^") index++
+  let hasCharacter = false
+  while (index < pattern.length) {
+    const char = pattern[index]
+    if (char === "]") return hasCharacter ? index + 1 : -1
+    if (char === "\\") {
+      if (!isSafeEscape(pattern[index + 1])) return -1
+      index += 2
+    } else {
+      if (char === "[") return -1
+      index++
+    }
+    hasCharacter = true
+  }
+  return -1
+}
+
+function readBoundedQuantifier(pattern: string, start: number): number {
+  const match = /^\{(\d{1,4})(?:,(\d{0,4}))?\}/.exec(pattern.slice(start))
+  if (!match) return -1
+  const minimum = Number(match[1])
+  const maximum = match[2] === undefined || match[2] === "" ? minimum : Number(match[2])
+  if (minimum > 1000 || maximum > 1000 || maximum < minimum) return -1
+  return start + match[0].length
+}
+
+function isSafeEscape(char: string | undefined): boolean {
+  return char !== undefined && ("dDsSwW\\.^$*+?{}[]|()-".includes(char) || !/[A-Za-z0-9]/.test(char))
 }

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { ActionRegistry, collectNodeRenderers, createActionRuntime, createParser, type RenderOutput } from "@ai-gui/core"
+import { ActionRegistry, collectNodeRenderers, createActionRuntime, createParser, type ActionState, type RenderOutput } from "@ai-gui/core"
 import { describe, expect, it, vi } from "vitest"
 import { form, formPromptSpec, parseFormDefinition, validateFormValues } from "./index"
 
@@ -24,6 +24,41 @@ describe("plugin-form", () => {
     expect(parseFormDefinition('{"id":"x","fields":[],"submitAction":"x","url":"https://evil"}').valid).toBe(false)
     expect(parseFormDefinition('{"id":"x","fields":[{"name":"x","type":"script","label":"X"}],"submitAction":"x"}').valid).toBe(false)
     expect(parseFormDefinition('{"id":"x","fields":[{"name":"__proto__","type":"text","label":"X"}],"submitAction":"x"}').valid).toBe(false)
+  })
+
+  it("rejects unsafe regular expressions without compiling them", () => {
+    const OriginalRegExp = globalThis.RegExp
+    const construct = vi.fn(() => { throw new Error("must not compile rejected patterns") })
+    globalThis.RegExp = construct as unknown as RegExpConstructor
+    try {
+      const parsed = parseFormDefinition(JSON.stringify({
+        id: "unsafe",
+        fields: [{ name: "value", type: "text", label: "Value", pattern: "^(a+)+$" }],
+        submitAction: "save",
+      }))
+      expect(parsed.valid).toBe(false)
+      expect(construct).not.toHaveBeenCalled()
+    } finally {
+      globalThis.RegExp = OriginalRegExp
+    }
+  })
+
+  it.each(["(a+)", "(a)", "a(?=b)", "(a)\\1", "a+.*b", "a+a+"])("rejects unsupported pattern %s", (pattern) => {
+    const parsed = parseFormDefinition(JSON.stringify({
+      id: "unsafe",
+      fields: [{ name: "value", type: "text", label: "Value", pattern }],
+      submitAction: "save",
+    }))
+    expect(parsed.valid).toBe(false)
+  })
+
+  it.each(["^[A-Z]", "^[A-Za-z0-9_-]{1,32}$", "order-\\d+"])("accepts linear pattern %s", (pattern) => {
+    const parsed = parseFormDefinition(JSON.stringify({
+      id: "safe",
+      fields: [{ name: "value", type: "text", label: "Value", pattern }],
+      submitAction: "save",
+    }))
+    expect(parsed.valid).toBe(true)
   })
 
   it("validates required, length, pattern, and numeric bounds locally", () => {
@@ -68,7 +103,7 @@ describe("plugin-form", () => {
     const from = host.querySelector<HTMLInputElement>('[name="from"]')!
     const people = host.querySelector<HTMLInputElement>('[name="people"]')!
     const direct = host.querySelector<HTMLInputElement>('[name="direct"]')!
-    expect(host.querySelector('label[for="travel-search-from"]')).toBeTruthy()
+    expect(host.querySelector("label")?.htmlFor).toBe(from.id)
     expect(from.getAttribute("aria-describedby")).toContain("error")
     expect(host.querySelector("textarea[name=notes]")).toBeTruthy()
     expect(host.querySelector("input[type=date][name=date]")).toBeTruthy()
@@ -95,7 +130,7 @@ describe("plugin-form", () => {
     if (typeof cleanup === "function") cleanup()
   })
 
-  it("rejects unknown actions before mounting and displays Action errors", async () => {
+  it("rejects unknown actions before mounting and displays only safe Action errors", async () => {
     const missingRuntime = createActionRuntime({ registry: new ActionRegistry() })
     const missing = collectNodeRenderers([form({ actionRuntime: missingRuntime })]).form({
       key: "form", type: "form", complete: true, content: JSON.stringify(definition),
@@ -114,7 +149,69 @@ describe("plugin-form", () => {
     host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
     await Promise.resolve()
     await Promise.resolve()
-    expect(host.querySelector("[data-aigui-form-action-error]")?.textContent).toContain("Search unavailable")
+    expect(host.querySelector("[data-aigui-form-action-error]")?.textContent).toBe('Action "travel.search" failed')
+  })
+
+  it("isolates action state, cancellation, and DOM ids for every mount", async () => {
+    const aborted: string[] = []
+    const states: ActionState[] = []
+    const registry = new ActionRegistry()
+    registry.register({
+      type: "travel.search",
+      run: (_params, { signal, cardType }) => new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => {
+          aborted.push(cardType ?? "")
+          reject(signal.reason)
+        }, { once: true })
+      }),
+    })
+    const runtime = createActionRuntime({ registry })
+    runtime.subscribe((state) => states.push(state))
+    const out = collectNodeRenderers([form({ actionRuntime: runtime })]).form({
+      key: "form", type: "form", complete: true, content: JSON.stringify({ ...definition, fields: [] }),
+    }) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected mount")
+    const firstHost = document.createElement("div")
+    const secondHost = document.createElement("div")
+    const cleanupFirst = out.mount(firstHost)
+    const cleanupSecond = out.mount(secondHost)
+    firstHost.querySelector("form")!.requestSubmit()
+    secondHost.querySelector("form")!.requestSubmit()
+
+    const pending = states.filter((state) => state.status === "pending")
+    expect(pending).toHaveLength(2)
+    expect(new Set(pending.map((state) => state.key)).size).toBe(2)
+    expect(new Set(pending.map((state) => state.cardType)).size).toBe(2)
+    expect(firstHost.querySelector("form")?.getAttribute("data-aigui-form-instance")).not.toBe(
+      secondHost.querySelector("form")?.getAttribute("data-aigui-form-instance"),
+    )
+
+    if (typeof cleanupFirst === "function") cleanupFirst()
+    await Promise.resolve()
+    expect(aborted).toEqual([pending[0]?.cardType])
+    expect(runtime.getState(pending[1]!.key).status).toBe("pending")
+    if (typeof cleanupSecond === "function") cleanupSecond()
+    await Promise.resolve()
+  })
+
+  it("uses unique DOM ids while preserving label and aria relationships", () => {
+    const registry = new ActionRegistry()
+    registry.register({ type: "travel.search", run: vi.fn() })
+    const out = collectNodeRenderers([form({ actionRuntime: createActionRuntime({ registry }) })]).form({
+      key: "form", type: "form", complete: true, content: JSON.stringify(definition),
+    }) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected mount")
+    const firstHost = document.createElement("div")
+    const secondHost = document.createElement("div")
+    out.mount(firstHost)
+    out.mount(secondHost)
+    const firstInput = firstHost.querySelector<HTMLInputElement>('[name="from"]')!
+    const secondInput = secondHost.querySelector<HTMLInputElement>('[name="from"]')!
+    expect(firstInput.id).not.toBe(secondInput.id)
+    expect(firstHost.querySelector("label")?.htmlFor).toBe(firstInput.id)
+    expect(secondHost.querySelector("label")?.htmlFor).toBe(secondInput.id)
+    expect(firstHost.querySelector('[data-aigui-form-field-error="from"]')?.id).toBe(firstInput.getAttribute("aria-describedby"))
+    expect(secondHost.querySelector('[data-aigui-form-field-error="from"]')?.id).toBe(secondInput.getAttribute("aria-describedby"))
   })
 
   it("aborts its own pending action when the adapter unmounts it", async () => {
