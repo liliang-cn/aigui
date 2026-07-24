@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-chart",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "ECharts chart plugin for AIGUI — static SVG, interactive, and 3D (echarts-gl).",
   "keywords": [
     "llm",

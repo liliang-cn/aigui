@@ -27,6 +27,74 @@ describe("react plugin rendering", () => {
     await act(async () => { await Promise.resolve() })
     expect(container.querySelector("b")?.textContent).toBe("chart")
   })
+
+  it("does not restart an async node renderer after its promise resolves", async () => {
+    const node: ASTNode = { key: "0:chart-stable", type: "chart", content: "x" }
+    let calls = 0
+    const plugin: AIGuiPlugin = {
+      name: "stable-async",
+      nodeRenderers: {
+        chart: () => {
+          calls++
+          return Promise.resolve({ kind: "html", html: "<b>stable</b>" })
+        },
+      },
+    }
+    const view = render(<>{renderNode(node, { plugins: [plugin] })}</>)
+    await act(async () => { await Promise.resolve() })
+    expect(view.container.textContent).toBe("stable")
+    view.rerender(<>{renderNode({ ...node }, { plugins: [plugin] })}</>)
+    await act(async () => { await Promise.resolve() })
+    expect(view.container.textContent).toBe("stable")
+    expect(calls).toBe(1)
+  })
+  it("restarts an async node renderer when the node content changes", async () => {
+    let calls = 0
+    const plugin: AIGuiPlugin = {
+      name: "changing-async",
+      nodeRenderers: {
+        chart: (node) => {
+          calls++
+          return Promise.resolve({ kind: "html", html: `<b>${node.content}</b>` })
+        },
+      },
+    }
+    const view = render(<>{renderNode({ key: "chart", type: "chart", content: "first" }, { plugins: [plugin] })}</>)
+    await act(async () => { await Promise.resolve() })
+    view.rerender(<>{renderNode({ key: "chart", type: "chart", content: "second" }, { plugins: [plugin] })}</>)
+    await act(async () => { await Promise.resolve() })
+    expect(view.container.textContent).toBe("second")
+    expect(calls).toBe(2)
+  })
+  it("does not share async outputs between renderer instances", async () => {
+    let calls = 0
+    const plugin: AIGuiPlugin = {
+      name: "isolated-async",
+      nodeRenderers: {
+        chart: () => {
+          calls++
+          return Promise.resolve({ kind: "html", html: `<b>${calls}</b>` })
+        },
+      },
+    }
+    const node: ASTNode = { key: "same", type: "chart", content: "same" }
+    const first = render(<>{renderNode(node, { plugins: [plugin] })}</>)
+    const second = render(<>{renderNode(node, { plugins: [plugin] })}</>)
+    await act(async () => { await Promise.resolve() })
+    expect(first.container.textContent).toBe("1")
+    expect(second.container.textContent).toBe("2")
+    expect(calls).toBe(2)
+  })
+  it("restarts an async node renderer when the renderer identity changes", async () => {
+    const node: ASTNode = { key: "same", type: "chart", content: "same" }
+    const first: AIGuiPlugin = { name: "first", nodeRenderers: { chart: () => Promise.resolve({ kind: "html", html: "<b>first</b>" }) } }
+    const second: AIGuiPlugin = { name: "second", nodeRenderers: { chart: () => Promise.resolve({ kind: "html", html: "<b>second</b>" }) } }
+    const view = render(<>{renderNode(node, { plugins: [first] })}</>)
+    await act(async () => { await Promise.resolve() })
+    view.rerender(<>{renderNode(node, { plugins: [second] })}</>)
+    await act(async () => { await Promise.resolve() })
+    expect(view.container.textContent).toBe("second")
+  })
   it("resets for a replacement promise and ignores an older resolution", async () => {
     let resolveFirst!: (value: any) => void
     let resolveSecond!: (value: any) => void

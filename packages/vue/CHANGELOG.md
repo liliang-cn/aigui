@@ -1,5 +1,11 @@
 # @ai-gui/vue
 
+## 0.4.1
+
+### Patch Changes
+
+- @ai-gui/core@0.4.1
+
 ## 0.4.0
 
 ### Minor Changes

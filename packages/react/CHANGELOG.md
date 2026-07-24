@@ -1,5 +1,12 @@
 # @ai-gui/react
 
+## 0.4.1
+
+### Patch Changes
+
+- Keep async plugin renderer promises stable across parent rerenders while refreshing them when node content or renderer identity changes.
+  - @ai-gui/core@0.4.1
+
 ## 0.4.0
 
 ### Minor Changes

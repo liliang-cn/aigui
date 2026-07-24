@@ -1,4 +1,4 @@
-import { createElement, useCallback, useEffect, useSyncExternalStore, type ComponentType, type ReactNode } from "react"
+import { createElement, useCallback, useEffect, useRef, useSyncExternalStore, type ComponentType, type ReactNode } from "react"
 import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardAction, type CardRegistry, type CardStore, type NodeRenderer, type RendererOptions, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
 import { AsyncOutput, renderOutput } from "./render-output"
 
@@ -24,15 +24,7 @@ export function renderNode(node: ASTNode, ctx: RenderContext): ReactNode {
   const r = (ctx.nodeRenderers ?? collectNodeRenderers(ctx.plugins))[node.type]
   if (r) {
     if (node.complete === false) return <div key={node.key} data-aigui-block-loading="" data-block-type={node.type} />
-    try {
-      const out: RenderOutput | Promise<RenderOutput> = r(node)
-      if (out && typeof (out as { then?: unknown }).then === "function") {
-        return <AsyncOutput key={node.key} promise={out as Promise<RenderOutput>} sanitize={ctx.sanitize} context={ctx} />
-      }
-      return renderOutput(out as RenderOutput, node.key, ctx.sanitize, ctx)
-    } catch {
-      return renderFallback(node, ctx)
-    }
+    return <PluginOutputHost key={node.key} node={node} renderer={r} context={ctx} />
   }
   switch (node.type) {
     case "heading":
@@ -53,6 +45,45 @@ export function renderNode(node: ASTNode, ctx: RenderContext): ReactNode {
       return renderCard(node, ctx)
     default:
       return renderFallback(node, ctx)
+  }
+}
+
+interface PluginOutputHostProps {
+  node: ASTNode
+  renderer: NodeRenderer
+  context: RenderContext
+}
+
+interface CachedPluginOutput {
+  renderer: NodeRenderer
+  signature: string | ASTNode
+  output: RenderOutput | Promise<RenderOutput>
+}
+
+function PluginOutputHost({ node, renderer, context }: PluginOutputHostProps): ReactNode {
+  const cache = useRef<CachedPluginOutput>()
+  const signature = nodeSignature(node)
+  try {
+    if (!cache.current || cache.current.renderer !== renderer || cache.current.signature !== signature) {
+      cache.current = { renderer, signature, output: renderer(node) }
+    }
+    const output = cache.current.output
+    if (output && typeof (output as { then?: unknown }).then === "function") {
+      return <AsyncOutput promise={output as Promise<RenderOutput>} sanitize={context.sanitize} context={context} />
+    }
+    return renderOutput(output as RenderOutput, undefined, context.sanitize, context)
+  } catch {
+    return renderFallback(node, context)
+  }
+}
+
+function nodeSignature(node: ASTNode): string | ASTNode {
+  try {
+    return JSON.stringify(node)
+  } catch {
+    // External callers can supply non-serializable nodes. Identity still prevents
+    // repeated work for the same object without retaining it after unmount.
+    return node
   }
 }
 
