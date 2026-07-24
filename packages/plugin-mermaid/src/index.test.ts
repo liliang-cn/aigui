@@ -26,13 +26,26 @@ describe("plugin-mermaid", () => {
     const out = r({ key: "0:m", type: "mermaid", content: "graph TD; A-->B" } as ASTNode)
     expect(typeof (out as Promise<RenderOutput>).then).toBe("function")
   })
+  it("describes supported UML and general diagram syntax to the model", async () => {
+    const { mermaidPromptSpec } = await import("./index")
+    const prompt = mermaidPromptSpec()
+    expect(prompt).toContain("flowchart")
+    expect(prompt).toContain("sequenceDiagram")
+    expect(prompt).toContain("classDiagram")
+    expect(prompt).toContain("stateDiagram-v2")
+    expect(prompt).toContain("erDiagram")
+    expect(prompt).toContain("Never emit")
+  })
   it("resolves to an html RenderOutput and never throws (error → fallback html)", async () => {
     mocks.render.mockRejectedValue(new Error("bad diagram"))
     const { mermaid } = await import("./index")
     const r = collectNodeRenderers([mermaid()]).mermaid
     const out = (await r({ key: "0:m", type: "mermaid", content: "not a valid diagram !!!" } as ASTNode)) as RenderOutput
     expect(out.kind).toBe("html")
-    if (out.kind === "html") expect(out.html).toContain("data-aigui-mermaid-error")
+    if (out.kind === "html") {
+      expect(out.html).toContain("data-aigui-mermaid-error")
+      expect(out.html).not.toContain("bad diagram")
+    }
   })
 
   it("uses globally unique IDs across plugin instances and concurrent renders", async () => {
@@ -61,7 +74,15 @@ describe("plugin-mermaid", () => {
     ])
 
     expect(mocks.initialize).toHaveBeenCalledOnce()
-    expect(mocks.initialize).toHaveBeenCalledWith({ startOnLoad: false, theme: "dark" })
+    expect(mocks.initialize).toHaveBeenCalledWith({ startOnLoad: false, theme: "dark", securityLevel: "strict" })
+  })
+
+  it("rejects oversized diagrams without loading Mermaid", async () => {
+    const { mermaid } = await import("./index")
+    const render = collectNodeRenderers([mermaid({ maxSourceBytes: 8 })]).mermaid
+    const out = await render({ key: "large", type: "mermaid", content: "flowchart TD; A-->B" } as ASTNode) as RenderOutput
+    expect(out.kind).toBe("html")
+    expect(mocks.render).not.toHaveBeenCalled()
   })
 
   it("serializes concurrent Mermaid renders because Mermaid owns global mutable state", async () => {

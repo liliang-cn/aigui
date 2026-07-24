@@ -1,4 +1,4 @@
-import { sanitizeHtml, type RendererOptions, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
+import { sanitizeHtml, type RendererOptions, type RenderMountContext, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
 
 export interface ManagedElement extends HTMLElement {
   __aiguiCleanup?: () => void
@@ -6,7 +6,7 @@ export interface ManagedElement extends HTMLElement {
 }
 
 /** Translate a framework-neutral RenderOutput (from a plugin node renderer) into a DOM element. */
-export function renderOutputToElement(out: RenderOutput, sanitize?: RendererOptions["sanitize"]): HTMLElement {
+export function renderOutputToElement(out: RenderOutput, sanitize?: RendererOptions["sanitize"], mountContext: RenderMountContext = {}): HTMLElement {
   switch (out.kind) {
     case "html": {
       const el = document.createElement("div")
@@ -19,7 +19,7 @@ export function renderOutputToElement(out: RenderOutput, sanitize?: RendererOpti
         if (key === "class" || key === "className") el.className = String(value)
         else el.setAttribute(key, String(value))
       }
-      for (const child of out.children ?? []) el.appendChild(renderOutputToElement(child, sanitize))
+      for (const child of out.children ?? []) el.appendChild(renderOutputToElement(child, sanitize, mountContext))
       return el
     }
     case "card": {
@@ -38,7 +38,7 @@ export function renderOutputToElement(out: RenderOutput, sanitize?: RendererOpti
       el.setAttribute("data-aigui-mount", "")
       queueMicrotask(() => {
         if ((el as ManagedElement).__aiguiDisposed) return
-        const c = out.mount(el)
+        const c = out.mount(el, mountContext)
         if (typeof c === "function") {
           if ((el as ManagedElement).__aiguiDisposed) c()
           else (el as ManagedElement).__aiguiCleanup = c

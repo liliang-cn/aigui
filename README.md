@@ -1,6 +1,6 @@
 # AIGUI
 
-A framework-agnostic TypeScript SDK for rendering **streaming** LLM output — markdown, interactive cards, charts, math, and diagrams — progressively, as the tokens arrive.
+A framework-agnostic TypeScript SDK for rendering **streaming** LLM output as generated interfaces, interactive cards, revisioned artifacts, markdown, charts, citations, math, and diagrams.
 
 AIGUI turns a raw model stream into a live, structured UI. Text and markdown render progressively (with in-memory repair of half-typed syntax); richer blocks (cards, charts, math, mermaid) show a loading skeleton while they stream, then render complete. A headless core emits a framework-agnostic AST plus patches; thin adapters render it in React, Vue, or vanilla DOM; plugins add block types.
 
@@ -9,10 +9,12 @@ AIGUI turns a raw model stream into a live, structured UI. Text and markdown ren
 - **Streaming-first** — progressive markdown with live repair of incomplete syntax; block types are complete-gated (skeleton → full render).
 - **Framework-agnostic core** — one headless engine, adapters for React / Vue / vanilla.
 - **App-defined cards** — the LLM only fills data into fenced `card:<type>` blocks; your app owns the schema, the render component, and the real API calls behind buttons.
-- **Pluggable blocks** — KaTeX math, Shiki syntax highlighting, Mermaid diagrams, primitive UI (list/table/key-value/layout), and ECharts charts (static SVG, live interactive, or 3D via WebGL).
+- **Declarative generated UI** — one bounded `ui` tree composes layout, data, forms, registered actions, local bindings, and host-owned card components without generated code.
+- **Pluggable blocks** — KaTeX math, Mermaid/UML diagrams, molecular structures, interactive maps, ECharts charts, primitive UI, and secure source lists.
 - **Prompt assembly** — `buildSystemPrompt` produces the system-prompt guidance (card specs + each plugin's prompt spec) so the model knows exactly what it may emit.
 - **Safe by default** — the core sanitizes all HTML output.
 - **Observable when requested** — opt-in debug events and `@ai-gui/devtools` provide a bounded, redacted runtime timeline and deterministic stream simulator.
+- **Revisioned artifacts** — models can create and update persistent text, code, Markdown, and JSON documents without executing generated code.
 - **Tiny surface, well tested** — 150+ tests, built with [tsdown](https://github.com/rolldown/tsdown).
 
 ## Install
@@ -30,7 +32,10 @@ pnpm add @ai-gui/core @ai-gui/vue
 pnpm add @ai-gui/core @ai-gui/vanilla
 
 # plugins (optional)
-pnpm add @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-form
+pnpm add @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact
+
+# plugin authoring helpers (optional)
+pnpm add @ai-gui/plugin-sdk
 
 # model stream adapters (optional, no provider SDK required)
 pnpm add @ai-gui/openai # or @ai-gui/anthropic / @ai-gui/vercel-ai
@@ -158,6 +163,11 @@ await r.feed(res.body!)
 | `@ai-gui/plugin-primitives` | `primitives()` | ` ```list `, ` ```table `, ` ```key-value `, ` ```layout ` UI blocks |
 | `@ai-gui/plugin-chart` | `chart({ interactive?, gl?, width?, height? })` | ` ```chart ` ECharts blocks — static SVG, live interactive, or 3D |
 | `@ai-gui/plugin-form` | `form({ actionRuntime })` | Safe interactive ` ```form ` blocks with local validation and registered actions |
+| `@ai-gui/plugin-citation` | `citation()` | Secure ` ```sources ` blocks with validated HTTPS links |
+| `@ai-gui/plugin-artifact` | `artifact({ store? })` | Revisioned `artifact-create` / `artifact-update` commands and an inert document workspace |
+| `@ai-gui/plugin-ui` | `ui({ registry, actionRuntime })` | Bounded ` ```ui ` trees with local state, forms, actions, and registered card slots |
+| `@ai-gui/plugin-molecule` | `molecule(options?)` | Strict ` ```molecule ` blocks for SMILES/Molfile 2D and Molfile 3D structures |
+| `@ai-gui/plugin-map` | `map(options?)` | Strict ` ```map ` blocks for inline GeoJSON, markers, routes, bounded navigation, and host-controlled basemaps |
 
 Pass plugins to any adapter:
 
@@ -168,9 +178,16 @@ import { mermaid } from "@ai-gui/plugin-mermaid"
 import { primitives } from "@ai-gui/plugin-primitives"
 import { chart } from "@ai-gui/plugin-chart"
 import { form } from "@ai-gui/plugin-form"
+import { citation } from "@ai-gui/plugin-citation"
+import { ArtifactStore, artifact } from "@ai-gui/plugin-artifact"
+import { ui } from "@ai-gui/plugin-ui"
+import { molecule } from "@ai-gui/plugin-molecule"
+import { map } from "@ai-gui/plugin-map"
+import "@ai-gui/plugin-map/style.css"
 
 // Keep plugin instances stable across component renders.
-const plugins = [katex(), highlight(), mermaid(), chart({ interactive: true }), primitives()]
+const artifactStore = new ArtifactStore()
+const plugins = [ui({ registry, actionRuntime }), katex(), highlight(), mermaid(), molecule(), map(), chart({ interactive: true }), primitives(), citation(), artifact({ store: artifactStore })]
 
 <AIRenderer
   registry={registry}
@@ -181,6 +198,18 @@ const plugins = [katex(), highlight(), mermaid(), chart({ interactive: true }), 
 By default `chart()` renders a static SSR SVG; `chart({ interactive: true })` renders a live ECharts instance (tooltip / dataZoom / click); `chart({ gl: true })` renders 3D charts via `echarts-gl` (WebGL, live-only). Charts are complete-gated: skeleton while streaming, full render when the option JSON is complete.
 
 Forms use the same `ActionRuntime` in every adapter: `const plugins = [form({ actionRuntime })]`. A closed valid `form` JSON fence mounts an accessible native form; incomplete fences remain a loading skeleton, invalid definitions render a safe fallback, and only actions already registered in the runtime can execute. See [`packages/plugin-form/README.md`](./packages/plugin-form/README.md) for the schema and lifecycle details.
+
+`ui({ registry, actionRuntime })` is the main composition layer for AI-generated interfaces. The model can combine fixed node kinds such as `stack`, `grid`, `heading`, `text`, `table`, `keyValue`, `form`, `field`, `button`, and registered `card` slots. State is flat and scalar; the only binding syntax is `{"$state":"key"}`. Actions and cards must already be registered by the host. HTML, CSS, JavaScript, URLs, expressions, loops, workflows, remote components, and artifact commands are rejected.
+
+`citation()` renders a strict `sources` JSON fence as an accessible source list. HTTPS is required by default, unknown fields and unsafe protocols are rejected, and generated source text is never treated as HTML.
+
+`artifact()` lets the model create and revise persistent generated documents through complete-gated JSON commands. Every update requires the exact current `baseRevision`; `operationId` receipts make stream replay idempotent. The workspace previews `text`, `code`, `markdown`, and `json`, supports copy/download, and never executes generated HTML, JavaScript, components, actions, or network requests. `ArtifactStore.snapshot()` and `restore()` support application-owned persistence.
+
+`molecule()` validates chemistry with OpenChemLib, renders safe 2D SVG, and can lazily mount 3Dmol for local Molfiles containing genuine 3D coordinates. SMILES is 2D-only in v1. The model cannot supply URLs, remote structures, scripts, shaders, callbacks, or network operations.
+
+`map()` renders inline GeoJSON, markers, and routes with bounded Leaflet navigation. It is vector-only and network-free by default. Optional raster basemaps are configured exclusively by the host with an exact origin allowlist; tile URLs, tokens, remote GeoJSON, geocoding, HTML popups, and style expressions are not part of the model protocol. Use ECharts for statistical maps and `plugin-map` for map navigation, routes, feature inspection, and geography teaching.
+
+Plugin authors can use `@ai-gui/plugin-sdk` for the existing core authoring types plus small, test-runner-neutral helpers such as `definePlugin`, `createTestNode`, `renderPluginNode`, and `mountOutputForTest`.
 
 ## Model streams
 
@@ -345,6 +374,11 @@ LLM stream ──▶ @ai-gui/core (headless)
 | [`@ai-gui/plugin-primitives`](./packages/plugin-primitives/README.md) | Primitive UI blocks: list / table / key-value / layout. |
 | [`@ai-gui/plugin-chart`](./packages/plugin-chart/README.md) | ECharts charts: static SVG, live interactive, or 3D. |
 | [`@ai-gui/plugin-form`](./packages/plugin-form/README.md) | Accessible, validated forms that submit through `ActionRuntime`. |
+| [`@ai-gui/plugin-citation`](./packages/plugin-citation/README.md) | Secure source-list blocks with bounded fields and validated links. |
+| [`@ai-gui/plugin-artifact`](./packages/plugin-artifact/README.md) | Revisioned generated documents with a safe framework-neutral workspace. |
+| [`@ai-gui/plugin-molecule`](./packages/plugin-molecule/README.md) | Safe SMILES/Molfile 2D and local Molfile 3D molecular views. |
+| [`@ai-gui/plugin-map`](./packages/plugin-map/README.md) | Accessible inline GeoJSON, marker, and route maps with host-controlled networking. |
+| [`@ai-gui/plugin-sdk`](./packages/plugin-sdk/README.md) | Minimal plugin authoring types and test helpers. |
 | [`@ai-gui/openai`](./packages/openai/README.md) | OpenAI Responses and Chat Completions stream adapter. |
 | [`@ai-gui/anthropic`](./packages/anthropic/README.md) | Anthropic Messages stream adapter. |
 | [`@ai-gui/vercel-ai`](./packages/vercel-ai/README.md) | Vercel AI SDK full/data/UI stream adapter. |

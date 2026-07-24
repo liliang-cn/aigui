@@ -80,5 +80,5 @@ export type { BuildSystemPromptOptions } from "./build-system-prompt"
 export { contentDeltas, jsonLines, mockModelStream, ndjson, parseSSE, readableBytes, textLines } from "./model-stream"
 export type { ByteStreamSource, Citation, ModelStreamEvent, SSEEvent, SSEOptions, StreamParseOptions, Usage } from "./model-stream"
 export type {
-  ASTNode, Patch, RenderOutput, NodeRenderer, JSONSchema, CardDef, AIGuiPlugin, RendererOptions, FeedOptions, FeedChunk, FeedSource,
+  ASTNode, Patch, RenderOutput, RenderMountContext, MountCardSlotRequest, MountedCardSlot, NodeRenderer, JSONSchema, CardDef, AIGuiPlugin, PluginCommitContext, RendererOptions, FeedOptions, FeedChunk, FeedSource,
 } from "./types"

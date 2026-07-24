@@ -17,6 +17,9 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions = {}): strin
   if (options.base) parts.push(options.base)
   const cardSpec = options.registry?.toPromptSpec()
   if (cardSpec) parts.push(cardSpec)
-  for (const p of options.plugins ?? []) if (p.promptSpec) parts.push(p.promptSpec)
+  for (const plugin of options.plugins ?? []) {
+    const spec = typeof plugin.promptSpec === "function" ? plugin.promptSpec() : plugin.promptSpec
+    if (spec) parts.push(spec)
+  }
   return parts.join("\n\n")
 }

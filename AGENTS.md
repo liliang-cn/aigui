@@ -21,7 +21,7 @@ AIGUI renders a streaming LLM response as live UI. A headless core (`@ai-gui/cor
 | Vue | `@ai-gui/vue` | `pnpm add @ai-gui/core @ai-gui/vue` |
 | vanilla DOM | `@ai-gui/vanilla` | `pnpm add @ai-gui/core @ai-gui/vanilla` |
 
-Add any plugins you need: `@ai-gui/plugin-katex`, `@ai-gui/plugin-highlight`, `@ai-gui/plugin-mermaid`, `@ai-gui/plugin-primitives`, `@ai-gui/plugin-chart`.
+Add any plugins you need: `@ai-gui/plugin-ui`, `@ai-gui/plugin-katex`, `@ai-gui/plugin-highlight`, `@ai-gui/plugin-mermaid`, `@ai-gui/plugin-molecule`, `@ai-gui/plugin-map`, `@ai-gui/plugin-primitives`, `@ai-gui/plugin-chart`, `@ai-gui/plugin-form`, `@ai-gui/plugin-citation`, `@ai-gui/plugin-artifact`.
 
 ### 2. Register cards
 
@@ -92,8 +92,14 @@ import { highlight } from "@ai-gui/plugin-highlight"
 import { mermaid } from "@ai-gui/plugin-mermaid"
 import { primitives } from "@ai-gui/plugin-primitives"
 import { chart } from "@ai-gui/plugin-chart"
+import { citation } from "@ai-gui/plugin-citation"
+import { ArtifactStore, artifact } from "@ai-gui/plugin-artifact"
+import { ui } from "@ai-gui/plugin-ui"
+import { molecule } from "@ai-gui/plugin-molecule"
+import { map } from "@ai-gui/plugin-map"
 
-const plugins = [katex(), highlight(), mermaid(), chart({ interactive: true }), primitives()]
+const artifactStore = new ArtifactStore()
+const plugins = [ui({ registry, actionRuntime }), katex(), highlight(), mermaid(), molecule(), map(), chart({ interactive: true }), primitives(), citation(), artifact({ store: artifactStore })]
 ```
 
 ### 6. Build the system prompt
@@ -135,6 +141,16 @@ A card is an app-defined widget. Emit a fenced block whose info string is `card:
 
 **Buttons are declarative.** Never claim you performed an action or made a request. A card's buttons carry an `action` name plus `params`; the app performs the real work when the user clicks. You only supply the data.
 
+### Generated UI — ` ```ui `
+
+Emit at most one strict JSON UI tree when the app enables it:
+
+    ```ui
+    {"version":1,"id":"search","state":{"query":""},"root":{"kind":"stack","id":"root","children":[{"kind":"heading","id":"title","level":2,"text":"Search"},{"kind":"form","id":"form","submit":{"type":"search.run"},"children":[{"kind":"field","id":"query","bind":"query","fieldType":"text","label":"Query","required":true}]},{"kind":"card","id":"summary","type":"search-summary","data":{"query":{"$state":"query"}}}]}}
+    ```
+
+Use only the node kinds, actions, cards, and fields listed in the system prompt. The only binding syntax is `{"$state":"key"}`. Never emit HTML, Markdown nodes, CSS, JavaScript, URLs, expressions, conditions, loops, imports, remote components, workflows, or artifact commands inside a UI tree.
+
 ### Charts — ` ```chart `
 
 A fenced block containing an ECharts option JSON:
@@ -168,6 +184,46 @@ Inline `$E = mc^2$`, or a block:
     graph TD; A-->B; A-->C;
     ```
 
+### Molecules — ` ```molecule `
+
+    ```molecule
+    {"version":1,"format":"smiles","source":"CCO","view":"2d","highlight":{"atoms":[2]}}
+    ```
+
+Use SMILES for 2D structures. Use a local Molfile for 2D or 3D; 3D requires real finite non-flat coordinates. Never emit structure URLs, scripts, network requests, remote resources, HTML, shaders, callbacks, or credentials.
+
+### Maps — ` ```map `
+
+    ```map
+    {"version":1,"ariaLabel":"Route map","layers":[{"id":"cities","type":"markers","items":[{"id":"a","position":[116.4,39.9],"label":"Beijing"}]},{"id":"route","type":"route","coordinates":[[116.4,39.9],[121.47,31.23]],"label":"Route"}]}
+    ```
+
+Coordinates are `[longitude, latitude]`. Use only inline GeoJSON, markers, and routes. Never emit tile URLs, tokens, remote GeoJSON, geocoding requests, HTML, scripts, CSS, images, callbacks, or arbitrary map options. Basemaps and network access are host-controlled.
+
+### Sources — ` ```sources `
+
+    ```sources
+    {"sources":[{"id":"docs","title":"AIGUI documentation","url":"https://github.com/liliang-cn/aigui"}]}
+    ```
+
+Use only the fields documented by the enabled plugin. Do not put HTML, scripts, actions, credentials, or unsafe URLs in source data.
+
+### Artifacts — ` ```artifact-create ` / ` ```artifact-update `
+
+Create a persistent generated document:
+
+    ```artifact-create
+    {"version":1,"operationId":"create-guide","artifact":{"id":"guide","title":"Guide","filename":"GUIDE.md","kind":"markdown","content":"# Guide"}}
+    ```
+
+Update it using the exact current revision:
+
+    ```artifact-update
+    {"version":1,"operationId":"update-guide-r1","id":"guide","baseRevision":0,"content":"# Revised guide"}
+    ```
+
+Artifact commands are declarative. Never claim a command succeeded. Do not emit HTML execution, scripts, components, actions, network requests, filesystem paths, or package installation instructions as executable artifact behavior. Code artifacts are inert source previews.
+
 ### The one rule
 
-Only emit registered cards and enabled block types (per your system prompt). Everything else is plain markdown. Keep card/chart/primitive bodies as valid JSON.
+Only emit registered cards and enabled block types (per your system prompt). Everything else is plain markdown. Keep UI/card/chart/molecule/map/primitive/source/artifact bodies as valid JSON.

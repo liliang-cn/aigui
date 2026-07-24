@@ -1,0 +1,9 @@
+@import "leaflet/dist/leaflet.css";
+
+[data-aigui-map]{display:block;max-width:100%}
+[data-aigui-map-canvas]{position:relative;width:100%;height:var(--aigui-map-height,360px);min-height:240px;overflow:hidden;background:#e8edf1;outline:none}
+[data-aigui-map-canvas]:focus-visible{outline:3px solid #2563eb;outline-offset:2px}
+[data-aigui-map-controls]{position:absolute;z-index:800;top:10px;right:10px;display:flex;gap:8px;flex-wrap:wrap}
+[data-aigui-map-controls] button{min-width:44px;min-height:44px;border:1px solid #64748b;border-radius:6px;background:#fff;color:#111827;font:inherit;padding:8px 12px;cursor:pointer}
+[data-aigui-map-summary]{margin-top:12px}
+@media (prefers-reduced-motion:reduce){[data-aigui-map] *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}

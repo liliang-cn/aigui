@@ -1,6 +1,6 @@
 import { defineComponent, h, markRaw, onBeforeUnmount, onMounted, shallowRef, toRaw, watch, type Component, type PropType, type VNode, type WatchStopHandle } from "vue"
 import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardRecord, type CardRegistry, type CardStore, type NodeRenderer, type RendererOptions, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
-import { AsyncOutput, renderOutput } from "./render-output"
+import { AsyncOutput, createRenderMountContext, renderOutput } from "./render-output"
 
 export interface RenderContext {
   registry?: CardRegistry
@@ -19,10 +19,11 @@ export function renderNode(node: ASTNode, ctx: RenderContext): VNode {
     if (node.complete === false) return h("div", { key: node.key, "data-aigui-block-loading": "", "data-block-type": node.type })
     try {
       const out = r(node)
+      const mountContext = createRenderMountContext(ctx.registry, ctx.onCardAction)
       if (out && typeof (out as { then?: unknown }).then === "function") {
-        return h(AsyncOutput, { key: node.key, promise: out as Promise<RenderOutput>, sanitize: ctx.sanitize })
+        return h(AsyncOutput, { key: node.key, promise: out as Promise<RenderOutput>, sanitize: ctx.sanitize, context: mountContext })
       }
-      const vnode = renderOutput(out as RenderOutput, ctx.sanitize)
+      const vnode = renderOutput(out as RenderOutput, ctx.sanitize, mountContext)
       vnode.key = node.key
       return vnode
     } catch {

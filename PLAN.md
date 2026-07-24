@@ -497,3 +497,181 @@ v0.4 可优先考虑：
 - 官方主题包。
 - Plugin SDK、scaffold 和跨 adapter contract test kit。
 - Data grid、timeline、map 和 file preview 插件。
+
+## v0.4 首批增强
+
+状态：已完成首批实现。
+
+- `@ai-gui/plugin-sdk`：薄层插件 authoring API 和 test-runner-neutral 测试 helpers。
+- `@ai-gui/plugin-citation`：complete-gated `sources` JSON、HTTPS URL policy、安全文本输出。
+- `@ai-gui/plugin-artifact`：`artifact-create` / `artifact-update`、revision conflict、operation receipt、snapshot/restore、安全 workspace。
+- Core `onASTCommit`：模型命令只在 AST 提交阶段执行，不在 React/Vue render 或 mount 阶段产生副作用。
+- Dynamic `promptSpec`：每轮 prompt 可列出当前 artifact ID、kind、revision 和 title，不注入内容。
+- Playground 同时验证 React、Vue、Vanilla 的 Citation 和 Artifact 生命周期。
+
+Artifact 首版只支持 `text`、`code`、`markdown`、`json` 惰性文档。模型生成的 HTML、JavaScript、组件、Action、网络请求、远程模块和文件系统操作都不会执行。
+
+### Declarative Generative UI
+
+- `@ai-gui/plugin-ui`：一个 complete-gated `ui` JSON tree 组合布局、文本、数据、表单、注册 Action 和注册 Card slot。
+- Core/adapter mount-card bridge：framework-neutral plugin 可以挂载宿主已有的 React、Vue 或 Vanilla Card renderer，并在本地状态变化时原位更新。
+- 状态只允许扁平 scalar；绑定只允许精确 `{"$state":"key"}`。
+- 首版没有表达式、条件、循环、Action result binding、HTML、CSS、JavaScript、URL、远程组件或 workflow。
+- Artifact 保持独立：UI tree 不读取或修改 ArtifactStore。
+
+## 后续学科插件
+
+状态：规划中。学科插件建立在通用 Generative UI、KaTeX、ECharts、Mermaid、Artifact 和宿主 Action 之上，只补充领域数据协议与专业渲染器，不进入 core。
+
+### 物理：`@ai-gui/plugin-science-canvas`
+
+当前物理教学优先复用：
+
+- KaTeX：公式、推导和符号表达。
+- ECharts：实验数据、运动曲线、相图和统计结果。
+- Mermaid：装置关系、过程流程和系统结构。
+- Generated UI：参数表单、控制按钮、状态展示和宿主注册组件。
+
+高级交互仿真后续作为独立 `plugin-science-canvas`，不恢复通用 Physics preset 插件。建议能力：
+
+- 受限 scene graph，不接收 JavaScript、任意 engine API 或 callback。
+- 坐标系、矢量、轨迹、力箭头、测量标尺和可控时间轴。
+- 宿主注册的 simulation model；LLM 只能选择模型并填写受限参数。
+- Play、Pause、Step、Reset 和 reduced-motion 生命周期。
+- 可选 2D Canvas/SVG，后续再评估 3D/WebGL。
+- 不把数值求解器、Matter.js bodies 或任意脚本暴露给模型。
+
+### 化学：`@ai-gui/plugin-molecule`
+
+状态：v1 已实现。
+
+目标：使用领域标准格式生成安全、可检查的分子教学视图。
+
+首版建议支持：
+
+- SMILES。
+- Molfile / SDF 单分子记录。
+- 2D 结构式。
+- 3D ball-and-stick / space-filling 分子视图。
+- 原子标签、键类型、元素着色、旋转、缩放和重置。
+- 可选高亮原子或键，用于官能团、反应位点和立体化学讲解。
+
+协议与安全边界：
+
+- 一个 complete-gated `molecule` JSON fence，数据而非脚本。
+- 严格限制 source bytes、原子数、键数、坐标范围和嵌套深度。
+- 禁止远程结构 URL、脚本、shader、callback、任意 HTML 和网络请求。
+- SMILES/Molfile 解析失败使用通用非反射错误，不回显内部 parser 细节。
+- 2D/3D renderer 按需加载，未启用消费者不增加默认 core 体积。
+- 后续可增加反应式和多个 molecule layout，但不在 v1 混入通用化学编辑器。
+
+候选模型输出：
+
+```json
+{
+  "version": 1,
+  "format": "smiles",
+  "source": "CCO",
+  "view": "2d",
+  "labels": "hetero",
+  "highlight": { "atoms": [2] }
+}
+```
+
+### 地理：`@ai-gui/plugin-map`
+
+状态：v1 已实现。
+
+目标：提供完整的地图教学与地理数据交互，而不是把 ECharts 的统计地图能力包装成 GIS。
+
+首版建议支持：
+
+- GeoJSON `FeatureCollection`。
+- 行政区边界和区域选择。
+- 经纬度点、标记和标签。
+- LineString / 路线。
+- bounded viewport、缩放、平移、fit bounds 和 reset。
+- 图层开关、图例和受限 tooltip 字段。
+- 教学场景中的距离、方向和区域比较。
+
+协议与安全边界：
+
+- 一个 complete-gated `map` JSON fence。
+- 默认只接受内联、受限 GeoJSON 和坐标数据。
+- 底图、瓦片和地理编码属于宿主配置；LLM 不提供任意 tile URL、token 或网络请求。
+- 限制 feature 数、坐标点数、geometry depth、属性大小和经纬度范围。
+- 禁止 HTML popup、脚本、style expression、远程组件和任意 Map API 调用。
+- Renderer 按需加载；SSR 使用安全 placeholder 或静态摘要。
+
+候选模型输出：
+
+```json
+{
+  "version": 1,
+  "viewport": { "center": [116.4, 39.9], "zoom": 6 },
+  "layers": [
+    { "type": "markers", "items": [{ "id": "beijing", "position": [116.4, 39.9], "label": "北京" }] },
+    { "type": "route", "coordinates": [[116.4, 39.9], [121.47, 31.23]] }
+  ]
+}
+```
+
+### ECharts 与 `plugin-map` 的边界
+
+现有 ECharts 继续适合：
+
+- Choropleth 和统计地图。
+- 基础地理热力图。
+- 数据驱动的 scatter / lines series。
+- Globe、map3D 和其他可视化叙事。
+
+`plugin-map` 负责 ECharts 不应承担的地图应用语义：
+
+- 稳定的地图 viewport 和导航生命周期。
+- 行政区、GeoJSON feature 和多图层管理。
+- 标记、路线、地图选择和地理测量。
+- 宿主控制的底图、tile provider、访问凭证和网络策略。
+- 面向地理教学而非单次统计图表的交互模型。
+
+两者可以并存：统计表达优先 ECharts；地图探索、路线、行政区和地理教学优先 `plugin-map`。
+
+## v0.4 后续：Session Context Surface
+
+状态：规划中，不阻塞当前 Generative UI 工作。
+
+### Session Metadata Surface
+
+宿主可以提交和更新独立于聊天正文的结构化 session metadata：
+
+```ts
+{
+  learningProfile: {
+    domain: "分布式系统",
+    goal: "掌握百万用户短链接服务的设计方法",
+    foundation: "待通过对话诊断",
+  },
+}
+```
+
+约束：
+
+- Metadata 不进入 Markdown buffer、AST、消息列表或用户消息。
+- 更新由宿主 API 显式执行，不使用隐藏的聊天消息模拟状态。
+- 宿主显式决定哪些字段可注入下一轮 model context；默认不自动注入。
+- Metadata 必须经过 schema、大小、深度、节点数和危险 key 校验。
+- 更新、订阅、snapshot/restore 和 debug event 与 renderer 生命周期解耦。
+- LLM 不能直接写任意 metadata；如需模型建议更新，必须经过声明式 proposal 和宿主确认/allowlist。
+
+### Structured Status Card
+
+提供标准化只读状态卡，用于展示由宿主或受控 LLM 流程产生的领域、目标、掌握度和诊断状态。
+
+约束：
+
+- 状态卡订阅 Session Metadata Surface，不从聊天正文解析状态。
+- 状态卡不是普通聊天消息，不参与 Markdown diff 或对话 transcript。
+- 首版只读；不在卡片内部隐式执行请求或修改 session metadata。
+- 字段、状态枚举和进度值必须受 schema 限制，并提供 React、Vue、Vanilla 一致语义。
+- 宿主决定状态卡的挂载位置、可见字段和 model-context 暴露策略。
+
+推荐边界：`SessionMetadataStore` 放在 core 的独立宿主状态 API；Structured Status Card 作为可选 framework-neutral view 或 adapter 组件。两者不能与 `CardStore`、ArtifactStore 或聊天消息存储混为一体。

@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/playground",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +12,12 @@
   "dependencies": {
     "@ai-gui/core": "workspace:*",
     "@ai-gui/devtools": "workspace:*",
+    "@ai-gui/plugin-citation": "workspace:*",
+    "@ai-gui/plugin-artifact": "workspace:*",
+    "@ai-gui/plugin-ui": "workspace:*",
+    "@ai-gui/plugin-mermaid": "workspace:*",
+    "@ai-gui/plugin-molecule": "workspace:*",
+    "@ai-gui/plugin-map": "workspace:*",
     "@ai-gui/react": "workspace:*",
     "@ai-gui/vanilla": "workspace:*",
     "@ai-gui/vue": "workspace:*",

@@ -1,10 +1,96 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest"
 import { createRenderer } from "./create-renderer"
-import type { AIGuiPlugin, ASTNode, RenderOutput } from "@ai-gui/core"
+import { CardRegistry, type AIGuiPlugin, type ASTNode, type RenderMountContext, type RenderOutput } from "@ai-gui/core"
 import { createReconcileState, reconcile } from "./reconcile"
+import { renderNodeToElement, type VanillaCardInstance } from "./render-node-dom"
 
 describe("vanilla mount RenderOutput", () => {
+  it("bridges mountCard to legacy card factories and keeps the supplied slot host", async () => {
+    const registry = new CardRegistry()
+    const onCardAction = vi.fn()
+    const factory = vi.fn((data: any, context: any) => {
+      const button = document.createElement("button")
+      button.textContent = String(data.value)
+      button.onclick = () => context.onAction({ type: "select", params: { value: data.value } })
+      return button
+    })
+    registry.register({ type: "choice", description: "choice", render: factory })
+    let mountContext: RenderMountContext | undefined
+    let slot: HTMLElement | undefined
+    const plugin: AIGuiPlugin = {
+      name: "slots",
+      nodeRenderers: {
+        slots: () => ({
+          kind: "mount",
+          mount(el, context) {
+            mountContext = context
+            slot = document.createElement("section")
+            el.appendChild(slot)
+            const mounted = context.mountCard?.(slot, { type: "choice", data: { value: 1 } })
+            expect(context.mountCard?.(document.createElement("div"), { type: "missing", data: {} })).toBeUndefined()
+            mounted?.update({ value: 2 })
+            return mounted?.destroy
+          },
+        }),
+      },
+    }
+
+    const el = renderNodeToElement({ key: "slots", type: "slots", complete: true }, { registry, onCardAction, plugins: [plugin] })
+    const root = document.createElement("div")
+    root.appendChild(el)
+    await Promise.resolve()
+
+    expect(mountContext?.mountCard).toEqual(expect.any(Function))
+    expect(root.querySelector("section")).toBe(slot)
+    expect(slot?.querySelector("button")?.textContent).toBe("2")
+    expect(factory).toHaveBeenCalledTimes(2)
+    slot?.querySelector("button")?.click()
+    expect(onCardAction).toHaveBeenCalledWith({ type: "select", params: { value: 2 }, cardType: "choice" })
+  })
+
+  it("bridges async mount outputs to managed card instances and destroys once", async () => {
+    const registry = new CardRegistry()
+    const update = vi.fn((data: any) => { cardElement.textContent = String(data.value) })
+    const destroy = vi.fn()
+    const cardElement = document.createElement("span")
+    registry.register({
+      type: "managed",
+      description: "managed",
+      render(data: any): VanillaCardInstance {
+        cardElement.textContent = String(data.value)
+        return { element: cardElement, update, destroy }
+      },
+    })
+    let mounted: ReturnType<NonNullable<RenderMountContext["mountCard"]>>
+    const plugin: AIGuiPlugin = {
+      name: "async-slots",
+      nodeRenderers: {
+        slots: async () => ({
+          kind: "mount",
+          mount(el, context) {
+            mounted = context.mountCard?.(el, { type: "managed", data: { value: 1 } })
+            mounted?.update({ value: 2 })
+            return () => {
+              mounted?.destroy()
+              mounted?.destroy()
+            }
+          },
+        }),
+      },
+    }
+    const container = document.createElement("div")
+    const state = createReconcileState()
+    reconcile(container, [{ key: "slots", type: "slots", complete: true }], { registry, plugins: [plugin] }, state)
+    await new Promise((resolve) => setTimeout(resolve))
+
+    expect(container.querySelector("span")).toBe(cardElement)
+    expect(cardElement.textContent).toBe("2")
+    expect(update).toHaveBeenCalledOnce()
+    reconcile(container, [], { registry, plugins: [plugin] }, state)
+    expect(destroy).toHaveBeenCalledOnce()
+  })
+
   it("mounts a live widget and cleans up on reset", async () => {
     const cleanup = vi.fn()
     const mountFn = vi.fn((el: HTMLElement) => { el.setAttribute("data-mounted", ""); return cleanup })

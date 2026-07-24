@@ -16,6 +16,13 @@ describe("buildSystemPrompt", () => {
     const out = buildSystemPrompt({ plugins: [plugin] })
     expect(out).toContain("Fence ```x for widgets.")
   })
+  it("evaluates dynamic plugin prompt specs for each turn", () => {
+    let revision = 0
+    const plugin: AIGuiPlugin = { name: "dynamic", promptSpec: () => `Current revision: ${revision}` }
+    expect(buildSystemPrompt({ plugins: [plugin] })).toContain("Current revision: 0")
+    revision = 2
+    expect(buildSystemPrompt({ plugins: [plugin] })).toContain("Current revision: 2")
+  })
   it("omits empty sections (no registry, no plugins)", () => {
     expect(buildSystemPrompt({ base: "Base only." })).toBe("Base only.")
   })

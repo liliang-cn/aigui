@@ -29,9 +29,28 @@ export type RenderOutput =
   | { kind: "html"; html: string }
   | { kind: "element"; tag: string; props?: Record<string, unknown>; children?: RenderOutput[] }
   | { kind: "card"; type: string; data: unknown }
-  | { kind: "mount"; mount: (el: HTMLElement) => void | (() => void) }
+  | { kind: "mount"; mount: (el: HTMLElement, context: RenderMountContext) => void | (() => void) }
+
+export interface MountCardSlotRequest {
+  type: string
+  data: unknown
+}
+
+export interface MountedCardSlot {
+  update(data: unknown): void
+  destroy(): void
+}
+
+export interface RenderMountContext {
+  mountCard?: (host: HTMLElement, request: MountCardSlotRequest) => MountedCardSlot | undefined
+}
 
 export type NodeRenderer = (node: ASTNode) => RenderOutput | Promise<RenderOutput>
+
+export interface PluginCommitContext {
+  readonly generation: number
+  emitDebug(type: string, data?: Record<string, unknown>): void
+}
 
 type KnownJSONSchemaType = "object" | "array" | "string" | "number" | "integer" | "boolean" | "null"
 
@@ -68,9 +87,11 @@ export interface AIGuiPlugin {
   cards?: CardDef[]
   nodeRenderers?: Record<string, NodeRenderer>
   isBlockComplete?: (nodeType: string, raw: string) => boolean
+  /** Runs synchronously after the AST is finalized and before patches are dispatched. */
+  onASTCommit?: (nodes: readonly ASTNode[], context: PluginCommitContext) => void
   css?: string
   /** LLM-facing guidance describing this plugin's fence syntax. */
-  promptSpec?: string
+  promptSpec?: string | (() => string)
 }
 
 export interface RendererOptions extends DebugOptions {

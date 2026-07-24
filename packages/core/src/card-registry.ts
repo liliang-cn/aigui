@@ -23,6 +23,14 @@ export class CardRegistry {
     return this.cards.get(type)?.render
   }
 
+  get(type: string): Readonly<CardDef> | undefined {
+    return this.cards.get(type)
+  }
+
+  list(): Readonly<CardDef>[] {
+    return [...this.cards.values()]
+  }
+
   parse(type: string, rawJson: string): CardParseResult {
     const def = this.cards.get(type)
     const { data, complete } = parsePartialJSON(rawJson)

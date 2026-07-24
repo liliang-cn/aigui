@@ -250,6 +250,17 @@ export class Renderer {
       if (this.sanitize !== false) this.sanitizeNodesWithDebug(next.nodes)
     }
     const nextAst = next.nodes
+    for (const plugin of this.options.plugins ?? []) {
+      if (!plugin.onASTCommit) continue
+      try {
+        plugin.onASTCommit(nextAst, {
+          generation: this.generation,
+          emitDebug: (type, data = {}) => this.debug.emit(type, { plugin: plugin.name, ...data }),
+        })
+      } catch (error) {
+        if (debug) this.debug.emit("plugin-commit-failed", { plugin: plugin.name, error })
+      }
+    }
     const diffStarted = debug ? now() : 0
     const patches: Patch[] = diffAst(this.prevAst, nextAst)
     const diffDurationMs = debug ? now() - diffStarted : 0

@@ -1,10 +1,17 @@
 import "./style.css"
+import "@ai-gui/plugin-map/style.css"
 import { createElement } from "react"
 import { flushSync } from "react-dom"
 import { createRoot, type Root } from "react-dom/client"
 import { createApp, defineComponent, h, ref, type App } from "vue"
-import { CardRegistry, type DebugEventTarget } from "@ai-gui/core"
+import { ActionRegistry, CardRegistry, createActionRuntime, type AIGuiPlugin, type DebugEventTarget } from "@ai-gui/core"
 import { createDevTools, createStreamSimulator, type DevTools, type StreamSimulator, type TimelineEvent } from "@ai-gui/devtools"
+import { citation } from "@ai-gui/plugin-citation"
+import { ArtifactStore, artifact } from "@ai-gui/plugin-artifact"
+import { ui } from "@ai-gui/plugin-ui"
+import { mermaid } from "@ai-gui/plugin-mermaid"
+import { molecule } from "@ai-gui/plugin-molecule"
+import { map } from "@ai-gui/plugin-map"
 import { AIRenderer as ReactAIRenderer, type AIRendererHandle as ReactHandle } from "@ai-gui/react"
 import { AIRenderer as VueAIRenderer } from "@ai-gui/vue"
 import { createRenderer, type VanillaRenderer } from "@ai-gui/vanilla"
@@ -19,7 +26,59 @@ Edit this Markdown, then inspect how repair, parsing and patch dispatch evolve.
 
 \`\`\`card:demo
 {"id":"counter-1","title":"Interactive card","count":3}
+\`\`\`
+
+\`\`\`sources
+{"sources":[{"id":"aigui-docs","title":"AIGUI documentation","url":"https://github.com/liliang-cn/aigui"}]}
+\`\`\`
+
+## Generated interface
+
+\`\`\`ui
+{"version":1,"id":"service-planner","state":{"service":"short-links","replicas":3,"durable":true},"root":{"kind":"stack","id":"ui-root","gap":"lg","children":[{"kind":"heading","id":"ui-title","level":2,"text":"Service planner"},{"kind":"text","id":"ui-summary","text":{"$state":"service"},"tone":"positive"},{"kind":"form","id":"ui-form","submit":{"type":"plan.submit"},"submitLabel":"Create plan","children":[{"kind":"grid","id":"ui-fields","columns":2,"gap":"md","children":[{"kind":"field","id":"service-field","bind":"service","fieldType":"text","label":"Service name","required":true,"minLength":2},{"kind":"field","id":"replicas-field","bind":"replicas","fieldType":"number","label":"Replicas","required":true,"min":1,"max":12}]},{"kind":"field","id":"durable-field","bind":"durable","fieldType":"checkbox","label":"Durable storage"}]},{"kind":"card","id":"ui-card","type":"demo","data":{"id":"generated-summary","title":{"$state":"service"},"count":{"$state":"replicas"}}},{"kind":"button","id":"ui-action","label":"Inspect current plan","variant":"secondary","action":{"type":"plan.inspect","params":{"service":{"$state":"service"},"replicas":{"$state":"replicas"},"durable":{"$state":"durable"}}}}]}}
+\`\`\`
+
+## Architecture diagram
+
+\`\`\`mermaid
+flowchart LR
+  Model[LLM] -->|strict JSON| UI[AIGUI UI tree]
+  UI --> Actions[Registered Actions]
+  UI --> Cards[Host Card Registry]
+  UI --> Artifacts[Artifact workspace]
+\`\`\`
+
+## Chemistry structure
+
+\`\`\`molecule
+{"version":1,"format":"smiles","source":"CCO","view":"2d","atomLabels":"standard","highlight":{"atoms":[2]}}
+\`\`\`
+
+## Geography route
+
+\`\`\`map
+{"version":1,"ariaLabel":"北京到上海示意路线","view":{"center":[118.9,35.5],"zoom":5},"layers":[{"id":"cities","type":"markers","items":[{"id":"beijing","position":[116.4,39.9],"label":"北京","description":"路线起点","variant":"accent"},{"id":"shanghai","position":[121.47,31.23],"label":"上海","description":"路线终点","variant":"positive"}]},{"id":"route","type":"route","coordinates":[[116.4,39.9],[118.8,35.1],[121.47,31.23]],"label":"北京至上海","description":"教学示意路线","variant":"accent"}]}
+\`\`\`
+
+## Generated workspace
+
+\`\`\`artifact-create
+{"version":1,"operationId":"create-guide","artifact":{"id":"guide","title":"Integration guide","filename":"GUIDE.md","kind":"markdown","content":"# Integration guide\\n\\nAIGUI artifacts are persistent, revisioned generated UI documents.\\n\\n- React\\n- Vue\\n- Vanilla"}}
+\`\`\`
+
+\`\`\`artifact-create
+{"version":1,"operationId":"create-config","artifact":{"id":"config","title":"Renderer configuration","filename":"aigui.json","kind":"json","content":"{\\n  \\"sanitize\\": true,\\n  \\"streaming\\": true\\n}"}}
+\`\`\`
+
+\`\`\`artifact-update
+{"version":1,"operationId":"update-guide-r1","id":"guide","baseRevision":0,"content":"# Integration guide\\n\\nAIGUI artifacts are persistent, revisioned generated UI documents.\\n\\n- React\\n- Vue\\n- Vanilla\\n\\nGenerated code remains inert and is never executed."}
 \`\`\``
+
+const artifactStore = new ArtifactStore()
+const actions = new ActionRegistry()
+actions.register({ type: "plan.submit", run: (params) => { showAction({ type: "plan.submit", params }); return params } })
+actions.register({ type: "plan.inspect", run: (params) => { showAction({ type: "plan.inspect", params }); return params } })
+const actionRuntime = createActionRuntime({ registry: actions })
 
 interface RendererHandle extends DebugEventTarget {
   push(chunk: string): void
@@ -115,7 +174,9 @@ function mount(kind: PlaygroundAdapter): void {
   preview.replaceChildren()
   timeline = []
   adapterBadge.textContent = kind.toUpperCase()
-  const mounted = kind === "react" ? mountReact() : kind === "vue" ? mountVue() : mountVanilla()
+  const registry = createRegistry(kind)
+  const plugins: AIGuiPlugin[] = [citation(), ui({ registry, actionRuntime }), mermaid({ theme: "neutral" }), molecule(), map(), artifact({ store: artifactStore })]
+  const mounted = kind === "react" ? mountReact(registry, plugins) : kind === "vue" ? mountVue(registry, plugins) : mountVanilla(registry, plugins)
   handle = mounted.handle
   cleanupRenderer = mounted.cleanup
   devtools = createDevTools({ maxEvents: 500, maxStringLength: 512, maxDepth: 8, maxNodes: 2_000 })
@@ -153,27 +214,31 @@ function cancel(): void {
   setStatus("Cancelled", "cancelled")
 }
 
-function mountReact(): { handle: RendererHandle; cleanup: () => void } {
+function mountReact(registry: CardRegistry, plugins: AIGuiPlugin[]): { handle: RendererHandle; cleanup: () => void } {
   let renderer: ReactHandle | null = null
-  const registry = new CardRegistry()
-  registry.register({ type: "demo", description: "Interactive counter", render: ({ data, onAction }: any) => createElement("article", { className: "demo-card" }, createElement("small", null, data.title), createElement("strong", null, data.count), createElement("button", { onClick: () => onAction({ type: "increment", params: { by: 1 } }) }, "Emit action")) })
   const root: Root = createRoot(preview)
-  flushSync(() => root.render(createElement(ReactAIRenderer, { ref: (value) => { renderer = value }, registry, debug: true, onCardAction: showAction })))
+  flushSync(() => root.render(createElement(ReactAIRenderer, { ref: (value) => { renderer = value }, registry, plugins, actionRuntime, debug: true, onCardAction: showAction })))
   return { handle: proxy(() => renderer), cleanup: () => root.unmount() }
 }
 
-function mountVue(): { handle: RendererHandle; cleanup: () => void } {
+function mountVue(registry: CardRegistry, plugins: AIGuiPlugin[]): { handle: RendererHandle; cleanup: () => void } {
   const renderer = ref<any>()
-  const registry = new CardRegistry()
-  registry.register({ type: "demo", description: "Interactive counter", render: defineComponent({ props: ["data"], emits: ["action"], setup(props, { emit }) { return () => h("article", { class: "demo-card" }, [h("small", (props.data as any).title), h("strong", String((props.data as any).count)), h("button", { onClick: () => emit("action", { type: "increment", params: { by: 1 } }) }, "Emit action")]) } }) })
-  const vueApp: App = createApp(defineComponent({ setup: () => () => h(VueAIRenderer, { ref: renderer, registry, debug: true, onCardAction: showAction }) }))
+  const vueApp: App = createApp(defineComponent({ setup: () => () => h(VueAIRenderer, { ref: renderer, registry, plugins, actionRuntime, debug: true, onCardAction: showAction }) }))
   vueApp.mount(preview)
   return { handle: proxy(() => renderer.value), cleanup: () => vueApp.unmount() }
 }
 
-function mountVanilla(): { handle: RendererHandle; cleanup: () => void } {
+function mountVanilla(registry: CardRegistry, plugins: AIGuiPlugin[]): { handle: RendererHandle; cleanup: () => void } {
+  const renderer: VanillaRenderer = createRenderer(preview, { registry, plugins, actionRuntime, debug: true, onCardAction: showAction })
+  return { handle: renderer, cleanup: () => renderer.destroy() }
+}
+
+function createRegistry(kind: PlaygroundAdapter): CardRegistry {
   const registry = new CardRegistry()
-  registry.register({ type: "demo", description: "Interactive counter", render: (data: any, { onAction }: any) => {
+  const base = { type: "demo", description: "Interactive counter", schema: { type: "object", required: ["title", "count"], properties: { id: { type: "string" }, title: { type: "string" }, count: { type: "number" } } } }
+  if (kind === "react") registry.register({ ...base, render: ({ data, onAction }: any) => createElement("article", { className: "demo-card" }, createElement("small", null, data.title), createElement("strong", null, data.count), createElement("button", { onClick: () => onAction({ type: "increment", params: { by: 1 } }) }, "Emit action")) })
+  else if (kind === "vue") registry.register({ ...base, render: defineComponent({ props: ["data"], emits: ["action"], setup(props, { emit }) { return () => h("article", { class: "demo-card" }, [h("small", (props.data as any).title), h("strong", String((props.data as any).count)), h("button", { onClick: () => emit("action", { type: "increment", params: { by: 1 } }) }, "Emit action")]) } }) })
+  else registry.register({ ...base, render: (data: any, { onAction }: any) => {
     const card = document.createElement("article")
     card.className = "demo-card"
     card.innerHTML = `<small>${escapeHtml(String(data.title))}</small><strong>${Number(data.count)}</strong>`
@@ -183,8 +248,7 @@ function mountVanilla(): { handle: RendererHandle; cleanup: () => void } {
     card.append(button)
     return card
   } })
-  const renderer: VanillaRenderer = createRenderer(preview, { registry, debug: true, onCardAction: showAction })
-  return { handle: renderer, cleanup: () => renderer.destroy() }
+  return registry
 }
 
 function proxy(get: () => RendererHandle | null | undefined): RendererHandle {

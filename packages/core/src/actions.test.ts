@@ -63,6 +63,7 @@ describe("ActionRuntime", () => {
 
     expect(runtime.hasAction("save")).toBe(true)
     expect(runtime.hasAction("missing")).toBe(false)
+    expect(runtime.listActionTypes()).toEqual(["save"])
   })
   it("dispatches a validated action with context and observable lifecycle", async () => {
     const registry = new ActionRegistry()

@@ -1,6 +1,6 @@
 ---
 name: aigui
-description: Use when integrating the @ai-gui SDK to render streaming LLM output (markdown, cards, charts, math, diagrams) in React/Vue/vanilla, or when generating content for an @ai-gui frontend (card/chart/primitive/math/mermaid fences).
+description: Use when integrating the @ai-gui SDK to render streaming LLM output as declarative generated UI, cards, revisioned artifacts, molecules, maps, markdown, charts, citations, math, and diagrams in React/Vue/vanilla, or when generating content for an @ai-gui frontend.
 ---
 
 # AIGUI
@@ -30,6 +30,7 @@ Write normal markdown. Add fenced blocks **only** for card/block types listed in
 | Block | Syntax |
 | --- | --- |
 | Card | ` ```card:<type> ` + JSON data only |
+| Generated UI | ` ```ui ` + one bounded declarative JSON tree |
 | Chart | ` ```chart ` + ECharts option JSON (3D series if `gl` enabled) |
 | List | ` ```list {"items":[...]} ` |
 | Table | ` ```table {"headers":[...],"rows":[[...]]} ` |
@@ -37,6 +38,11 @@ Write normal markdown. Add fenced blocks **only** for card/block types listed in
 | Layout | ` ```layout {"direction":"row\|column","items":[...]} ` |
 | Math | `$…$` inline, `$$…$$` block |
 | Diagram | ` ```mermaid ` |
+| Molecule | ` ```molecule ` + strict SMILES/Molfile JSON |
+| Map | ` ```map ` + strict inline GeoJSON/markers/routes JSON |
+| Sources | ` ```sources {"sources":[{"id":"...","title":"...","url":"https://..."}]} ` |
+| Artifact create | ` ```artifact-create ` + strict JSON document definition |
+| Artifact update | ` ```artifact-update ` + `operationId`, `id`, exact `baseRevision`, and full replacement content |
 
 Card example:
 
@@ -47,9 +53,14 @@ Card example:
 ## Key rules
 
 - **Cards are app-defined** — only emit registered card types, filling data that matches the given schema/example. Do not invent types.
+- **UI trees are bounded and declarative** — use only enabled node kinds, registered actions/cards, flat scalar state, and exact `{"$state":"key"}` bindings; never emit code, expressions, URLs, remote components, or workflows.
 - **Buttons are declarative** — cards carry an `action` + `params`; the app performs the real request. Never claim you did it.
 - **Blocks are complete-gated** — cards/charts/math/mermaid show a skeleton while streaming, then render complete (charts/3D never partial-drawn). Plain markdown renders progressively.
 - **Call `buildSystemPrompt`** — don't hand-write generation rules; it assembles card specs + each plugin's prompt spec.
 - **Only emit enabled block types** — everything else is plain markdown.
+- **Source blocks are data only** — never emit scripts, callbacks, remote modules, credentials, or unsafe URLs.
+- **Artifacts are inert documents** — code/HTML are previewed as source, never executed; every update must use the current revision and a unique operation ID.
+- **Molecules use local chemistry data only** — SMILES is 2D-only in v1; 3D requires a local Molfile with real 3D coordinates. No URLs or network operations.
+- **Maps are host-networked** — the model may emit only inline geographic data. Basemaps, tile providers, tokens, and network policy belong exclusively to the host.
 
 See [AGENTS.md](./AGENTS.md) for full examples.

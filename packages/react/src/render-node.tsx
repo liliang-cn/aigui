@@ -27,9 +27,9 @@ export function renderNode(node: ASTNode, ctx: RenderContext): ReactNode {
     try {
       const out: RenderOutput | Promise<RenderOutput> = r(node)
       if (out && typeof (out as { then?: unknown }).then === "function") {
-        return <AsyncOutput key={node.key} promise={out as Promise<RenderOutput>} sanitize={ctx.sanitize} />
+        return <AsyncOutput key={node.key} promise={out as Promise<RenderOutput>} sanitize={ctx.sanitize} context={ctx} />
       }
-      return renderOutput(out as RenderOutput, node.key, ctx.sanitize)
+      return renderOutput(out as RenderOutput, node.key, ctx.sanitize, ctx)
     } catch {
       return renderFallback(node, ctx)
     }
@@ -108,7 +108,7 @@ export interface CardComponentProps {
   onAction: (a: { type: string; params?: unknown }) => void
 }
 
-type CardComponent = ComponentType<CardComponentProps>
+export type CardComponent = ComponentType<CardComponentProps>
 
 const getServerCardSnapshot = (): undefined => undefined
 

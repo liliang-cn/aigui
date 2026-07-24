@@ -5,6 +5,12 @@ import { defineWorkspace } from "vitest/config"
 const alias = {
   "@ai-gui/core": fileURLToPath(new URL("./packages/core/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-form": fileURLToPath(new URL("./packages/plugin-form/src/index.ts", import.meta.url)),
+  "@ai-gui/plugin-sdk": fileURLToPath(new URL("./packages/plugin-sdk/src/index.ts", import.meta.url)),
+  "@ai-gui/plugin-citation": fileURLToPath(new URL("./packages/plugin-citation/src/index.ts", import.meta.url)),
+  "@ai-gui/plugin-artifact": fileURLToPath(new URL("./packages/plugin-artifact/src/index.ts", import.meta.url)),
+  "@ai-gui/plugin-ui": fileURLToPath(new URL("./packages/plugin-ui/src/index.ts", import.meta.url)),
+  "@ai-gui/plugin-molecule": fileURLToPath(new URL("./packages/plugin-molecule/src/index.ts", import.meta.url)),
+  "@ai-gui/plugin-map": fileURLToPath(new URL("./packages/plugin-map/src/index.ts", import.meta.url)),
   "@ai-gui/devtools": fileURLToPath(new URL("./packages/devtools/src/index.ts", import.meta.url)),
   "@ai-gui/react": fileURLToPath(new URL("./packages/react/src/index.ts", import.meta.url)),
   "@ai-gui/vue": fileURLToPath(new URL("./packages/vue/src/index.ts", import.meta.url)),
@@ -59,6 +65,30 @@ export default defineWorkspace([
   {
     resolve: { alias },
     test: { name: "plugin-form", root: "packages/plugin-form", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "plugin-sdk", root: "packages/plugin-sdk", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "plugin-citation", root: "packages/plugin-citation", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "plugin-artifact", root: "packages/plugin-artifact", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "plugin-ui", root: "packages/plugin-ui", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "plugin-molecule", root: "packages/plugin-molecule", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "plugin-map", root: "packages/plugin-map", coverage },
   },
   {
     resolve: { alias },

@@ -326,6 +326,11 @@ export class ActionRuntime {
     return !this.destroyed && this.registry.has(type)
   }
 
+  /** List registered action names without exposing executable definitions. */
+  listActionTypes(): readonly string[] {
+    return this.destroyed ? [] : Object.freeze(this.registry.list().map((action) => action.type))
+  }
+
   subscribe(listener: ActionStateListener): () => void {
     if (this.destroyed) return () => {}
     this.listeners.add(listener)

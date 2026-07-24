@@ -9,6 +9,16 @@ const flight = {
 }
 
 describe("CardRegistry", () => {
+  it("exposes registered definitions through read-only snapshots", () => {
+    const registry = new CardRegistry()
+    const definition = { type: "weather", description: "Weather" }
+    registry.register(definition)
+    expect(registry.get("weather")).toBe(definition)
+    const listed = registry.list()
+    expect(listed).toEqual([definition])
+    listed.pop()
+    expect(registry.has("weather")).toBe(true)
+  })
   it("parses complete JSON after register", () => {
     const r = new CardRegistry()
     r.register(flight)

@@ -1,4 +1,4 @@
-import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardAction, type CardRegistry, type CardStore, type NodeRenderer, type RendererOptions, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
+import { collectNodeRenderers, sanitizeHtml, type AIGuiPlugin, type ASTNode, type CardAction, type CardRegistry, type CardStore, type MountedCardSlot, type MountCardSlotRequest, type NodeRenderer, type RendererOptions, type RenderMountContext, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
 import { renderOutputToElement, type ManagedElement } from "./render-output"
 
 export interface VanillaCardAction {
@@ -50,7 +50,7 @@ export function renderNodeToElement(node: ASTNode, ctx: DomRenderContext): HTMLE
           (res) => {
             if (host.__aiguiDisposed) return
             host.removeAttribute("data-aigui-async-pending")
-            host.replaceChildren(renderOutputToElement(res, ctx.sanitize))
+            host.replaceChildren(renderOutputToElement(res, ctx.sanitize, createRenderMountContext(ctx)))
           },
           () => {
             if (host.__aiguiDisposed) return
@@ -60,7 +60,7 @@ export function renderNodeToElement(node: ASTNode, ctx: DomRenderContext): HTMLE
         )
         return host
       }
-      return renderOutputToElement(out as RenderOutput, ctx.sanitize)
+      return renderOutputToElement(out as RenderOutput, ctx.sanitize, createRenderMountContext(ctx))
     } catch {
       return renderFallback(node, ctx)
     }
@@ -115,6 +115,71 @@ interface CardController {
   destroy: () => void
 }
 
+interface VanillaMountedCardSlot extends MountedCardSlot {
+  element: () => HTMLElement | undefined
+}
+
+function createRenderMountContext(ctx: DomRenderContext): RenderMountContext {
+  return {
+    mountCard(host, request) {
+      return mountCardSlot(host, request, ctx)
+    },
+  }
+}
+
+function mountCardSlot(host: HTMLElement, request: MountCardSlotRequest, ctx: DomRenderContext): MountedCardSlot | undefined {
+  const factory = ctx.registry?.getRender(request.type) as VanillaCardFactory | undefined
+  if (!factory) return undefined
+  return createVanillaCardSlot(
+    host,
+    request.data,
+    factory,
+    () => ({
+      state: { status: "idle" },
+      onAction: (action) => ctx.onCardAction?.({ ...action, cardType: request.type }),
+    }),
+  )
+}
+
+function createVanillaCardSlot(
+  host: HTMLElement,
+  initialData: unknown,
+  factory: VanillaCardFactory,
+  context: () => VanillaCardUpdateContext,
+): VanillaMountedCardSlot {
+  let destroyed = false
+  let instance: VanillaCardInstance | undefined
+  let element: HTMLElement | undefined
+
+  const mount = (data: unknown) => {
+    const rendered = factory(data, context())
+    if (isVanillaCardInstance(rendered)) {
+      instance = rendered
+      element = rendered.element
+    } else {
+      instance = undefined
+      element = rendered
+    }
+    host.replaceChildren(element)
+  }
+
+  mount(initialData)
+  return {
+    element: () => element,
+    update(data) {
+      if (destroyed) return
+      if (instance) instance.update(data, context())
+      else mount(data)
+    },
+    destroy() {
+      if (destroyed) return
+      destroyed = true
+      instance?.destroy?.()
+      instance = undefined
+    },
+  }
+}
+
 function createCardFallback(card: NonNullable<ASTNode["card"]>, ctx: DomRenderContext): HTMLElement {
   const pre = document.createElement("pre") as ManagedElement
   pre.setAttribute("data-aigui-card-fallback", "")
@@ -165,8 +230,7 @@ function createCardController(
   let card = initialCard
   let destroyed = false
   let unsubscribe = () => {}
-  let instance: VanillaCardInstance | undefined
-  let element: HTMLElement | undefined
+  let slot: VanillaMountedCardSlot | undefined
   let missing = false
   const id = card.id
   const onAction = (action: VanillaCardAction) => ctx.onCardAction?.({
@@ -188,17 +252,8 @@ function createCardController(
     }
   }
 
-  const context = (): VanillaCardUpdateContext => ({ state, onAction })
   const mount = (nextData: unknown) => {
-    const rendered = factory(nextData, context())
-    if (isVanillaCardInstance(rendered)) {
-      instance = rendered
-      element = rendered.element
-    } else {
-      instance = undefined
-      element = rendered
-    }
-    host.replaceChildren(element)
+    slot = createVanillaCardSlot(host, nextData, factory, () => ({ state, onAction }))
   }
   const update = (nextData: unknown, nextState: CardAction) => {
     if (destroyed) return
@@ -208,13 +263,11 @@ function createCardController(
     if (missing) {
       missing = false
       host.removeAttribute("data-aigui-card-missing")
+      const element = slot?.element()
       if (element) host.replaceChildren(element)
     }
-    if (instance) {
-      instance.update(data, context())
-    } else {
-      mount(data)
-    }
+    if (slot) slot.update(data)
+    else mount(data)
   }
   const showMissing = () => {
     if (destroyed || missing) return
@@ -257,8 +310,8 @@ function createCardController(
       destroyed = true
       unsubscribe()
       unsubscribe = () => {}
-      instance?.destroy?.()
-      instance = undefined
+      slot?.destroy()
+      slot = undefined
     },
   }
 }
