@@ -15,7 +15,7 @@ describe("Vue form plugin", () => {
     await wrapper.vm.$nextTick()
     const input = wrapper.element.querySelector<HTMLInputElement>('input[name="name"]')!
     input.value = "Ada"
-    input.form!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    wrapper.element.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
     await Promise.resolve()
     expect(run).toHaveBeenCalledWith({ name: "Ada" }, expect.anything())
   })
@@ -32,7 +32,7 @@ describe("Vue form plugin", () => {
     const wrapper = mount(AIRenderer, { props: { plugins: [form({ actionRuntime: createActionRuntime({ registry }) })] } })
     wrapper.vm.push('```form\n{"id":"profile","fields":[],"submitAction":"save"}\n```')
     await wrapper.vm.$nextTick()
-    wrapper.element.querySelector("form")!.requestSubmit()
+    wrapper.element.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
     wrapper.unmount()
     await Promise.resolve()
     expect(aborted).toHaveBeenCalledOnce()

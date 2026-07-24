@@ -15,7 +15,7 @@ describe("Vanilla form plugin", () => {
     await Promise.resolve()
     const input = host.querySelector<HTMLInputElement>('input[name="name"]')!
     input.value = "Ada"
-    input.form!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    host.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
     await Promise.resolve()
     expect(run).toHaveBeenCalledWith({ name: "Ada" }, expect.anything())
   })
@@ -33,7 +33,7 @@ describe("Vanilla form plugin", () => {
     const renderer = createRenderer(host, { plugins: [form({ actionRuntime: createActionRuntime({ registry }) })] })
     renderer.push('```form\n{"id":"profile","fields":[],"submitAction":"save"}\n```')
     await Promise.resolve()
-    host.querySelector("form")!.requestSubmit()
+    host.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
     renderer.destroy()
     await Promise.resolve()
     expect(aborted).toHaveBeenCalledOnce()

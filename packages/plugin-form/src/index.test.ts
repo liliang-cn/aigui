@@ -111,23 +111,42 @@ describe("plugin-form", () => {
     expect(host.querySelector("input[type=checkbox][name=direct]")).toBeTruthy()
     expect(host.querySelectorAll("input[type=radio][name=meal]")).toHaveLength(2)
 
-    formEl.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    formEl.requestSubmit()
     expect(run).not.toHaveBeenCalled()
-    expect(host.querySelector('[data-aigui-form-field-error="from"]')?.textContent).toContain("required")
+    expect(host.querySelector('[data-aigui-form-field-error="from"]')?.textContent).toBe("")
 
     from.value = "Paris"
     people.value = "2"
     direct.checked = true
-    formEl.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
-    formEl.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    const submit = host.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!
+    submit.click()
+    submit.click()
     expect(run).toHaveBeenCalledTimes(1)
     expect(run).toHaveBeenCalledWith(expect.objectContaining({ from: "Paris", people: 2, direct: true }), expect.anything())
-    expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true)
+    expect(submit.disabled).toBe(true)
     resolve()
     await Promise.resolve()
     await Promise.resolve()
-    expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(false)
+    expect(submit.disabled).toBe(false)
     if (typeof cleanup === "function") cleanup()
+  })
+
+  it("never dispatches when a radio option is selected", () => {
+    const run = vi.fn()
+    const registry = new ActionRegistry()
+    registry.register({ type: "travel.search", run })
+    const plugin = form({ actionRuntime: createActionRuntime({ registry }) })
+    const node = createParser({ plugins: [plugin] })(`\`\`\`form\n${JSON.stringify(definition)}\n\`\`\``)[0]
+    const out = collectNodeRenderers([plugin]).form(node) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected mount")
+    const host = document.createElement("div")
+    out.mount(host)
+    const option = host.querySelector<HTMLInputElement>('input[type="radio"][value="veg"]')!
+    host.querySelector<HTMLLabelElement>(`label[for="${option.id}"]`)!.click()
+    expect(option.checked).toBe(true)
+    expect(run).not.toHaveBeenCalled()
+    host.querySelector("form")!.requestSubmit()
+    expect(run).not.toHaveBeenCalled()
   })
 
   it("rejects unknown actions before mounting and displays only safe Action errors", async () => {
@@ -146,7 +165,7 @@ describe("plugin-form", () => {
     if (out.kind !== "mount") throw new Error("expected mount")
     const host = document.createElement("div")
     out.mount(host)
-    host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    host.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
     await Promise.resolve()
     await Promise.resolve()
     expect(host.querySelector("[data-aigui-form-action-error]")?.textContent).toBe('Action "travel.search" failed')
@@ -175,8 +194,8 @@ describe("plugin-form", () => {
     const secondHost = document.createElement("div")
     const cleanupFirst = out.mount(firstHost)
     const cleanupSecond = out.mount(secondHost)
-    firstHost.querySelector("form")!.requestSubmit()
-    secondHost.querySelector("form")!.requestSubmit()
+    firstHost.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
+    secondHost.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
 
     const pending = states.filter((state) => state.status === "pending")
     expect(pending).toHaveLength(2)
@@ -229,7 +248,7 @@ describe("plugin-form", () => {
     if (out.kind !== "mount") throw new Error("expected mount")
     const host = document.createElement("div")
     const cleanup = out.mount(host)
-    host.querySelector("form")!.requestSubmit()
+    host.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
     if (typeof cleanup === "function") cleanup()
     await Promise.resolve()
     expect(aborted).toHaveBeenCalledOnce()

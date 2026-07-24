@@ -1,5 +1,12 @@
 # @ai-gui/plugin-form
 
+## 0.4.2
+
+### Patch Changes
+
+- Require an explicit submit-button click before dispatching form actions, preventing radio selection and implicit form submission from triggering actions.
+  - @ai-gui/core@0.4.2
+
 ## 0.4.1
 
 ### Patch Changes

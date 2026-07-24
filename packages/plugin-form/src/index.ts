@@ -322,7 +322,8 @@ function mountForm(host: HTMLElement, definition: FormDefinition, runtime: Actio
   actionError.hidden = true
   formElement.appendChild(actionError)
   const submit = document.createElement("button")
-  submit.type = "submit"
+  submit.type = "button"
+  submit.setAttribute("data-aigui-form-submit", "")
   submit.textContent = definition.submitLabel ?? "Submit"
   formElement.appendChild(submit)
 
@@ -332,8 +333,7 @@ function mountForm(host: HTMLElement, definition: FormDefinition, runtime: Actio
     clearFieldError(control.name, controls, errorElements)
     actionError.hidden = true
   }
-  const onSubmit = (event: SubmitEvent) => {
-    event.preventDefault()
+  const onSubmit = () => {
     if (pending || disposed) return
     const validation = validateFormValues(definition, readControls(definition, controls))
     renderErrors(validation.errors, controls, errorElements)
@@ -365,16 +365,19 @@ function mountForm(host: HTMLElement, definition: FormDefinition, runtime: Actio
       },
     )
   }
+  const preventImplicitSubmit = (event: SubmitEvent) => event.preventDefault()
   formElement.addEventListener("input", onInput)
   formElement.addEventListener("change", onInput)
-  formElement.addEventListener("submit", onSubmit)
+  formElement.addEventListener("submit", preventImplicitSubmit)
+  submit.addEventListener("click", onSubmit)
   host.replaceChildren(formElement)
   return () => {
     disposed = true
     controller.abort()
     formElement.removeEventListener("input", onInput)
     formElement.removeEventListener("change", onInput)
-    formElement.removeEventListener("submit", onSubmit)
+    formElement.removeEventListener("submit", preventImplicitSubmit)
+    submit.removeEventListener("click", onSubmit)
   }
 }
 
