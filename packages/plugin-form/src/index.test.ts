@@ -127,8 +127,53 @@ describe("plugin-form", () => {
     resolve()
     await Promise.resolve()
     await Promise.resolve()
-    expect(submit.disabled).toBe(false)
+    expect(submit.disabled).toBe(true)
+    expect(submit.textContent).toBe("Submitted")
+    expect(formEl.hasAttribute("data-aigui-form-submitted")).toBe(true)
+    submit.click()
+    expect(run).toHaveBeenCalledTimes(1)
     if (typeof cleanup === "function") cleanup()
+  })
+
+  it("mounts restored forms as submitted and never dispatches them", () => {
+    const run = vi.fn()
+    const registry = new ActionRegistry()
+    registry.register({ type: "travel.search", run })
+    const out = collectNodeRenderers([form({
+      actionRuntime: createActionRuntime({ registry }),
+      submitted: true,
+      submittedLabel: "Saved",
+    })]).form({ key: "form", type: "form", complete: true, content: JSON.stringify(definition) }) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected mount")
+    const host = document.createElement("div")
+    out.mount(host)
+    const formEl = host.querySelector<HTMLFormElement>("form")!
+    const submit = host.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!
+    expect(formEl.hasAttribute("data-aigui-form-submitted")).toBe(true)
+    expect(Array.from(formEl.elements).every((element) => !("disabled" in element) || element.disabled)).toBe(true)
+    expect(submit.textContent).toBe("Saved")
+    submit.click()
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it("restores the form after a failed action so it can be retried", async () => {
+    const run = vi.fn().mockRejectedValue(new Error("failed"))
+    const registry = new ActionRegistry()
+    registry.register({ type: "travel.search", run })
+    const out = collectNodeRenderers([form({ actionRuntime: createActionRuntime({ registry }) })]).form({
+      key: "form", type: "form", complete: true, content: JSON.stringify({ ...definition, fields: [] }),
+    }) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected mount")
+    const host = document.createElement("div")
+    out.mount(host)
+    const submit = host.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!
+    submit.click()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(submit.disabled).toBe(false)
+    expect(host.querySelector("form")?.hasAttribute("data-aigui-form-submitted")).toBe(false)
+    submit.click()
+    expect(run).toHaveBeenCalledTimes(2)
   })
 
   it("never dispatches when a radio option is selected", () => {

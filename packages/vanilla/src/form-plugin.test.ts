@@ -17,7 +17,12 @@ describe("Vanilla form plugin", () => {
     input.value = "Ada"
     host.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
     await Promise.resolve()
+    await Promise.resolve()
     expect(run).toHaveBeenCalledWith({ name: "Ada" }, expect.anything())
+    expect(input.disabled).toBe(true)
+    expect(host.querySelector("[data-aigui-form-submitted]")).toBeTruthy()
+    host.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
+    expect(run).toHaveBeenCalledTimes(1)
   })
 
   it("cancels a pending form action when the renderer is destroyed", async () => {

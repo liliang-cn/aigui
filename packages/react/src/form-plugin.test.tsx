@@ -23,6 +23,10 @@ describe("React form plugin", () => {
     view.container.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
     await act(async () => { await Promise.resolve() })
     expect(run).toHaveBeenCalledWith({ name: "Ada" }, expect.anything())
+    expect(input.disabled).toBe(true)
+    expect(view.container.querySelector("[data-aigui-form-submitted]")).toBeTruthy()
+    view.container.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
+    expect(run).toHaveBeenCalledTimes(1)
   })
 
   it("cancels a pending form action when the renderer unmounts", async () => {

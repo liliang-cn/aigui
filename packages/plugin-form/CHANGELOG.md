@@ -1,5 +1,12 @@
 # @ai-gui/plugin-form
 
+## 0.4.3
+
+### Patch Changes
+
+- Lock form controls after a successful action, expose a submitted state marker, and support restoring forms as already submitted.
+  - @ai-gui/core@0.4.3
+
 ## 0.4.2
 
 ### Patch Changes

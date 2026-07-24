@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-form",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Safe interactive form blocks for AIGUI, backed by the core ActionRuntime.",
   "keywords": [
     "llm",

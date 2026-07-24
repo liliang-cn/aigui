@@ -1,5 +1,11 @@
 # @ai-gui/plugin-citation
 
+## 0.4.3
+
+### Patch Changes
+
+- @ai-gui/core@0.4.3
+
 ## 0.4.2
 
 ### Patch Changes

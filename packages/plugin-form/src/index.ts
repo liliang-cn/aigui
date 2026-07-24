@@ -74,6 +74,10 @@ export interface FormValidationResult {
 export interface FormPluginOptions {
   /** Shared core runtime whose registry is the only allowlist for submitAction. */
   actionRuntime: ActionRuntime
+  /** Mount forms as already submitted, useful when restoring persisted conversations. */
+  submitted?: boolean
+  /** Label shown after a successful or restored submission. */
+  submittedLabel?: string
 }
 
 export function formPromptSpec(): string {
@@ -108,7 +112,7 @@ export function form(options: FormPluginOptions): AIGuiPlugin {
     }
     const output: RenderOutput = {
       kind: "mount",
-      mount: (host) => mountForm(host, parsed.data, options.actionRuntime),
+      mount: (host) => mountForm(host, parsed.data, options),
     }
     outputs.set(node, output)
     return output
@@ -296,13 +300,14 @@ function parseOptions(value: unknown, path: string, issues: string[]): FormOptio
   })
 }
 
-function mountForm(host: HTMLElement, definition: FormDefinition, runtime: ActionRuntime): () => void {
+function mountForm(host: HTMLElement, definition: FormDefinition, options: FormPluginOptions): () => void {
   const instanceId = String(++nextFormInstanceId)
   const instancePrefix = `aigui-form-${instanceId}-${definition.id}`
   const cardType = `form:${definition.id}:${instanceId}`
   const owner = {}
   const controller = new AbortController()
   let pending = false
+  let submitted = options.submitted === true
   let disposed = false
   const formElement = document.createElement("form")
   formElement.noValidate = true
@@ -327,6 +332,19 @@ function mountForm(host: HTMLElement, definition: FormDefinition, runtime: Actio
   submit.textContent = definition.submitLabel ?? "Submit"
   formElement.appendChild(submit)
 
+  const markSubmitted = () => {
+    if (disposed) return
+    pending = false
+    submitted = true
+    formElement.removeAttribute("aria-busy")
+    formElement.setAttribute("data-aigui-form-submitted", "")
+    for (const element of Array.from(formElement.elements)) {
+      if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement || element instanceof HTMLButtonElement || element instanceof HTMLFieldSetElement) element.disabled = true
+    }
+    submit.textContent = options.submittedLabel ?? "Submitted"
+  }
+  if (submitted) markSubmitted()
+
   const onInput = (event: Event) => {
     const control = event.target
     if (!(control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement || control instanceof HTMLSelectElement)) return
@@ -334,7 +352,7 @@ function mountForm(host: HTMLElement, definition: FormDefinition, runtime: Actio
     actionError.hidden = true
   }
   const onSubmit = () => {
-    if (pending || disposed) return
+    if (pending || submitted || disposed) return
     const validation = validateFormValues(definition, readControls(definition, controls))
     renderErrors(validation.errors, controls, errorElements)
     actionError.hidden = true
@@ -351,11 +369,11 @@ function mountForm(host: HTMLElement, definition: FormDefinition, runtime: Actio
       submit.disabled = false
       formElement.removeAttribute("aria-busy")
     }
-    void runtime.dispatch(
+    void options.actionRuntime.dispatch(
       { type: definition.submitAction, params: validation.values, cardType },
       { owner, signal: controller.signal },
     ).then(
-      settle,
+      markSubmitted,
       (error: unknown) => {
         if (!disposed && !controller.signal.aborted) {
           actionError.textContent = actionErrorMessage(error)

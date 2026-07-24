@@ -17,7 +17,12 @@ describe("Vue form plugin", () => {
     input.value = "Ada"
     wrapper.element.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
     await Promise.resolve()
+    await Promise.resolve()
     expect(run).toHaveBeenCalledWith({ name: "Ada" }, expect.anything())
+    expect(input.disabled).toBe(true)
+    expect(wrapper.element.querySelector("[data-aigui-form-submitted]")).toBeTruthy()
+    wrapper.element.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
+    expect(run).toHaveBeenCalledTimes(1)
   })
 
   it("cancels a pending form action when the renderer unmounts", async () => {
