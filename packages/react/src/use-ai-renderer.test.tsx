@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { act, renderHook } from "@testing-library/react"
+import { StrictMode } from "react"
 import { describe, expect, it, vi } from "vitest"
 import type { AIGuiPlugin } from "@ai-gui/core"
 import { useAIRenderer } from "./use-ai-renderer"
@@ -40,6 +41,11 @@ describe("useAIRenderer", () => {
     const headings = result.current.nodes.filter((n) => n.type === "heading")
     expect(headings).toHaveLength(1)
     expect(headings[0].html).toContain("Second")
+  })
+  it("keeps accepting pushes after StrictMode remounts the effects", () => {
+    const { result } = renderHook(() => useAIRenderer(), { wrapper: StrictMode })
+    act(() => result.current.push("# Hello"))
+    expect(result.current.nodes.some((n) => n.type === "heading")).toBe(true)
   })
   it("clears old content when renderer configuration changes", () => {
     const first: AIGuiPlugin[] = []

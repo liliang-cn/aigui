@@ -28,6 +28,10 @@ export function useAIRenderer(options: Omit<RendererOptions, "onPatch"> = {}): U
   }, [options.registry, options.sanitize, options.plugins, options.scheduler, options.debug, options.onDebugEvent])
 
   useEffect(() => {
+    // Re-arm on every mount, not just when the session is created: StrictMode's development
+    // remount (and Fast Refresh) tears this effect down and runs it again on the same session,
+    // and without this the cleanup below would leave the renderer permanently deaf to push/feed.
+    active.current = session.token
     setNodes([])
     return () => {
       session.renderer.reset()

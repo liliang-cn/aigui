@@ -1,5 +1,16 @@
 # @ai-gui/react
 
+## 0.4.4
+
+### Patch Changes
+
+- Keep the React renderer alive across effect remounts. `useAIRenderer` only armed its patch
+  token while creating a session, so once the mount effect had been torn down and re-run on the
+  same session — which React StrictMode does on every mount in development, and Fast Refresh does
+  on edit — `push` and `feed` became silent no-ops and the rendered output stayed blank. The mount
+  effect now re-arms the active session token.
+  - @ai-gui/core@0.4.4
+
 ## 0.4.3
 
 ### Patch Changes
