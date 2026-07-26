@@ -1,17 +1,17 @@
 {
-  "name": "@ai-gui/plugin-physics",
+  "name": "@ai-gui/plugin-figure",
   "version": "0.10.0",
-  "description": "Force and vector diagrams for teaching mechanics, rendered as SVG from a declarative block.",
+  "description": "Labelled figures — regions with leader-line callouts — rendered as SVG from a declarative block.",
   "keywords": [
     "llm",
     "ai",
-    "physics",
-    "mechanics",
-    "free-body",
-    "vector",
     "diagram",
-    "svg",
+    "figure",
+    "labels",
+    "biology",
+    "anatomy",
     "teaching",
+    "svg",
     "plugin",
     "aigui"
   ],
@@ -20,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/liliang-cn/aigui.git",
-    "directory": "packages/plugin-physics"
+    "directory": "packages/plugin-figure"
   },
   "homepage": "https://github.com/liliang-cn/aigui#readme",
   "bugs": "https://github.com/liliang-cn/aigui/issues",
@@ -55,7 +55,7 @@
   },
   "scripts": {
     "build": "tsdown",
-    "test": "pnpm --dir ../.. exec vitest run --project plugin-physics",
+    "test": "pnpm --dir ../.. exec vitest run --project plugin-figure",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
