@@ -159,3 +159,25 @@ describe("plugin-mermaid", () => {
     }
   })
 })
+
+describe("plugin-mermaid cleanup", () => {
+  it("leaves nothing behind in the document when a diagram fails to parse", async () => {
+    const { mermaid } = await import("./index")
+    const render = collectNodeRenderers([mermaid()]).mermaid
+    // Mermaid renders into a container it appends to the document and tidies up itself only on
+    // success; a parse error leaves that container holding its "Syntax error in text" graphic, and
+    // it sits outside the renderer where nothing owning the answer can reach it.
+    mocks.render.mockImplementationOnce((id: string) => {
+      const host = document.createElement("div")
+      host.id = `d${id}`
+      host.textContent = "Syntax error in text"
+      document.body.appendChild(host)
+      throw new Error("Parse error")
+    })
+
+    const output = await render({ key: "0:a", type: "mermaid", content: "graph TD; ??" } as ASTNode)
+
+    expect(output).toMatchObject({ kind: "html" })
+    expect(document.body.textContent).not.toContain("Syntax error in text")
+  })
+})

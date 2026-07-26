@@ -26,6 +26,19 @@ function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 }
 
+/**
+ * Remove the container Mermaid rendered into.
+ *
+ * Mermaid appends a host element id'd `d<id>` to the document and removes it itself on success. A
+ * parse error aborts before that, leaving its own error graphic in the page — outside the renderer,
+ * so nothing that owns the answer can clean it up.
+ */
+function discardMermaidHost(id: string): void {
+  if (typeof document === "undefined") return
+  document.getElementById(`d${id}`)?.remove()
+  document.getElementById(id)?.remove()
+}
+
 function errorHtml(): RenderOutput {
   return { kind: "html", html: `<pre data-aigui-mermaid-error>${escapeHtml("Diagram could not be rendered.")}</pre>` }
 }
@@ -69,11 +82,19 @@ export function mermaid(opts: MermaidOptions = {}): AIGuiPlugin {
         initializedTheme = wanted
       }
       const id = `aigui-mermaid-${nextId++}`
-      const { svg } = await m.render(id, node.content ?? "")
-      // Built here from the diagram source, under Mermaid's strict security level — not markup the
-      // model wrote. Sanitizing SVG escapes it, so the reader would get the source text instead of
-      // the picture, which is why hosts used to bypass their sanitizer by matching the id above.
-      return { kind: "html", html: svg, trusted: true }
+      try {
+        const { svg } = await m.render(id, node.content ?? "")
+        // Built here from the diagram source, under Mermaid's strict security level — not markup
+        // the model wrote. Sanitizing SVG escapes it, so the reader would get the source text
+        // instead of the picture, which is why hosts used to bypass their sanitizer by matching the
+        // id above.
+        return { kind: "html", html: svg, trusted: true }
+      } finally {
+        // Mermaid draws into a container it appends to the document, and on a parse error it leaves
+        // that container behind holding its own "Syntax error in text" graphic. It sits outside the
+        // renderer, so one malformed diagram used to stain every page of the app until reload.
+        discardMermaidHost(id)
+      }
     } catch {
       return errorHtml()
     }
