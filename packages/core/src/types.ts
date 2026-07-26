@@ -45,7 +45,19 @@ export interface RenderMountContext {
   mountCard?: (host: HTMLElement, request: MountCardSlotRequest) => MountedCardSlot | undefined
 }
 
-export type NodeRenderer = (node: ASTNode) => RenderOutput | Promise<RenderOutput>
+/** What the host can tell a plugin about the surroundings it is rendering into. */
+export interface NodeRenderContext {
+  /**
+   * The host's colour scheme, "light" or "dark" by convention.
+   *
+   * A diagram or a chart picks its own palette, and a plugin has no way to read the palette of
+   * the page it is embedded in, so without this an answer rendered on a dark page comes back
+   * with white plot areas.
+   */
+  readonly theme?: string
+}
+
+export type NodeRenderer = (node: ASTNode, context?: NodeRenderContext) => RenderOutput | Promise<RenderOutput>
 
 export interface PluginCommitContext {
   readonly generation: number

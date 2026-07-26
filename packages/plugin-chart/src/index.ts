@@ -50,7 +50,7 @@ import {
 import { init, use, type ECharts, type EChartsCoreOption } from "echarts/core"
 import { LabelLayout, UniversalTransition } from "echarts/features"
 import { CanvasRenderer, SVGRenderer } from "echarts/renderers"
-import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@ai-gui/core"
+import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type NodeRenderContext, type RenderOutput } from "@ai-gui/core"
 
 use([
   BarChart,
@@ -146,7 +146,10 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
   const height = opts.height ?? 400
   const gl = opts.gl ?? false
   const interactive = gl || (opts.interactive ?? false)
-  const render = (node: ASTNode): RenderOutput => {
+  const render = (node: ASTNode, context?: NodeRenderContext): RenderOutput => {
+    // ECharts picks its palette from a registered theme name, and "dark" is one it ships with.
+    // Without the host's scheme a chart keeps its light plot area on a dark page.
+    const chartTheme = context?.theme === "dark" ? "dark" : undefined
     const { data: option, complete } = parsePartialJSON(node.content ?? "")
     if (!complete || option == null || typeof option !== "object") {
       return { kind: "html", html: `<div data-aigui-chart-loading></div>` }
@@ -165,7 +168,7 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
             .then(() => {
               if (disposed) return
               // NOTE: no `renderer:"svg"` — WebGL requires the canvas renderer.
-              inst = init(el, undefined, { width, height })
+              inst = init(el, chartTheme, { width, height })
               inst.setOption(opt)
             })
             .catch(() => {
@@ -184,7 +187,7 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
       return {
         kind: "mount",
         mount: (el: HTMLElement) => {
-          const inst = init(el, undefined, { renderer: "svg", width, height })
+          const inst = init(el, chartTheme, { renderer: "svg", width, height })
           try {
             inst.setOption(opt)
           } catch {
@@ -197,7 +200,7 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
     }
     let inst: ECharts | undefined
     try {
-      inst = init(null, null, { renderer: "svg", ssr: true, width, height })
+      inst = init(null, chartTheme ?? null, { renderer: "svg", ssr: true, width, height })
       inst.setOption(option as EChartsCoreOption)
       const svg = inst.renderToSVGString()
       return { kind: "html", html: svg }

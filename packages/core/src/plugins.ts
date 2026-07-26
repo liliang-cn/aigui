@@ -17,11 +17,11 @@ export function collectNodeRenderers(plugins: AIGuiPlugin[] = [], debugOptions: 
         map[k] = render
         continue
       }
-      map[k] = (node) => {
+      map[k] = (node, context) => {
         const emit = (type: string, data: Record<string, unknown>) => target?.emitDebug(type, data) ?? debug?.emit(type, data)
         emit("plugin-render-started", { plugin: p.name, nodeType: node.type, nodeKey: node.key })
         try {
-          const output = render(node)
+          const output = render(node, context)
           if (isPromise(output)) {
             return output.then(
               (resolved) => {

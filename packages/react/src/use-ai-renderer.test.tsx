@@ -48,12 +48,23 @@ describe("useAIRenderer", () => {
     expect(result.current.nodes.some((n) => n.type === "heading")).toBe(true)
   })
   it("clears old content when renderer configuration changes", () => {
-    const first: AIGuiPlugin[] = []
-    const second: AIGuiPlugin[] = []
-    const { result, rerender } = renderHook(({ plugins }) => useAIRenderer({ plugins }), { initialProps: { plugins: first } })
+    const plugin: AIGuiPlugin = { name: "one" }
+    const { result, rerender } = renderHook(({ plugins }) => useAIRenderer({ plugins }), { initialProps: { plugins: [] as AIGuiPlugin[] } })
     act(() => result.current.push("old"))
-    rerender({ plugins: second })
+    rerender({ plugins: [plugin] })
     expect(result.current.nodes).toEqual([])
+  })
+
+  it("keeps the rendered answer when the same plugins arrive in a new array", () => {
+    const plugin: AIGuiPlugin = { name: "one" }
+    const { result, rerender } = renderHook(({ plugins }) => useAIRenderer({ plugins }), { initialProps: { plugins: [plugin] } })
+    act(() => result.current.push("# Title"))
+
+    // `plugins={[chart, katex]}` is a new array every render and the same plugins every time.
+    // Rebuilding the session for it wiped the answer as it streamed.
+    rerender({ plugins: [plugin] })
+
+    expect(result.current.nodes.some((n) => n.type === "heading")).toBe(true)
   })
   it("ignores an old feed after configuration changes", async () => {
     let release!: () => void
@@ -62,8 +73,9 @@ describe("useAIRenderer", () => {
       await new Promise<void>((resolve) => { release = resolve })
       yield " late"
     })()
+    // A real configuration change: the same plugins in a fresh array are not one.
     const first: AIGuiPlugin[] = []
-    const second: AIGuiPlugin[] = []
+    const second: AIGuiPlugin[] = [{ name: "added" }]
     const { result, rerender } = renderHook(({ plugins }) => useAIRenderer({ plugins }), { initialProps: { plugins: first } })
     let feeding!: Promise<void>
     await act(async () => { feeding = result.current.feed(source); await Promise.resolve() })
@@ -81,8 +93,9 @@ describe("useAIRenderer", () => {
       cancel,
       releaseLock: vi.fn(),
     }
+    // A real configuration change: the same plugins in a fresh array are not one.
     const first: AIGuiPlugin[] = []
-    const second: AIGuiPlugin[] = []
+    const second: AIGuiPlugin[] = [{ name: "added" }]
     const { result, rerender } = renderHook(({ plugins }) => useAIRenderer({ plugins }), { initialProps: { plugins: first } })
     const feeding = result.current.feed({ getReader: () => reader } as unknown as ReadableStream<string>)
     await act(async () => { await Promise.resolve() })

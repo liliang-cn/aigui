@@ -63,18 +63,40 @@ describe("plugin-mermaid", () => {
     expect(new Set(ids).size).toBe(3)
   })
 
-  it("initializes Mermaid once and keeps the first-rendered theme across instances", async () => {
+  it("re-initializes Mermaid only when the theme actually changes", async () => {
     const { mermaid } = await import("./index")
     const dark = collectNodeRenderers([mermaid({ theme: "dark" })]).mermaid
+    const alsoDark = collectNodeRenderers([mermaid({ theme: "dark" })]).mermaid
     const forest = collectNodeRenderers([mermaid({ theme: "forest" })]).mermaid
 
     await Promise.all([
       dark({ key: "0:a", type: "mermaid", content: "graph TD; A-->B" } as ASTNode),
-      forest({ key: "0:b", type: "mermaid", content: "graph TD; C-->D" } as ASTNode),
+      alsoDark({ key: "0:b", type: "mermaid", content: "graph TD; C-->D" } as ASTNode),
     ])
-
     expect(mocks.initialize).toHaveBeenCalledOnce()
     expect(mocks.initialize).toHaveBeenCalledWith({ startOnLoad: false, theme: "dark", securityLevel: "strict" })
+
+    // Mermaid holds one global configuration, so a diagram asking for another theme has to set it
+    // again. Keeping the first one meant the earliest diagram on the page decided for the rest.
+    await forest({ key: "0:c", type: "mermaid", content: "graph TD; E-->F" } as ASTNode)
+
+    expect(mocks.initialize).toHaveBeenLastCalledWith({ startOnLoad: false, theme: "forest", securityLevel: "strict" })
+  })
+
+  it("takes the theme from the host over the one it was built with", async () => {
+    const { mermaid } = await import("./index")
+    const render = collectNodeRenderers([mermaid({ theme: "dark" })]).mermaid
+    const node = { key: "0:a", type: "mermaid", content: "graph TD; A-->B" } as ASTNode
+
+    await render(node, { theme: "forest" })
+
+    expect(mocks.initialize).toHaveBeenLastCalledWith({ startOnLoad: false, theme: "forest", securityLevel: "strict" })
+
+    // The same node re-rendered for a different page theme is a different picture, so the memo
+    // per node cannot answer for both.
+    await render(node, { theme: "dark" })
+
+    expect(mocks.initialize).toHaveBeenLastCalledWith({ startOnLoad: false, theme: "dark", securityLevel: "strict" })
   })
 
   it("rejects oversized diagrams without loading Mermaid", async () => {

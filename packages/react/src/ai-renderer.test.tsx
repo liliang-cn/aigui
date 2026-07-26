@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { render, act, fireEvent, waitFor } from "@testing-library/react"
-import { createElement, createRef, useState } from "react"
+import { createElement, createRef, StrictMode, useState } from "react"
 import { describe, expect, it, vi } from "vitest"
-import { ActionAbortedError, ActionNotFoundError, ActionRegistry, ActionValidationError, CardRegistry, CardStore, createActionRuntime, type AIGuiPlugin } from "@ai-gui/core"
+import { ActionAbortedError, ActionNotFoundError, ActionRegistry, ActionValidationError, CardRegistry, CardStore, createActionRuntime, Renderer, type AIGuiPlugin, type ASTNode } from "@ai-gui/core"
 import { AIRenderer, type AIRendererHandle } from "./ai-renderer"
 import { useActionState } from "./use-action-state"
 
@@ -29,6 +29,85 @@ describe("AIRenderer", () => {
     act(() => ref.current!.push("# Hi"))
     expect(container.querySelector("h1")?.textContent).toBe("Hi")
   })
+  it("renders the text prop and pushes only what was added", () => {
+    const view = render(<AIRenderer text="# Ti" />)
+    const push = vi.spyOn(Renderer.prototype, "push")
+
+    view.rerender(<AIRenderer text="# Title" />)
+
+    expect(push.mock.calls).toEqual([["tle"]])
+    expect(view.container.querySelector("h1")?.textContent).toBe("Title")
+    push.mockRestore()
+  })
+
+  it("starts over when the new text is not a continuation", () => {
+    const view = render(<AIRenderer text="# First" />)
+
+    view.rerender(<AIRenderer text="# Second" />)
+
+    const headings = view.container.querySelectorAll("h1")
+    expect(Array.from(headings, (h) => h.textContent)).toEqual(["Second"])
+  })
+
+  it("keeps the text on screen when StrictMode remounts the effects", () => {
+    const view = render(<AIRenderer text="# Hi" />, { wrapper: StrictMode })
+
+    expect(view.container.querySelector("h1")?.textContent).toBe("Hi")
+
+    view.rerender(<StrictMode><AIRenderer text="# Hi there" /></StrictMode>)
+
+    expect(view.container.querySelector("h1")?.textContent).toBe("Hi there")
+  })
+
+  it("re-sends the whole text after an imperative reset", () => {
+    const ref = createRef<AIRendererHandle>()
+    const view = render(<AIRenderer ref={ref} text="# Title" />)
+
+    act(() => ref.current!.reset())
+    expect(view.container.querySelector("h1")).toBeNull()
+
+    view.rerender(<AIRenderer ref={ref} text="# Title and more" />)
+
+    expect(view.container.querySelector("h1")?.textContent).toBe("Title and more")
+  })
+
+  it("reports the rendered nodes so a host can tell what the answer produced", () => {
+    const onRender = vi.fn()
+    const view = render(<AIRenderer text="# Title" onRender={onRender} />)
+
+    view.rerender(<AIRenderer text={"# Title\n\n```mermaid\ngraph TD;\n```"} onRender={onRender} />)
+
+    // A host counting the diagrams in an answer reads them off the nodes, rather than watching
+    // the DOM for whatever elements a plugin happened to create.
+    const last = onRender.mock.lastCall![0] as ASTNode[]
+    expect(last.map((node) => node.type)).toEqual(["heading", "code"])
+    expect(last[1]!.attrs?.lang).toBe("mermaid")
+    expect(onRender.mock.calls.length).toBeGreaterThan(1)
+  })
+
+  it("hands the host theme to plugins and re-renders when it changes", () => {
+    const themes: Array<string | undefined> = []
+    const plugin: AIGuiPlugin = {
+      name: "probe",
+      nodeRenderers: {
+        probe: (node, context) => {
+          themes.push(context?.theme)
+          return { kind: "html", html: `<i data-theme="${context?.theme ?? "none"}">${node.content ?? ""}</i>` }
+        },
+      },
+    }
+    const plugins = [plugin]
+    const text = "```probe\nx\n```"
+    const view = render(<AIRenderer text={text} plugins={plugins} theme="light" />)
+    expect(view.container.querySelector("i")?.dataset.theme).toBe("light")
+
+    view.rerender(<AIRenderer text={text} plugins={plugins} theme="dark" />)
+
+    // The node did not change, but the picture drawn for the light page is the wrong one now.
+    expect(view.container.querySelector("i")?.dataset.theme).toBe("dark")
+    expect(themes).toEqual(["light", "dark"])
+  })
+
   it("renders a card component and routes onCardAction", () => {
     const registry = setupActionCard()
     const onCardAction = vi.fn()
@@ -443,7 +522,7 @@ describe("AIRenderer", () => {
   it.each([
     ["registry", { registry: setupActionCard() }, { registry: setupActionCard() }],
     ["sanitize", { sanitize: true }, { sanitize: false }],
-    ["plugins", { plugins: [] as AIGuiPlugin[] }, { plugins: [] as AIGuiPlugin[] }],
+    ["plugins", { plugins: [] as AIGuiPlugin[] }, { plugins: [{ name: "added" }] as AIGuiPlugin[] }],
   ] as const)("changing %s clears the AST and cancels the old action scope", async (_name, initial, next) => {
     const registry = setupActionCard()
     const actions = new ActionRegistry()

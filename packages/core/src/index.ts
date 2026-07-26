@@ -71,6 +71,8 @@ export { createParser, createParserWithMetadata } from "./parser"
 export type { ParserOptions, ParseResult, SourceBlock } from "./parser"
 export { collectNodeRenderers, pluginNodeTypes } from "./plugins"
 export type { CollectNodeRendererOptions } from "./plugins"
+export { downloadImage, exportRenderedImages, exportSVGToImage } from "./export-image"
+export type { ExportedImage, ExportImageOptions } from "./export-image"
 export { applyPatches, diffAst } from "./diff"
 export { Renderer } from "./renderer"
 export { StreamRouter } from "./stream-router"
@@ -80,5 +82,5 @@ export type { BuildSystemPromptOptions } from "./build-system-prompt"
 export { contentDeltas, jsonLines, mockModelStream, ndjson, parseSSE, readableBytes, textLines } from "./model-stream"
 export type { ByteStreamSource, Citation, ModelStreamEvent, SSEEvent, SSEOptions, StreamParseOptions, Usage } from "./model-stream"
 export type {
-  ASTNode, Patch, RenderOutput, RenderMountContext, MountCardSlotRequest, MountedCardSlot, NodeRenderer, JSONSchema, CardDef, AIGuiPlugin, PluginCommitContext, RendererOptions, FeedOptions, FeedChunk, FeedSource,
+  ASTNode, Patch, RenderOutput, RenderMountContext, MountCardSlotRequest, MountedCardSlot, NodeRenderer, NodeRenderContext, JSONSchema, CardDef, AIGuiPlugin, PluginCommitContext, RendererOptions, FeedOptions, FeedChunk, FeedSource,
 } from "./types"

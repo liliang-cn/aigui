@@ -17,6 +17,8 @@ export interface RenderContext {
   onCardAction?: (action: CardActionPayload) => void
   sanitize?: RendererOptions["sanitize"]
   sanitized?: boolean
+  /** The host's colour scheme, handed to every plugin that renders a node. */
+  theme?: string
 }
 
 export function renderNode(node: ASTNode, ctx: RenderContext): ReactNode {
@@ -57,15 +59,19 @@ interface PluginOutputHostProps {
 interface CachedPluginOutput {
   renderer: NodeRenderer
   signature: string | ASTNode
+  theme: string | undefined
   output: RenderOutput | Promise<RenderOutput>
 }
 
 function PluginOutputHost({ node, renderer, context }: PluginOutputHostProps): ReactNode {
   const cache = useRef<CachedPluginOutput>()
   const signature = nodeSignature(node)
+  const theme = context.theme
   try {
-    if (!cache.current || cache.current.renderer !== renderer || cache.current.signature !== signature) {
-      cache.current = { renderer, signature, output: renderer(node) }
+    // The theme belongs in the cache key: the node has not changed when the page switches to dark,
+    // but the diagram drawn for the light one is the wrong picture now.
+    if (!cache.current || cache.current.renderer !== renderer || cache.current.signature !== signature || cache.current.theme !== theme) {
+      cache.current = { renderer, signature, theme, output: renderer(node, { theme }) }
     }
     const output = cache.current.output
     if (output && typeof (output as { then?: unknown }).then === "function") {
