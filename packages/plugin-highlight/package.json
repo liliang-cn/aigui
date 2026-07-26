@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-highlight",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Shiki code-highlighting plugin for AIGUI.",
   "keywords": [
     "llm",
