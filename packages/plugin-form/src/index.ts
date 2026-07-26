@@ -80,13 +80,41 @@ export interface FormValidationResult {
   errors: Record<string, string>
 }
 
+/** What was answered, and how it turned out — enough to put a form back the way it was left. */
+export interface FormSubmission {
+  values: Record<string, string | number | boolean>
+  /**
+   * The verdict, when the host kept one. Omitted, the fields' own `expect` is graded again, so a
+   * quiz still comes back coloured without the host having to store the marking.
+   */
+  outcome?: ActionOutcome
+}
+
 export interface FormPluginOptions {
   /** Shared core runtime whose registry is the only allowlist for submitAction. */
   actionRuntime: ActionRuntime
-  /** Mount forms as already submitted, useful when restoring persisted conversations. */
+  /** Mount every form as already submitted, useful when restoring persisted conversations. */
   submitted?: boolean
   /** Label shown after a successful or restored submission. */
   submittedLabel?: string
+  /**
+   * The submission this form already has, by form id.
+   *
+   * `submitted` on its own marks a form done without saying what was answered, so a reloaded
+   * conversation shows a disabled question with nothing chosen in it — which reads as worse than
+   * unanswered, since it claims to have been answered and cannot say with what. Returning the
+   * values puts the person's own answer back in front of them.
+   *
+   * Called once per form as it mounts, so it can read whatever the host has loaded by then.
+   */
+  restore?: (formId: string) => FormSubmission | undefined
+  /**
+   * Called when a submission succeeds, so the host can persist what to restore later.
+   *
+   * The action handler sees the values too, but not which form they came from — the form id is only
+   * in `cardType`, which a host would have to parse. This hands it over directly.
+   */
+  onSubmitted?: (formId: string, submission: FormSubmission) => void
 }
 
 export function formPromptSpec(): string {
@@ -413,7 +441,16 @@ function mountForm(host: HTMLElement, definition: FormDefinition, options: FormP
     }
     submit.textContent = options.submittedLabel ?? "Submitted"
   }
-  if (submitted) markSubmitted()
+  // A stored submission is put back before the form is locked, so the person sees their own answer
+  // rather than an empty question that claims to have been answered.
+  const stored = options.restore?.(definition.id)
+  if (stored) {
+    writeControls(definition, controls, stored.values)
+    markSubmitted()
+    applyOutcome(stored.outcome, gradeAgainstExpectations(stored.values))
+  } else if (submitted) {
+    markSubmitted()
+  }
 
   const onInput = (event: Event) => {
     const control = event.target
@@ -447,6 +484,18 @@ function mountForm(host: HTMLElement, definition: FormDefinition, options: FormP
       (result: unknown) => {
         markSubmitted()
         applyOutcome(result, graded)
+        // Handed over after the form is settled, so a host that throws while persisting cannot
+        // leave the person looking at a form that took their answer and still says "Submit".
+        if (disposed) return
+        const outcome = actionOutcome(result) ?? graded
+        try {
+          options.onSubmitted?.(definition.id, {
+            values: validation.values,
+            ...(outcome ? { outcome } : {}),
+          })
+        } catch {
+          // The host's bookkeeping is not the person's problem.
+        }
       },
       (error: unknown) => {
         if (!disposed && !controller.signal.aborted) {
@@ -572,6 +621,36 @@ function readControls(
     else values[field.name] = control.value
   }
   return values
+}
+
+/**
+ * Put a stored submission back into the controls — the inverse of `readControls`.
+ *
+ * A radio group is several inputs sharing a name, and `controls` holds only the first, so the one
+ * that carries the stored value has to be found in the group. Setting `.value` on that first input
+ * would rename the option instead of choosing it.
+ */
+function writeControls(
+  definition: FormDefinition,
+  controls: Map<string, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
+  values: Record<string, string | number | boolean>,
+): void {
+  for (const field of definition.fields) {
+    const control = controls.get(field.name)
+    const value = values[field.name]
+    if (!control || value === undefined) continue
+    if (field.type === "checkbox" && control instanceof HTMLInputElement) {
+      control.checked = value === true
+    } else if (field.type === "radio") {
+      const group = control.form?.elements.namedItem(field.name)
+      const inputs = group instanceof RadioNodeList ? Array.from(group) : [control]
+      for (const input of inputs) {
+        if (input instanceof HTMLInputElement) input.checked = input.value === String(value)
+      }
+    } else {
+      control.value = String(value)
+    }
+  }
 }
 
 function renderErrors(

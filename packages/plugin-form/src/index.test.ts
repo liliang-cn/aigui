@@ -414,3 +414,112 @@ describe("plugin-form expectations", () => {
     expect(result.valid).toBe(false)
   })
 })
+
+describe("plugin-form restored submissions", () => {
+  const quiz = {
+    id: "q1",
+    fields: [
+      { name: "answer", type: "radio", label: "请选择", required: true, expect: "B", options: [{ label: "A. 100", value: "A" }, { label: "B. 7", value: "B" }] },
+      { name: "why", type: "textarea", label: "理由" },
+      { name: "sure", type: "checkbox", label: "确定" },
+    ],
+    submitAction: "quiz.answer",
+  }
+
+  function mount(options: Partial<Parameters<typeof form>[0]> = {}, definition: unknown = quiz) {
+    const registry = new ActionRegistry()
+    const run = vi.fn(() => ({ submitted: true }))
+    registry.register({ type: "quiz.answer", run })
+    const plugin = form({ actionRuntime: createActionRuntime({ registry }), ...options })
+    const node = createParser({ plugins: [plugin] })(`\`\`\`form\n${JSON.stringify(definition)}\n\`\`\``)[0]
+    const out = collectNodeRenderers([plugin]).form(node) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected a mount output")
+    const host = document.createElement("div")
+    out.mount(host)
+    return { host, formEl: host.querySelector("form")!, run }
+  }
+
+  it("puts the answer back, not just the lock", () => {
+    // `submitted: true` alone left a disabled question with nothing chosen in it — which claims to
+    // have been answered and cannot say with what. This is the whole point of restoring.
+    const { formEl } = mount({
+      restore: () => ({ values: { answer: "B", why: "因为 3+4=7", sure: true } }),
+    })
+
+    expect(formEl.querySelector<HTMLInputElement>('input[value="B"]')!.checked).toBe(true)
+    expect(formEl.querySelector<HTMLInputElement>('input[value="A"]')!.checked).toBe(false)
+    expect(formEl.querySelector<HTMLTextAreaElement>('[name="why"]')!.value).toBe("因为 3+4=7")
+    expect(formEl.querySelector<HTMLInputElement>('input[name="sure"]')!.checked).toBe(true)
+    expect(formEl.hasAttribute("data-aigui-form-submitted")).toBe(true)
+  })
+
+  it("will not take a second answer for a question already answered", () => {
+    const { formEl, run } = mount({ restore: () => ({ values: { answer: "A" } }) })
+
+    expect(Array.from(formEl.elements).every((element) => (element as HTMLInputElement).disabled)).toBe(true)
+    formEl.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
+    expect(run).not.toHaveBeenCalled()
+  })
+
+  it("grades a restored answer again so a quiz comes back coloured", () => {
+    // The host stores what was answered; it should not have to store the marking as well.
+    const wrong = mount({ restore: () => ({ values: { answer: "A" } }) })
+    expect(wrong.formEl.getAttribute("data-aigui-form-outcome")).toBe("warning")
+
+    const right = mount({ restore: () => ({ values: { answer: "B" } }) })
+    expect(right.formEl.getAttribute("data-aigui-form-outcome")).toBe("positive")
+  })
+
+  it("prefers a stored verdict over grading the values again", () => {
+    const { formEl } = mount({
+      restore: () => ({ values: { answer: "A" }, outcome: { tone: "neutral", message: "按过程给分" } }),
+    })
+
+    expect(formEl.getAttribute("data-aigui-form-outcome")).toBe("neutral")
+    expect(formEl.querySelector("[data-aigui-form-outcome-message]")?.textContent).toBe("按过程给分")
+  })
+
+  it("only restores the form the submission belongs to", () => {
+    const seen: string[] = []
+    mount({
+      restore: (formId) => {
+        seen.push(formId)
+        return formId === "other" ? { values: { answer: "A" } } : undefined
+      },
+    })
+
+    expect(seen).toEqual(["q1"])
+    // Asked about q1, told nothing: this form must be answerable.
+    const { formEl } = mount({ restore: (formId) => (formId === "other" ? { values: { answer: "A" } } : undefined) })
+    expect(formEl.hasAttribute("data-aigui-form-submitted")).toBe(false)
+  })
+
+  it("hands the submission to the host with the form id, so there is something to restore", async () => {
+    const onSubmitted = vi.fn()
+    const { formEl } = mount({ onSubmitted })
+
+    formEl.querySelector<HTMLInputElement>('input[value="B"]')!.checked = true
+    formEl.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
+
+    await vi.waitFor(() => expect(onSubmitted).toHaveBeenCalled())
+    // An untouched optional text field is left out, the same as the values the action receives —
+    // and `restore` skips what is absent, so a round trip through the host does not invent a "".
+    expect(onSubmitted).toHaveBeenCalledWith("q1", {
+      values: { answer: "B", sure: false },
+      outcome: expect.objectContaining({ tone: "positive" }),
+    })
+  })
+
+  it("keeps the form usable when the host throws while persisting", async () => {
+    // The host's bookkeeping failing is not the person's problem: their answer went through.
+    const { formEl } = mount({
+      onSubmitted: () => {
+        throw new Error("disk full")
+      },
+    })
+
+    formEl.querySelector<HTMLInputElement>('input[value="B"]')!.checked = true
+    expect(() => formEl.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()).not.toThrow()
+    await vi.waitFor(() => expect(formEl.hasAttribute("data-aigui-form-submitted")).toBe(true))
+  })
+})
