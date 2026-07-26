@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/react",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "React adapter for AIGUI — stream LLM output into live React components with cards, plugins, and interactive widgets.",
   "keywords": [
     "llm",

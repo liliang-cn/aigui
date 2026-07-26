@@ -353,3 +353,64 @@ describe("plugin-form outcomes", () => {
     expect((host.querySelector("[data-aigui-form-outcome-message]") as HTMLElement).hidden).toBe(true)
   })
 })
+
+describe("plugin-form expectations", () => {
+  const quiz = (expectValue: string) => ({
+    id: "q1",
+    fields: [{ name: "answer", type: "radio", label: "请选择", required: true, expect: expectValue, options: [{ label: "A. 100", value: "A" }, { label: "B. 7", value: "B" }] }],
+    submitAction: "quiz.answer",
+  })
+
+  async function answer(pick: string, expectValue: string, run: () => unknown = () => ({ submitted: true })) {
+    const registry = new ActionRegistry()
+    registry.register({ type: "quiz.answer", run })
+    const plugin = form({ actionRuntime: createActionRuntime({ registry }) })
+    const node = createParser({ plugins: [plugin] })(`\`\`\`form\n${JSON.stringify(quiz(expectValue))}\n\`\`\``)[0]
+    const out = collectNodeRenderers([plugin]).form(node) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected a mount output")
+    const host = document.createElement("div")
+    out.mount(host)
+    host.querySelector<HTMLInputElement>(`input[value="${pick}"]`)!.checked = true
+    host.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
+    await vi.waitFor(() => expect(host.querySelector("form")?.hasAttribute("data-aigui-form-submitted")).toBe(true))
+    return host.querySelector("form")!
+  }
+
+  it("marks a wrong answer as soon as it is submitted", async () => {
+    const formEl = await answer("A", "B")
+
+    expect(formEl.getAttribute("data-aigui-form-outcome")).toBe("warning")
+    expect(formEl.querySelector('[data-aigui-form-field="answer"]')?.getAttribute("data-aigui-form-field-outcome")).toBe("warning")
+  })
+
+  it("marks a right answer", async () => {
+    const formEl = await answer("B", "B")
+
+    expect(formEl.getAttribute("data-aigui-form-outcome")).toBe("positive")
+  })
+
+  it("lets the answer through rather than blocking it", async () => {
+    // A wrong answer is an answer: the tutor still has to see it to teach from it, so `expect`
+    // reports and never validates.
+    const run = vi.fn(() => ({ submitted: true }))
+    const formEl = await answer("A", "B", run)
+
+    expect(run).toHaveBeenCalledWith({ answer: "A" }, expect.anything())
+    expect(formEl.hasAttribute("data-aigui-form-submitted")).toBe(true)
+  })
+
+  it("takes the handler's verdict over its own comparison", async () => {
+    // The handler knows more than a value match: partial credit, a rephrased answer, a mark scheme.
+    const formEl = await answer("A", "B", () => ({ outcome: { tone: "neutral", message: "这题按过程给分" } }))
+
+    expect(formEl.getAttribute("data-aigui-form-outcome")).toBe("neutral")
+    expect(formEl.querySelector("[data-aigui-form-outcome-message]")?.textContent).toBe("这题按过程给分")
+  })
+
+  it("rejects an expectation that is not a value a field can hold", async () => {
+    const { parseFormDefinition } = await import("./index")
+    const result = parseFormDefinition(JSON.stringify({ id: "q", submitAction: "a", fields: [{ name: "answer", type: "text", label: "答", expect: { b: 1 } }] }))
+
+    expect(result.valid).toBe(false)
+  })
+})

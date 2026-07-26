@@ -1,5 +1,23 @@
 # @ai-gui/plugin-form
 
+## 0.8.0
+
+### Minor Changes
+
+- A field can declare the answer it expects, and the form marks the submission against it.
+
+  `expect` on a field makes a quiz colour itself the moment it is answered, instead of waiting for a
+  round trip to say what the person already needs to know. Only fields that declare it take part, the
+  tone is the worst of them, and the handler's own verdict still wins when it returns one — it knows
+  about partial credit and mark schemes that a value comparison does not.
+
+  Unlike the constraints beside it, `expect` never blocks a submission. A wrong answer is an answer:
+  the person is told, not stopped, and the handler still receives it.
+
+### Patch Changes
+
+- @ai-gui/core@0.8.0
+
 ## 0.7.0
 
 ### Minor Changes

@@ -1,8 +1,8 @@
-import { actionOutcome, ActionRuntimeError, type ActionRuntime, type AIGuiPlugin, type ASTNode, type OutcomeTone, type RenderOutput } from "@ai-gui/core"
+import { actionOutcome, ActionRuntimeError, type ActionOutcome, type ActionRuntime, type AIGuiPlugin, type ASTNode, type OutcomeTone, type RenderOutput } from "@ai-gui/core"
 
 const FIELD_TYPES = new Set<FormFieldType>(["text", "textarea", "number", "date", "select", "checkbox", "radio"])
 const FORM_KEYS = new Set(["id", "fields", "submitAction", "submitLabel"])
-const FIELD_KEYS = new Set(["name", "type", "label", "required", "minLength", "maxLength", "pattern", "min", "max", "options", "placeholder"])
+const FIELD_KEYS = new Set(["name", "type", "label", "required", "minLength", "maxLength", "pattern", "min", "max", "options", "placeholder", "expect"])
 const OPTION_KEYS = new Set(["label", "value"])
 const SAFE_NAME = /^[A-Za-z][A-Za-z0-9_.-]{0,127}$/
 const SAFE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,127}$/
@@ -24,6 +24,15 @@ interface FormFieldBase {
   label: string
   required?: boolean
   placeholder?: string
+  /**
+   * The answer this field is expected to carry.
+   *
+   * Declaring it lets the form report how the submission compared — a quiz colours itself the
+   * moment it is answered instead of waiting for a round trip to say so. Unlike the constraints
+   * beside it this never blocks a submission: a wrong answer is an answer, and the person is told
+   * rather than stopped.
+   */
+  expect?: string | number | boolean
 }
 
 export interface FormStringField extends FormFieldBase {
@@ -244,6 +253,14 @@ function parseField(value: unknown, index: number, issues: string[]): FormField 
       }
     }
   }
+  let expected: string | number | boolean | undefined
+  if (value.expect !== undefined) {
+    if (typeof value.expect === "string" || typeof value.expect === "number" || typeof value.expect === "boolean") {
+      expected = value.expect
+    } else {
+      issues.push(`${path}.expect must be a string, a number, or a boolean.`)
+    }
+  }
   if (!name || !label || !type) return undefined
 
   const base = {
@@ -251,6 +268,7 @@ function parseField(value: unknown, index: number, issues: string[]): FormField 
     label,
     ...(value.required === true ? { required: true as const } : {}),
     ...(placeholder === undefined ? {} : { placeholder }),
+    ...(expected === undefined ? {} : { expect: expected }),
   }
   if (type === "number") {
     if (minLength !== undefined || maxLength !== undefined || pattern !== undefined || value.options !== undefined) issues.push(`${path} contains constraints unsupported by number fields.`)
@@ -343,13 +361,36 @@ function mountForm(host: HTMLElement, definition: FormDefinition, options: FormP
   formElement.appendChild(submit)
 
   /**
+   * Compare the submission with the answers the fields declared.
+   *
+   * Only fields carrying `expect` take part, so a plain form is never marked. The tone is the worst
+   * of them: one wrong answer among three right ones is not a pass.
+   */
+  const gradeAgainstExpectations = (values: Record<string, string | number | boolean>): ActionOutcome | undefined => {
+    const graded = definition.fields.filter((field) => field.expect !== undefined)
+    if (graded.length === 0) return undefined
+    const fieldTones: Record<string, OutcomeTone> = {}
+    let wrong = 0
+    for (const field of graded) {
+      const submitted = values[field.name]
+      const matches = typeof field.expect === "string" && typeof submitted === "string"
+        ? submitted.trim() === field.expect.trim()
+        : submitted === field.expect
+      fieldTones[field.name] = matches ? "positive" : "warning"
+      if (!matches) wrong += 1
+    }
+    return { tone: wrong === 0 ? "positive" : "warning", fields: fieldTones }
+  }
+
+  /**
    * Show how the submission turned out, when the handler judged it.
    *
    * The result used to be discarded, so an app that knew the answer was wrong had no way to say so
    * — the form simply disabled itself and read "Submitted" whether the answer was right or not.
    */
-  const applyOutcome = (result: unknown) => {
-    const outcome = actionOutcome(result)
+  const applyOutcome = (result: unknown, fallback?: ActionOutcome) => {
+    // The handler wins when it judged: it knows more than a value comparison can.
+    const outcome = actionOutcome(result) ?? fallback
     if (!outcome || disposed) return
     formElement.setAttribute("data-aigui-form-outcome", outcome.tone)
     if (outcome.message) {
@@ -392,6 +433,7 @@ function mountForm(host: HTMLElement, definition: FormDefinition, options: FormP
     pending = true
     submit.disabled = true
     formElement.setAttribute("aria-busy", "true")
+    const graded = gradeAgainstExpectations(validation.values)
     const settle = () => {
       if (disposed) return
       pending = false
@@ -404,7 +446,7 @@ function mountForm(host: HTMLElement, definition: FormDefinition, options: FormP
     ).then(
       (result: unknown) => {
         markSubmitted()
-        applyOutcome(result)
+        applyOutcome(result, graded)
       },
       (error: unknown) => {
         if (!disposed && !controller.signal.aborted) {
