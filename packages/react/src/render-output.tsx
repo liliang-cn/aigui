@@ -1,13 +1,13 @@
 import { createElement, Fragment, useEffect, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react"
 import { createPortal } from "react-dom"
-import { sanitizeHtml, type MountCardSlotRequest, type MountedCardSlot, type RendererOptions, type RenderMountContext, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
+import { sanitizeRenderedHtml, type MountCardSlotRequest, type MountedCardSlot, type RendererOptions, type RenderMountContext, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
 import type { CardComponent, RenderContext } from "./render-node"
 
 /** Translate a framework-neutral RenderOutput into React nodes. */
 export function renderOutput(out: RenderOutput, key?: string, sanitize?: RendererOptions["sanitize"], context?: RenderContext): ReactNode {
   switch (out.kind) {
     case "html":
-      return <div key={key} dangerouslySetInnerHTML={{ __html: sanitizeOutput(out.html, sanitize) }} />
+      return <div key={key} dangerouslySetInnerHTML={{ __html: sanitizeRenderedHtml(out.html, sanitize, out.trusted) }} />
     case "element":
       return createElement(
         out.tag,
@@ -127,7 +127,3 @@ export function AsyncOutput({ promise, sanitize, context }: AsyncOutputProps): R
   }
 }
 
-function sanitizeOutput(html: string, sanitize: RendererOptions["sanitize"]): string {
-  if (sanitize === false) return html
-  return sanitizeHtml(html, typeof sanitize === "object" ? sanitize as SanitizeHtmlOptions : undefined)
-}

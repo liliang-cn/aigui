@@ -1,4 +1,4 @@
-import { sanitizeHtml, type RendererOptions, type RenderMountContext, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
+import { sanitizeRenderedHtml, type RendererOptions, type RenderMountContext, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
 
 export interface ManagedElement extends HTMLElement {
   __aiguiCleanup?: () => void
@@ -10,7 +10,7 @@ export function renderOutputToElement(out: RenderOutput, sanitize?: RendererOpti
   switch (out.kind) {
     case "html": {
       const el = document.createElement("div")
-      el.innerHTML = sanitizeOutput(out.html, sanitize)
+      el.innerHTML = sanitizeRenderedHtml(out.html, sanitize, out.trusted)
       return el
     }
     case "element": {
@@ -49,7 +49,3 @@ export function renderOutputToElement(out: RenderOutput, sanitize?: RendererOpti
   }
 }
 
-function sanitizeOutput(html: string, sanitize: RendererOptions["sanitize"]): string {
-  if (sanitize === false) return html
-  return sanitizeHtml(html, typeof sanitize === "object" ? sanitize as SanitizeHtmlOptions : undefined)
-}

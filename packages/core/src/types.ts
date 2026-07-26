@@ -26,7 +26,17 @@ export type Patch =
 
 /** Framework-neutral render descriptor returned by plugin node renderers. */
 export type RenderOutput =
-  | { kind: "html"; html: string }
+  /**
+   * `trusted` marks markup the plugin built itself rather than markup taken from the model.
+   *
+   * A plugin that renders a diagram returns SVG, and sanitizing SVG escapes it — the reader gets
+   * the source text instead of the picture. Hosts worked around that by matching the plugin's
+   * internal id prefix with a regular expression, which breaks the moment the plugin renames its
+   * ids and lets any model output wearing that prefix through unsanitized. A plugin is code the
+   * host chose to install, so it can say so itself; a host that disagrees sets
+   * `sanitize: { trustPlugins: false }`.
+   */
+  | { kind: "html"; html: string; trusted?: boolean }
   | { kind: "element"; tag: string; props?: Record<string, unknown>; children?: RenderOutput[] }
   | { kind: "card"; type: string; data: unknown }
   | { kind: "mount"; mount: (el: HTMLElement, context: RenderMountContext) => void | (() => void) }

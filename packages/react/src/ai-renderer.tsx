@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react"
-import { collectNodeRenderers, type ActionRuntime, type AIGuiPlugin, type ASTNode, type CardRegistry, type CardStore, type DebugEventListener, type FeedOptions, type FeedSource, type RendererOptions } from "@ai-gui/core"
+import { collectNodeRenderers, exportRenderedImages, type ActionRuntime, type AIGuiPlugin, type ASTNode, type CardRegistry, type CardStore, type DebugEventListener, type ExportedImage, type ExportImageOptions, type FeedOptions, type FeedSource, type RendererOptions } from "@ai-gui/core"
 import { useAIRenderer } from "./use-ai-renderer"
 import { renderNode, type RenderContext } from "./render-node"
 
@@ -8,6 +8,13 @@ export interface AIRendererHandle {
   subscribeDebug: (listener: DebugEventListener) => () => void
   push: (chunk: string) => void
   feed: (source: FeedSource, options?: FeedOptions) => Promise<void>
+  /**
+   * Export every drawing currently rendered, as PNG data URLs.
+   *
+   * The element the drawings live in belongs to the renderer, so a host offering "save this chart"
+   * would otherwise have to wrap it in one of its own just to find them.
+   */
+  exportImages: (options?: ExportImageOptions) => Promise<ExportedImage[]>
   reset: () => void
 }
 
@@ -62,6 +69,7 @@ export const AIRenderer = forwardRef<AIRendererHandle, AIRendererProps>(function
   const { renderer, nodes, push, feed, reset: resetRenderer } = useAIRenderer(opts)
   const actionScope = useRef(createActionScope())
   const rendered = useRef("")
+  const root = useRef<HTMLDivElement>(null)
   useEffect(() => () => {
     actionScope.current.controller.abort()
     actionScope.current = createActionScope()
@@ -103,11 +111,15 @@ export const AIRenderer = forwardRef<AIRendererHandle, AIRendererProps>(function
     }
     onCardAction?.(action)
   }, [actionRuntime, onCardAction])
-  useImperativeHandle(ref, () => ({ debugSource: "renderer" as const, subscribeDebug: (listener) => renderer.subscribeDebug(listener), push, feed, reset }), [renderer, push, feed, reset])
+  const exportImages = useCallback(
+    (options?: ExportImageOptions) => root.current ? exportRenderedImages(root.current, options) : Promise.resolve([]),
+    [],
+  )
+  useImperativeHandle(ref, () => ({ debugSource: "renderer" as const, subscribeDebug: (listener) => renderer.subscribeDebug(listener), push, feed, exportImages, reset }), [renderer, push, feed, exportImages, reset])
   const nodeRenderers = useMemo(() => collectNodeRenderers(plugins, { debugTarget: renderer }), [plugins, renderer])
   const ctx: RenderContext = { registry, cardStore, plugins, nodeRenderers, onCardAction: handleCardAction, sanitize, sanitized: true, theme }
   return (
-    <div className={className} data-aigui-renderer>
+    <div className={className} data-aigui-renderer ref={root}>
       {nodes.map((n) => renderNode(n, ctx))}
     </div>
   )

@@ -522,3 +522,60 @@ describe("AIRenderer", () => {
     expect(signal.aborted).toBe(true)
   })
 })
+
+describe("AIRenderer host contract", () => {
+  const probe = (seen: Array<string | undefined>) => ({
+    name: "probe",
+    nodeRenderers: {
+      probe: (node: { content?: string }, context?: { theme?: string }) => {
+        seen.push(context?.theme)
+        return { kind: "html" as const, html: `<i data-theme="${context?.theme ?? "none"}">${node.content ?? ""}</i>`, trusted: true }
+      },
+    },
+  })
+
+  it("renders the text prop and pushes only what was added", async () => {
+    const wrapper = mount(AIRenderer, { props: { text: "# Ti" } })
+    await nextTick()
+
+    await wrapper.setProps({ text: "# Title" })
+    await nextTick()
+
+    expect(wrapper.find("h1").text()).toBe("Title")
+  })
+
+  it("starts over when the new text is not a continuation", async () => {
+    const wrapper = mount(AIRenderer, { props: { text: "# First" } })
+    await nextTick()
+
+    await wrapper.setProps({ text: "# Second" })
+    await nextTick()
+
+    expect(wrapper.findAll("h1").map((h) => h.text())).toEqual(["Second"])
+  })
+
+  it("hands the theme to plugins and redraws when the page switches", async () => {
+    const seen: Array<string | undefined> = []
+    const plugins = [probe(seen)]
+    const text = "```probe\nx\n```"
+    const wrapper = mount(AIRenderer, { props: { text, plugins, theme: "light" } })
+    await nextTick()
+    expect(wrapper.find("i").attributes("data-theme")).toBe("light")
+
+    await wrapper.setProps({ theme: "dark" })
+    await nextTick()
+
+    // A Vue host had no way to say this, so plugin-chart drew a light plot area on a dark page.
+    expect(wrapper.find("i").attributes("data-theme")).toBe("dark")
+    expect(seen).toEqual(["light", "dark"])
+  })
+
+  it("reports the rendered nodes", async () => {
+    const wrapper = mount(AIRenderer, { props: { text: "# Title" } })
+    await nextTick()
+
+    const emitted = wrapper.emitted("render")
+    expect(emitted?.length).toBeGreaterThan(0)
+    expect((emitted!.at(-1)![0] as Array<{ type: string }>).map((n) => n.type)).toContain("heading")
+  })
+})

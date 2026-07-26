@@ -1,5 +1,5 @@
 import { defineComponent, h, markRaw, onBeforeUnmount, onMounted, ref, render, toRaw, watch, type Component, type PropType, type VNode } from "vue"
-import { sanitizeHtml, type CardRegistry, type MountedCardSlot, type RendererOptions, type RenderMountContext, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
+import { sanitizeRenderedHtml, type CardRegistry, type MountedCardSlot, type RendererOptions, type RenderMountContext, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
 
 type MountFunction = Extract<RenderOutput, { kind: "mount" }>["mount"]
 
@@ -31,7 +31,7 @@ const MountHost = defineComponent({
 export function renderOutput(out: RenderOutput, sanitize?: RendererOptions["sanitize"], context: RenderMountContext = {}): VNode {
   switch (out.kind) {
     case "html":
-      return h("div", { innerHTML: sanitizeOutput(out.html, sanitize) })
+      return h("div", { innerHTML: sanitizeRenderedHtml(out.html, sanitize, out.trusted) })
     case "element":
       return h(out.tag, out.props, (out.children ?? []).map((child) => renderOutput(child, sanitize, context)))
     case "mount":
@@ -106,7 +106,3 @@ export function createRenderMountContext(
   }
 }
 
-function sanitizeOutput(html: string, sanitize: RendererOptions["sanitize"]): string {
-  if (sanitize === false) return html
-  return sanitizeHtml(html, typeof sanitize === "object" ? sanitize as SanitizeHtmlOptions : undefined)
-}

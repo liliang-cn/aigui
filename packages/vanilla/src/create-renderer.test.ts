@@ -8,6 +8,7 @@ import {
   ActionValidationError,
   CardRegistry,
   createActionRuntime,
+  Renderer,
   type AIGuiPlugin,
   type RenderOutput,
 } from "@ai-gui/core"
@@ -362,5 +363,72 @@ describe("createRenderer", () => {
     const renderer = createRenderer(el)
     await renderer.feed(source)
     expect(el.textContent).toBe("你好")
+  })
+})
+
+describe("createRenderer host contract", () => {
+  const probe = (seen: Array<string | undefined>): AIGuiPlugin => ({
+    name: "probe",
+    nodeRenderers: {
+      probe: (node, context) => {
+        seen.push(context?.theme)
+        return { kind: "html", html: `<i data-theme="${context?.theme ?? "none"}">${node.content ?? ""}</i>`, trusted: true }
+      },
+    },
+  })
+
+  it("renders a whole text and pushes only what was added", () => {
+    const el = document.createElement("div")
+    const renderer = createRenderer(el)
+    renderer.setText("# Ti")
+    const push = vi.spyOn(Renderer.prototype, "push")
+
+    renderer.setText("# Title")
+
+    expect(push.mock.calls).toEqual([["tle"]])
+    expect(el.querySelector("h1")?.textContent).toBe("Title")
+    push.mockRestore()
+  })
+
+  it("starts over when the new text is not a continuation", () => {
+    const el = document.createElement("div")
+    const renderer = createRenderer(el)
+    renderer.setText("# First")
+
+    renderer.setText("# Second")
+
+    expect(Array.from(el.querySelectorAll("h1"), (h) => h.textContent)).toEqual(["Second"])
+  })
+
+  it("hands the theme to plugins and redraws on setTheme", () => {
+    const seen: Array<string | undefined> = []
+    const el = document.createElement("div")
+    const renderer = createRenderer(el, { plugins: [probe(seen)], theme: "light" })
+    renderer.setText("```probe\nx\n```")
+    expect(el.querySelector("i")?.getAttribute("data-theme")).toBe("light")
+
+    renderer.setTheme("dark")
+
+    // A vanilla host had no way to say this, so a chart kept its light plot area on a dark page.
+    expect(el.querySelector("i")?.getAttribute("data-theme")).toBe("dark")
+    expect(seen).toEqual(["light", "dark"])
+  })
+
+  it("reports the rendered nodes to the host", () => {
+    const onRender = vi.fn()
+    const el = document.createElement("div")
+    createRenderer(el, { onRender }).setText("# Title")
+
+    expect(onRender.mock.lastCall![0].map((node: { type: string }) => node.type)).toContain("heading")
+  })
+
+  it("keeps a plugin's own markup out of the sanitizer", () => {
+    const el = document.createElement("div")
+    const renderer = createRenderer(el, { plugins: [probe([])], sanitize: true })
+
+    renderer.setText("```probe\nlabel\n```")
+
+    // Sanitizing a diagram strips the labels out of it, so the plugin says the markup is its own.
+    expect(el.querySelector("i")?.textContent?.trim()).toBe("label")
   })
 })

@@ -60,7 +60,10 @@ export function mermaid(opts: MermaidOptions = {}): AIGuiPlugin {
       }
       const id = `aigui-mermaid-${nextId++}`
       const { svg } = await m.render(id, node.content ?? "")
-      return { kind: "html", html: svg }
+      // Built here from the diagram source, under Mermaid's strict security level — not markup the
+      // model wrote. Sanitizing SVG escapes it, so the reader would get the source text instead of
+      // the picture, which is why hosts used to bypass their sanitizer by matching the id above.
+      return { kind: "html", html: svg, trusted: true }
     } catch {
       return errorHtml()
     }

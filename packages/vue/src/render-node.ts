@@ -10,6 +10,8 @@ export interface RenderContext {
   onCardAction?: (action: { type: string; params?: unknown; cardType: string; cardId?: string }) => void
   sanitize?: RendererOptions["sanitize"]
   sanitized?: boolean
+  /** The host's colour scheme, handed to every plugin that renders a node. */
+  theme?: string
 }
 
 export function renderNode(node: ASTNode, ctx: RenderContext): VNode {
@@ -18,7 +20,7 @@ export function renderNode(node: ASTNode, ctx: RenderContext): VNode {
   if (r) {
     if (node.complete === false) return h("div", { key: node.key, "data-aigui-block-loading": "", "data-block-type": node.type })
     try {
-      const out = r(node)
+      const out = r(node, { theme: ctx.theme })
       const mountContext = createRenderMountContext(ctx.registry, ctx.onCardAction)
       if (out && typeof (out as { then?: unknown }).then === "function") {
         return h(AsyncOutput, { key: node.key, promise: out as Promise<RenderOutput>, sanitize: ctx.sanitize, context: mountContext })
