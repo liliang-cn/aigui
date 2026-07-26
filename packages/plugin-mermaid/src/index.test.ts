@@ -83,6 +83,18 @@ describe("plugin-mermaid", () => {
     expect(mocks.initialize).toHaveBeenLastCalledWith({ startOnLoad: false, theme: "forest", securityLevel: "strict" })
   })
 
+  it("does not hand Mermaid a colour scheme it has no theme for", async () => {
+    const { mermaid } = await import("./index")
+    const render = collectNodeRenderers([mermaid({ theme: "forest" })]).mermaid
+    const node = { key: "0:a", type: "mermaid", content: "graph TD; A-->B" } as ASTNode
+
+    // A host reports its appearance, and "light" is what most of them call the default one. Mermaid
+    // has no "light" theme, so passing it through failed every diagram on the page.
+    await render(node, { theme: "light" })
+
+    expect(mocks.initialize).toHaveBeenLastCalledWith({ startOnLoad: false, theme: "forest", securityLevel: "strict" })
+  })
+
   it("takes the theme from the host over the one it was built with", async () => {
     const { mermaid } = await import("./index")
     const render = collectNodeRenderers([mermaid({ theme: "dark" })]).mermaid

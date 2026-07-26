@@ -6,6 +6,9 @@ export interface MermaidOptions {
   maxSourceBytes?: number
 }
 
+/** The themes Mermaid ships with. Anything else it is handed is not a theme it can find. */
+const MERMAID_THEMES = new Set(["default", "base", "dark", "forest", "neutral", "neo", "neo-dark", "redux", "redux-dark", "redux-color", "redux-dark-color", "null"])
+
 let nextId = 0
 let mermaidPromise: Promise<typeof import("mermaid")["default"]> | null = null
 let initializedTheme: MermaidConfig["theme"] | undefined
@@ -42,9 +45,16 @@ export function mermaid(opts: MermaidOptions = {}): AIGuiPlugin {
   const outputs = new WeakMap<ASTNode, { theme: MermaidConfig["theme"]; output: Promise<RenderOutput> }>()
 
   const render = (node: ASTNode, context?: NodeRenderContext): Promise<RenderOutput> => {
-    // The host's theme wins over the one this plugin was built with, so a diagram follows the page
-    // it is embedded in instead of the palette that happened to be configured at startup.
-    const wanted = (context?.theme ?? theme) as MermaidConfig["theme"]
+    // A host reports a colour scheme, not a Mermaid theme: "light" is what most of them send for
+    // their default appearance and Mermaid has no such theme, so passing it straight through fails
+    // every diagram on the page. Only a name Mermaid knows is taken as given; a light scheme means
+    // whatever this plugin was configured with.
+    const scheme = context?.theme
+    const wanted = scheme === "dark"
+      ? "dark"
+      : scheme && MERMAID_THEMES.has(scheme)
+        ? (scheme as MermaidConfig["theme"])
+        : theme
     const cached = outputs.get(node)
     if (cached && cached.theme === wanted) return cached.output
     const output = enqueue(async (): Promise<RenderOutput> => {
