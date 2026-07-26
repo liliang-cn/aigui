@@ -1,5 +1,26 @@
 # @ai-gui/core
 
+## 0.7.0
+
+### Minor Changes
+
+- Let a handler say how a submission turned out, not just whether it ran.
+
+  The lifecycle a card and an action report — idle, loading, success, error — answers "did the
+  dispatch run". It cannot answer "was the answer right": a student who picks the wrong option
+  submits perfectly well, so the action succeeded and nothing on screen said otherwise. The form
+  plugin discarded the handler's result entirely, disabling itself and reading "Submitted" whether
+  the answer was right or wrong.
+
+  A handler can now return `{ tone: "warning", message, fields }` — on its own or under an `outcome`
+  key beside its own data. The form marks itself `data-aigui-form-outcome`, shows the message in a
+  slot of its own, and marks the field the answer came from, so a host styles a wrong answer without
+  reading it as a failed request. A card carries the same verdict on its success state, where a
+  custom card's render can see it.
+
+  Adding "warning" to the lifecycle instead would have folded a wrong answer in with a failed
+  request, which is the one distinction a host needs to keep.
+
 ## 0.6.2
 
 ## 0.6.1

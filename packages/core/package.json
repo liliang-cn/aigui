@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/core",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "Headless streaming renderer core for LLM-generated UI — markdown/JSON repair, card registry, AST diff, plugin engine, sanitizer.",
   "keywords": [
     "llm",

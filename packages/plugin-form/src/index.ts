@@ -1,4 +1,4 @@
-import { ActionRuntimeError, type ActionRuntime, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@ai-gui/core"
+import { actionOutcome, ActionRuntimeError, type ActionRuntime, type AIGuiPlugin, type ASTNode, type OutcomeTone, type RenderOutput } from "@ai-gui/core"
 
 const FIELD_TYPES = new Set<FormFieldType>(["text", "textarea", "number", "date", "select", "checkbox", "radio"])
 const FORM_KEYS = new Set(["id", "fields", "submitAction", "submitLabel"])
@@ -315,22 +315,51 @@ function mountForm(host: HTMLElement, definition: FormDefinition, options: FormP
   formElement.setAttribute("data-aigui-form-instance", instanceId)
   const controls = new Map<string, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>()
   const errorElements = new Map<string, HTMLElement>()
+  // Kept so a per-field verdict can mark the field it belongs to.
+  const fieldContainers = new Map<string, HTMLElement>()
   for (const field of definition.fields) {
     const rendered = createField(instancePrefix, field)
     formElement.appendChild(rendered.container)
     controls.set(field.name, rendered.control)
     errorElements.set(field.name, rendered.error)
+    fieldContainers.set(field.name, rendered.container)
   }
   const actionError = document.createElement("div")
   actionError.setAttribute("data-aigui-form-action-error", "")
   actionError.setAttribute("role", "alert")
   actionError.hidden = true
   formElement.appendChild(actionError)
+  // Where a verdict is shown. Separate from the error slot above: a wrong answer is not a failed
+  // request, and reading it as one would tell the person their submission broke.
+  const outcomeMessage = document.createElement("div")
+  outcomeMessage.setAttribute("data-aigui-form-outcome-message", "")
+  outcomeMessage.setAttribute("aria-live", "polite")
+  outcomeMessage.hidden = true
+  formElement.appendChild(outcomeMessage)
   const submit = document.createElement("button")
   submit.type = "button"
   submit.setAttribute("data-aigui-form-submit", "")
   submit.textContent = definition.submitLabel ?? "Submit"
   formElement.appendChild(submit)
+
+  /**
+   * Show how the submission turned out, when the handler judged it.
+   *
+   * The result used to be discarded, so an app that knew the answer was wrong had no way to say so
+   * — the form simply disabled itself and read "Submitted" whether the answer was right or not.
+   */
+  const applyOutcome = (result: unknown) => {
+    const outcome = actionOutcome(result)
+    if (!outcome || disposed) return
+    formElement.setAttribute("data-aigui-form-outcome", outcome.tone)
+    if (outcome.message) {
+      outcomeMessage.textContent = outcome.message
+      outcomeMessage.hidden = false
+    }
+    for (const [name, tone] of Object.entries(outcome.fields ?? {}) as Array<[string, OutcomeTone]>) {
+      fieldContainers.get(name)?.setAttribute("data-aigui-form-field-outcome", tone)
+    }
+  }
 
   const markSubmitted = () => {
     if (disposed) return
@@ -373,7 +402,10 @@ function mountForm(host: HTMLElement, definition: FormDefinition, options: FormP
       { type: definition.submitAction, params: validation.values, cardType },
       { owner, signal: controller.signal },
     ).then(
-      markSubmitted,
+      (result: unknown) => {
+        markSubmitted()
+        applyOutcome(result)
+      },
       (error: unknown) => {
         if (!disposed && !controller.signal.aborted) {
           actionError.textContent = actionErrorMessage(error)

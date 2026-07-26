@@ -217,3 +217,35 @@ describe("CardStore", () => {
     expect(store.get("one")?.action).toEqual({ status: "idle" })
   })
 })
+
+describe("CardStore outcomes", () => {
+  it("carries the verdict a handler reported onto the card it acted on", () => {
+    const registry = new CardRegistry()
+    registry.register({ type: "quiz", description: "q", render: () => null })
+    const store = new CardStore({ registry })
+    store.register({ id: "q1", type: "quiz", data: { id: "q1" } })
+    store.beginAction("q1", "a1")
+
+    store.succeedAction("q1", "a1", { submitted: true, outcome: { tone: "warning", message: "再看极限的定义" } })
+
+    // Submitting a wrong answer succeeds, so the status stays success and the verdict rides beside
+    // it — folding it into "error" would read as a failed request.
+    expect(store.get("q1")?.action).toEqual({
+      status: "success",
+      actionId: "a1",
+      outcome: { tone: "warning", message: "再看极限的定义" },
+    })
+  })
+
+  it("leaves the state untouched when the handler had no verdict to give", () => {
+    const registry = new CardRegistry()
+    registry.register({ type: "quiz", description: "q", render: () => null })
+    const store = new CardStore({ registry })
+    store.register({ id: "q1", type: "quiz", data: { id: "q1" } })
+    store.beginAction("q1", "a1")
+
+    store.succeedAction("q1", "a1", "ok")
+
+    expect(store.get("q1")?.action).toEqual({ status: "success", actionId: "a1" })
+  })
+})

@@ -1,3 +1,4 @@
+import { actionOutcome, type ActionOutcome } from "./action-outcome"
 import type { CardRegistry } from "./card-registry"
 import { DebugEmitter } from "./debug-events"
 import type { DebugEventListener, DebugOptions } from "./debug-events"
@@ -10,7 +11,11 @@ export const CARD_PATCH_BATCH_MAX_SIZE = 100
 export type CardAction =
   | { status: "idle" }
   | { status: "loading"; actionId: string }
-  | { status: "success"; actionId: string }
+  /**
+   * The dispatch ran. `outcome` carries how it turned out, when the handler judged it — a student
+   * answering wrong submits successfully, so the verdict cannot live in the status.
+   */
+  | { status: "success"; actionId: string; outcome?: ActionOutcome }
   | { status: "error"; actionId: string; error: CardActionError }
 
 export interface CardActionError {
@@ -206,8 +211,9 @@ export class CardStore {
     return this.setAction(id, actionId, { status: "loading", actionId }, true)
   }
 
-  succeedAction(id: string, actionId: string): boolean {
-    return this.setAction(id, actionId, { status: "success", actionId })
+  succeedAction(id: string, actionId: string, result?: unknown): boolean {
+    const outcome = actionOutcome(result)
+    return this.setAction(id, actionId, outcome ? { status: "success", actionId, outcome } : { status: "success", actionId })
   }
 
   failAction(id: string, actionId: string, error: unknown): boolean {

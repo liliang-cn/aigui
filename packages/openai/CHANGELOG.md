@@ -1,5 +1,12 @@
 # @ai-gui/openai
 
+## 0.7.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @ai-gui/core@0.7.0
+
 ## 0.6.2
 
 ### Patch Changes

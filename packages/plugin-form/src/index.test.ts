@@ -304,3 +304,52 @@ describe("plugin-form", () => {
     expect(formPromptSpec()).toContain("checkbox")
   })
 })
+
+describe("plugin-form outcomes", () => {
+  const quiz = {
+    id: "q1",
+    fields: [{ name: "answer", type: "radio", label: "请选择", required: true, options: [{ label: "A. 100", value: "A" }, { label: "B. 7", value: "B" }] }],
+    submitAction: "quiz.answer",
+    submitLabel: "提交答案",
+  }
+
+  async function submit(run: () => unknown) {
+    const registry = new ActionRegistry()
+    registry.register({ type: "quiz.answer", run })
+    const plugin = form({ actionRuntime: createActionRuntime({ registry }) })
+    const node = createParser({ plugins: [plugin] })(`\`\`\`form\n${JSON.stringify(quiz)}\n\`\`\``)[0]
+    const out = collectNodeRenderers([plugin]).form(node) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected a mount output")
+    const host = document.createElement("div")
+    out.mount(host)
+    host.querySelector<HTMLInputElement>('input[value="A"]')!.checked = true
+    host.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
+    await vi.waitFor(() => expect(host.querySelector("form")?.hasAttribute("data-aigui-form-submitted")).toBe(true))
+    return host
+  }
+
+  it("shows the verdict the handler returned", async () => {
+    // A wrong answer submits perfectly well, so the form used to disable itself and read
+    // "Submitted" whether the answer was right or not — the result was thrown away.
+    const host = await submit(() => ({ outcome: { tone: "warning", message: "再看一下极限的定义", fields: { answer: "warning" } } }))
+
+    expect(host.querySelector("form")?.getAttribute("data-aigui-form-outcome")).toBe("warning")
+    expect(host.querySelector("[data-aigui-form-outcome-message]")?.textContent).toBe("再看一下极限的定义")
+    expect(host.querySelector('[data-aigui-form-field="answer"]')?.getAttribute("data-aigui-form-field-outcome")).toBe("warning")
+  })
+
+  it("keeps a verdict out of the error slot, which means the submission failed", async () => {
+    const host = await submit(() => ({ outcome: { tone: "warning", message: "差一点" } }))
+
+    const error = host.querySelector("[data-aigui-form-action-error]") as HTMLElement
+    expect(error.hidden).toBe(true)
+    expect(error.textContent).toBe("")
+  })
+
+  it("says nothing when the handler did not judge the answer", async () => {
+    const host = await submit(() => ({ submitted: true }))
+
+    expect(host.querySelector("form")?.hasAttribute("data-aigui-form-outcome")).toBe(false)
+    expect((host.querySelector("[data-aigui-form-outcome-message]") as HTMLElement).hidden).toBe(true)
+  })
+})

@@ -258,7 +258,9 @@ export class ActionRuntime {
         if (this.debug.active) this.debug.emit("action-success", { ...event, result })
       }
       if (request.cardId && this.cardStore && canAffectCard) {
-        settleCardAction(() => this.cardStore?.succeedAction(request.cardId as string, actionId))
+        // The handler's result goes with it: a verdict it reported reaches the card that was acted
+        // on, which is the only place a "you answered wrong" can be shown.
+        settleCardAction(() => this.cardStore?.succeedAction(request.cardId as string, actionId, result))
       }
       resolvePromise(result)
     }
