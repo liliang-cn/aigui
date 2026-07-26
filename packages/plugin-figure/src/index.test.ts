@@ -95,14 +95,48 @@ describe("plugin-figure", () => {
     expect(new Set(leftYs).size).toBe(leftYs.length)
   })
 
-  it("makes the drawing box wide enough to hold the labels beside the figure", () => {
-    // The figure is 220 wide. Labels sit outside it, so a view box that only covered the shapes
-    // would clip every callout — the failure would be invisible in the markup and obvious on screen.
-    const svg = render(cell)
-    const viewBox = /viewBox="(-?[\d.]+) (-?[\d.]+) ([\d.]+) ([\d.]+)"/.exec(svg)
+  it("splits concentric parts across both sides, which following the part cannot do", () => {
+    // A cell drawn as membrane, cytoplasm and nucleus shares one centre. Placing each label on the
+    // side of its part put all three in the left gutter and left the right one empty, which is how
+    // the long notes came to be crushed against the edge.
+    const svg = render({
+      version: 1,
+      parts: [
+        { at: [0, 0], width: 200, height: 150, fill: "none", label: "Cell Membrane" },
+        { at: [0, 0], width: 150, height: 110, fill: "none", label: "Cytoplasm" },
+        { at: [0, 0], width: 50, height: 45, fill: "solid", label: "Nucleus" },
+      ],
+    })
 
+    const xs = [...svg.matchAll(/<text x="(-?[\d.]+)" y="-?[\d.]+" class="aigui-figure-label"/g)].map((match) =>
+      Number(match[1]),
+    )
+    expect(xs).toHaveLength(3)
+    expect(xs.some((x) => x < 0)).toBe(true)
+    expect(xs.some((x) => x > 0)).toBe(true)
+  })
+
+  it("makes the drawing box wide enough for the text each side actually holds", () => {
+    // A fixed allowance clipped this note against the left edge, in the running app, while every
+    // assertion about the markup passed. The box has to grow with the longest string on each side.
+    const long = "control center containing DNA and the nucleolus"
+    const svg = render({
+      version: 1,
+      parts: [
+        { at: [0, 0], width: 60, height: 60, label: "Nucleus", note: long },
+        { at: [80, 0], width: 30, height: 30, label: "N" },
+      ],
+    })
+
+    const viewBox = /viewBox="(-?[\d.]+) (-?[\d.]+) ([\d.]+) ([\d.]+)"/.exec(svg)
     expect(viewBox).not.toBeNull()
-    expect(Number(viewBox?.[3])).toBeGreaterThan(220 + 2 * 120)
+    const [minX, , width] = [Number(viewBox?.[1]), 0, Number(viewBox?.[3])]
+    const labelX = Number(/<text x="(-?[\d.]+)" y="-?[\d.]+" class="aigui-figure-note"/.exec(svg)?.[1])
+
+    // The note is right-aligned at labelX and runs leftwards; its far end must be inside the box.
+    expect(labelX - long.length * 6).toBeGreaterThan(minX)
+    // A short label must not pay for the long one's gutter on the other side.
+    expect(width).toBeLessThan(1200)
   })
 
   it("honours a label position the model chose", () => {

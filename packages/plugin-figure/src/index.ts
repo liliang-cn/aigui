@@ -243,6 +243,10 @@ interface Callout {
  * The side has to follow the part, not its turn in the list. Alternating sides sends the leader for
  * a part on the left out to the right, straight across everything drawn in between, and a figure
  * whose lines cross the thing they are labelling cannot be read.
+ *
+ * Concentric parts are the exception, and a common one — a cell drawn as membrane, cytoplasm and
+ * nucleus shares one centre, so following the part would pile every label into one gutter and leave
+ * the other empty. A part with no side of its own alternates instead.
  */
 function layOutCallouts(diagram: FigureDiagram, bounds: [number, number, number, number]): Callout[] {
   const [minX, minY, maxX, maxY] = bounds
@@ -250,8 +254,11 @@ function layOutCallouts(diagram: FigureDiagram, bounds: [number, number, number,
   const labelled = diagram.parts.filter((part) => part.label !== undefined)
   const placed: Callout[] = []
   const gutter = 56
+  // Below this the part is centred for layout purposes and has no side to follow.
+  const offCentre = Math.max(1, maxX - minX) * 0.06
 
   const automatic: { part: FigurePart; side: "left" | "right"; y: number }[] = []
+  let alternated = 0
   for (const part of labelled) {
     if (part.labelAt) {
       const { at } = boundsOf(part)
@@ -259,7 +266,15 @@ function layOutCallouts(diagram: FigureDiagram, bounds: [number, number, number,
       continue
     }
     const { at } = boundsOf(part)
-    automatic.push({ part, side: at[0] <= centreX ? "left" : "right", y: at[1] })
+    const offset = at[0] - centreX
+    let side: "left" | "right"
+    if (Math.abs(offset) > offCentre) {
+      side = offset < 0 ? "left" : "right"
+    } else {
+      side = alternated % 2 === 0 ? "left" : "right"
+      alternated += 1
+    }
+    automatic.push({ part, side, y: at[1] })
   }
 
   for (const side of ["left", "right"] as const) {
@@ -373,19 +388,38 @@ export function renderFigureSVG(diagram: FigureDiagram, options: FigureOptions =
   ].join("")
 }
 
+/**
+ * How wide a string will draw, near enough to reserve space for.
+ *
+ * The browser lays the text out, so this cannot be measured here — and a fixed allowance is what
+ * clipped "control center containing DNA" to "trol center containing DNA" against the left edge. A
+ * CJK glyph is about as wide as the font size; Latin runs a little over half.
+ */
+function textWidth(text: string, fontSize: number): number {
+  let width = 0
+  for (const character of text) {
+    const code = character.codePointAt(0) ?? 0
+    const wide = code > 0x2e7f && code < 0xa000
+    width += wide ? fontSize : fontSize * 0.58
+  }
+  return width
+}
+
 /** Widen the drawing box until every callout, and the caption, is inside it. */
 function viewWithCallouts(
   bounds: [number, number, number, number],
   callouts: Callout[],
   hasCaption: boolean,
 ): [number, number, number, number] {
-  // Room for the text itself, which is laid out by the renderer and cannot be measured here.
-  const textRoom = 120
   const xs = [bounds[0], bounds[2]]
   const ys = [bounds[1], bounds[3]]
   for (const callout of callouts) {
-    xs.push(callout.side === "left" ? callout.at[0] - textRoom : callout.at[0] + textRoom)
-    ys.push(callout.at[1] - 20, callout.at[1] + 12)
+    const room = Math.max(
+      textWidth(callout.part.label ?? "", 13),
+      textWidth(callout.part.note ?? "", 11),
+    )
+    xs.push(callout.side === "left" ? callout.at[0] - room : callout.at[0] + room)
+    ys.push(callout.at[1] - (callout.part.note ? 26 : 12), callout.at[1] + 12)
   }
   const pad = 12
   return [
