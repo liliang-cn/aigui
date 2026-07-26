@@ -171,7 +171,25 @@ export const katexCss = '@import "katex/dist/katex.min.css";'
  * KaTeX plugin: renders inline `$...$` and block `$$...$$` math to HTML during
  * markdown parsing, flowing through the core Renderer's sanitized `html` pipeline.
  */
-export function katex(): AIGuiPlugin {
+export interface KatexOptions {
+  /**
+   * Load KaTeX's mhchem extension, which is what renders `\ce{}` and `\pu{}`.
+   *
+   * Chemistry teaching runs on that notation — "\ce{2H2 + O2 -> 2H2O}" is how a reaction is
+   * written — and without the extension KaTeX renders it as an error. It is off by default because
+   * mhchem is a chunk of grammar that a maths or physics lesson never touches.
+   */
+  chemistry?: boolean
+}
+
+export function katex(options: KatexOptions = {}): AIGuiPlugin {
+  if (options.chemistry) {
+    // mhchem installs itself into KaTeX as a side effect. Rendering happens inside a synchronous
+    // markdown-it rule and cannot await anything, so the import is started here and the grammar is
+    // in place by the time an answer streams in. A load failure leaves \ce{} rendering as it did
+    // before rather than taking the lesson down.
+    void import("katex/contrib/mhchem").catch(() => {})
+  }
   return {
     name: "katex",
     css: katexCss,

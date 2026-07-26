@@ -1,5 +1,11 @@
 # @ai-gui/vercel-ai
 
+## 0.9.0
+
+### Patch Changes
+
+- @ai-gui/core@0.9.0
+
 ## 0.8.0
 
 ### Patch Changes

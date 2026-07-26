@@ -1,5 +1,23 @@
 # @ai-gui/plugin-katex
 
+## 0.9.0
+
+### Minor Changes
+
+- `katex({ chemistry: true })` renders chemical equations.
+
+  `\ce{2H2 + O2 -> 2H2O}` is how a reaction is written in every chemistry lesson, and KaTeX rejects
+  `\ce` as an undefined control sequence until its mhchem extension is loaded — which the plugin had
+  no way to ask for, since it took no options at all.
+
+  Off by default: mhchem is a body of grammar a maths or physics lesson never touches. Loaded through
+  a dynamic import, so a lesson that does not ask for chemistry does not pay for it, and a bundler
+  that cannot resolve the extension leaves `\ce` rendering as before rather than failing the lesson.
+
+### Patch Changes
+
+- @ai-gui/core@0.9.0
+
 ## 0.8.0
 
 ### Patch Changes
