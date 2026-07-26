@@ -1,5 +1,12 @@
 # @ai-gui/anthropic
 
+## 0.5.0
+
+### Patch Changes
+
+- Updated dependencies [401fce1]
+  - @ai-gui/core@0.5.0
+
 ## 0.4.4
 
 ### Patch Changes
