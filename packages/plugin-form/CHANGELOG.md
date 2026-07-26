@@ -1,5 +1,12 @@
 # @ai-gui/plugin-form
 
+## 0.11.0
+
+### Patch Changes
+
+- Updated dependencies [58d1b6c]
+  - @ai-gui/core@0.11.0
+
 ## 0.10.0
 
 ### Patch Changes
