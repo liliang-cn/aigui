@@ -21,6 +21,7 @@
       "@ai-gui/plugin-molecule",
       "@ai-gui/plugin-physics",
       "@ai-gui/plugin-figure",
+      "@ai-gui/plugin-progress",
       "@ai-gui/plugin-map",
       "@ai-gui/openai",
       "@ai-gui/anthropic",
