@@ -1,5 +1,11 @@
 # @ai-gui/plugin-figure
 
+## 0.15.0
+
+### Patch Changes
+
+- @ai-gui/core@0.15.0
+
 ## 0.14.0
 
 ### Patch Changes
