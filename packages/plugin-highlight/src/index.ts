@@ -1,14 +1,23 @@
 import type { Highlighter } from "shiki"
-import type { AIGuiPlugin, ASTNode, RenderOutput } from "@ai-gui/core"
+import type { AIGuiPlugin, ASTNode, NodeRenderContext, RenderOutput } from "@ai-gui/core"
 
 /** Options for the Shiki-backed code highlighter plugin. */
 export interface HighlightOptions {
-  /** Themes to load. First entry is the default when `theme` is omitted. */
+  /** Themes to load. First entry is the default when neither `theme` nor the host's scheme decides. */
   themes?: string[]
   /** Grammars to load. A node whose `attrs.lang` is not listed falls back to plain text. */
   langs?: string[]
-  /** Theme used for rendering. Defaults to the first entry of `themes`. */
+  /**
+   * Pin the theme, ignoring the host's colour scheme.
+   *
+   * Left unset, the theme follows `context.theme`: `darkTheme` on a dark page and `lightTheme` on a
+   * light one. Pinning is for a host that renders code in a fixed panel regardless of its own scheme.
+   */
   theme?: string
+  /** Theme for a light page. Must be among `themes`. */
+  lightTheme?: string
+  /** Theme for a dark page. Must be among `themes`. */
+  darkTheme?: string
 }
 
 /** Escape a raw string for safe embedding inside `<pre><code>`. */
@@ -27,20 +36,27 @@ function escapeHtml(s: string): string {
  * caught and rendered as an escaped `<pre><code>` block — the renderer never throws.
  */
 export function highlight(opts: HighlightOptions = {}): AIGuiPlugin {
-  const themes = opts.themes ?? ["github-light"]
+  const lightTheme = opts.lightTheme ?? "github-light"
+  const darkTheme = opts.darkTheme ?? "github-dark"
+  // Both loaded up front: choosing per render is the point, and a theme Shiki has not loaded throws.
+  const themes = opts.themes ?? [lightTheme, darkTheme]
   const langs = opts.langs ?? ["ts", "js", "json", "bash", "python", "html", "css"]
-  const theme = opts.theme ?? themes[0]
 
   let highlighterPromise: Promise<Highlighter> | null = null
   const getHighlighter = () => (highlighterPromise ??= import("shiki").then(({ createHighlighter }) =>
     createHighlighter({ themes, langs }),
   ))
 
-  const render = async (node: ASTNode): Promise<RenderOutput> => {
+  const render = async (node: ASTNode, context?: NodeRenderContext): Promise<RenderOutput> => {
     const code = node.content ?? ""
     const requested = node.attrs?.lang
     // "text" is always available in Shiki and never requires a loaded grammar.
     const lang = requested && langs.includes(requested) ? requested : "text"
+    // The host's scheme decides unless a theme was pinned. Code set in a light theme on a dark page is
+    // the same fault a chart has when it picks its own palette, and it is just as easy to miss when the
+    // markup is correct either way.
+    const wanted = opts.theme ?? (context?.theme === "dark" ? darkTheme : lightTheme)
+    const theme = themes.includes(wanted) ? wanted : themes[0]
     try {
       const highlighter = await getHighlighter()
       return { kind: "html", html: highlighter.codeToHtml(code, { lang, theme }) }

@@ -74,3 +74,55 @@ describe("plugin-highlight", () => {
     }
   })
 })
+
+describe("highlight themes", () => {
+  beforeEach(() => {
+    vi.resetModules()
+    mocks.codeToHtml.mockClear()
+    mocks.createHighlighter.mockReset()
+    mocks.createHighlighter.mockResolvedValue({ codeToHtml: mocks.codeToHtml })
+  })
+
+  const node = { key: "0:c", type: "code", content: "const a = 1", attrs: { lang: "ts" } } as ASTNode
+
+  it("sets code in the host's colour scheme rather than one fixed at construction", async () => {
+    // The same fault a chart has when it picks its own palette: correct markup, wrong ink. A theme
+    // pinned at construction gave a dark page code set for a light one.
+    const { highlight } = await import("./index")
+    const render = collectNodeRenderers([highlight({ langs: ["ts"] })]).code
+
+    await render(node, { theme: "light" })
+    expect(mocks.codeToHtml).toHaveBeenLastCalledWith("const a = 1", { lang: "ts", theme: "github-light" })
+    await render(node, { theme: "dark" })
+    expect(mocks.codeToHtml).toHaveBeenLastCalledWith("const a = 1", { lang: "ts", theme: "github-dark" })
+    // Both themes have to be loaded up front, or asking Shiki for the other one throws.
+    expect(mocks.createHighlighter).toHaveBeenCalledWith(
+      expect.objectContaining({ themes: ["github-light", "github-dark"] }),
+    )
+  })
+
+  it("honours a pinned theme against the host's scheme", async () => {
+    const { highlight } = await import("./index")
+    const render = collectNodeRenderers([highlight({ theme: "github-dark", langs: ["ts"] })]).code
+
+    await render(node, { theme: "light" })
+    expect(mocks.codeToHtml).toHaveBeenLastCalledWith("const a = 1", { lang: "ts", theme: "github-dark" })
+  })
+
+  it("falls back to a loaded theme rather than asking for one that is not", async () => {
+    const { highlight } = await import("./index")
+    const render = collectNodeRenderers([highlight({ themes: ["github-light"], darkTheme: "nord", langs: ["ts"] })]).code
+
+    // `nord` was never loaded, so asking Shiki for it would throw at render time.
+    await render(node, { theme: "dark" })
+    expect(mocks.codeToHtml).toHaveBeenLastCalledWith("const a = 1", { lang: "ts", theme: "github-light" })
+  })
+
+  it("with no context, renders as a light page", async () => {
+    const { highlight } = await import("./index")
+    const render = collectNodeRenderers([highlight({ langs: ["ts"] })]).code
+
+    await render(node)
+    expect(mocks.codeToHtml).toHaveBeenLastCalledWith("const a = 1", { lang: "ts", theme: "github-light" })
+  })
+})
