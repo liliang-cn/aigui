@@ -1,5 +1,22 @@
 # @ai-gui/playground
 
+## 0.0.18
+
+### Patch Changes
+
+- Updated dependencies [e21640a]
+  - @ai-gui/core@0.13.0
+  - @ai-gui/devtools@0.13.0
+  - @ai-gui/plugin-artifact@0.13.0
+  - @ai-gui/plugin-citation@0.13.0
+  - @ai-gui/plugin-map@0.13.0
+  - @ai-gui/plugin-mermaid@0.13.0
+  - @ai-gui/plugin-molecule@0.13.0
+  - @ai-gui/plugin-ui@0.13.0
+  - @ai-gui/react@0.13.0
+  - @ai-gui/vanilla@0.13.0
+  - @ai-gui/vue@0.13.0
+
 ## 0.0.17
 
 ### Patch Changes

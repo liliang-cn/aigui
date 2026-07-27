@@ -1,5 +1,12 @@
 # @ai-gui/openai
 
+## 0.13.0
+
+### Patch Changes
+
+- Updated dependencies [e21640a]
+  - @ai-gui/core@0.13.0
+
 ## 0.12.0
 
 ### Patch Changes
