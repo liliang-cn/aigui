@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { ActionRegistry, collectNodeRenderers, createActionRuntime, createParser, type ActionState, type RenderOutput } from "@ai-gui/core"
 import { describe, expect, it, vi } from "vitest"
-import { form, formPromptSpec, parseFormDefinition, validateFormValues } from "./index"
+import { form, formPromptSpec, parseFormDefinition, validateFormValues, type FormDefinition, type FormPluginOptions } from "./index"
 
 const definition = {
   id: "travel-search",
@@ -521,5 +521,157 @@ describe("plugin-form restored submissions", () => {
     formEl.querySelector<HTMLInputElement>('input[value="B"]')!.checked = true
     expect(() => formEl.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()).not.toThrow()
     await vi.waitFor(() => expect(formEl.hasAttribute("data-aigui-form-submitted")).toBe(true))
+  })
+
+  describe("a question with several right answers", () => {
+    /** The definition, parsed, so the tests below work on what the plugin would actually hold. */
+    function assertValid(source: unknown): FormDefinition {
+      const parsed = parseFormDefinition(JSON.stringify(source))
+      if (!parsed.valid) throw new Error(parsed.issues.join(" "))
+      return parsed.data
+    }
+
+    async function mountFormFor(source: unknown, extra: Partial<FormPluginOptions> = {}) {
+      const registry = new ActionRegistry()
+      registry.register({ type: "quiz.answer", run: async () => {} })
+      const plugin = form({ actionRuntime: createActionRuntime({ registry }), ...extra })
+      const out = collectNodeRenderers([plugin]).form({
+        key: "form",
+        type: "form",
+        complete: true,
+        content: JSON.stringify(source),
+      }) as RenderOutput
+      if (out.kind !== "mount") throw new Error("expected mount")
+      const host = document.createElement("div")
+      out.mount(host)
+      return host
+    }
+
+    const multi = {
+      id: "multi",
+      fields: [
+        {
+          name: "answer",
+          type: "checkboxes",
+          label: "哪些属于同步复制？",
+          required: true,
+          options: [
+            { label: "A. Protocol A", value: "A" },
+            { label: "B. Protocol B", value: "B" },
+            { label: "C. Protocol C", value: "C" },
+          ],
+          expect: ["B", "C"],
+        },
+      ],
+      submitAction: "quiz.answer",
+    }
+
+    it("parses a checkboxes field with its options and its set of answers", () => {
+      const parsed = parseFormDefinition(JSON.stringify(multi))
+
+      expect(parsed.valid).toBe(true)
+      if (!parsed.valid) return
+      const field = parsed.data.fields[0]
+      expect(field.type).toBe("checkboxes")
+      expect(field.type === "checkboxes" && field.options).toHaveLength(3)
+      expect(field.expect).toEqual(["B", "C"])
+    })
+
+    it("refuses an array answer on a field that can only hold one", () => {
+      // Radios exclude each other, so a set of expected answers there is a question nobody can answer.
+      const parsed = parseFormDefinition(JSON.stringify({
+        ...multi,
+        fields: [{ ...multi.fields[0], type: "radio", expect: ["B", "C"] }],
+      }))
+
+      expect(parsed.valid).toBe(false)
+      if (parsed.valid) return
+      expect(parsed.issues.join(" ")).toContain("only be an array on a checkboxes field")
+    })
+
+    it("keeps the chosen options in the order they were offered", () => {
+      // Clicked C then B, and again B then C: the same answer, so it has to compare equal to itself.
+      const clicked = validateFormValues(assertValid(multi), { answer: ["C", "B"] })
+
+      expect(clicked.valid).toBe(true)
+      expect(clicked.values.answer).toEqual(["B", "C"])
+    })
+
+    it("requires at least one, and honours a limit on how many", () => {
+      expect(validateFormValues(assertValid(multi), { answer: [] }).errors.answer).toBe("This field is required.")
+
+      const limited = assertValid({
+        ...multi,
+        fields: [{ ...multi.fields[0], required: false, minSelected: 2, maxSelected: 2 }],
+      })
+      expect(validateFormValues(limited, { answer: ["B"] }).errors.answer).toContain("at least 2")
+      expect(validateFormValues(limited, { answer: ["A", "B", "C"] }).errors.answer).toContain("at most 2")
+      expect(validateFormValues(limited, { answer: ["B", "C"] }).valid).toBe(true)
+    })
+
+    it("refuses an option that was never offered", () => {
+      const validation = validateFormValues(assertValid(multi), { answer: ["B", "Z"] })
+
+      expect(validation.valid).toBe(false)
+      expect(validation.errors.answer).toBe("Select an allowed option.")
+    })
+
+    it("marks the answer right however the expected set was written", async () => {
+      // A model writes the correct options in whatever order it thought of them, and sometimes with a
+      // stray space. The answer is a set; comparing the two as text makes a right answer read as wrong.
+      const reordered = {
+        ...multi,
+        fields: [{ ...multi.fields[0], expect: [" C", "B "] }],
+      }
+      const host = await mountFormFor(reordered)
+      for (const value of ["B", "C"]) {
+        host.querySelector<HTMLInputElement>(`input[type=checkbox][value="${value}"]`)!.checked = true
+      }
+      host.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(host.querySelector("form")!.getAttribute("data-aigui-form-outcome")).toBe("positive")
+    })
+
+    it("marks the answer right only when the set is exactly right", async () => {
+      // 漏选 and 多选 are both wrong here; how much a half-right answer is worth is the host's marking
+      // scheme, and the form only says whether it was right.
+      for (const [chosen, tone] of [
+        [["B", "C"], "positive"],
+        [["B"], "warning"],
+        [["A", "B", "C"], "warning"],
+        [["A"], "warning"],
+      ] as const) {
+        const host = await mountFormFor(multi)
+        for (const value of chosen) {
+          const box = host.querySelector<HTMLInputElement>(`input[type=checkbox][value="${value}"]`)!
+          box.checked = true
+        }
+        host.querySelector<HTMLButtonElement>("[data-aigui-form-submit]")!.click()
+        await Promise.resolve()
+        await Promise.resolve()
+        expect(host.querySelector("form")!.getAttribute("data-aigui-form-outcome")).toBe(tone)
+      }
+    })
+
+    it("puts a stored multi-select answer back the way it was left", async () => {
+      const host = await mountFormFor(multi, { restore: () => ({ values: { answer: ["B", "C"] } }) })
+
+      const checked = [...host.querySelectorAll<HTMLInputElement>("input[type=checkbox]")]
+        .filter((box) => box.checked)
+        .map((box) => box.value)
+      // A reloaded conversation that showed the question unanswered would claim it had been answered
+      // and be unable to say with what.
+      expect(checked).toEqual(["B", "C"])
+      expect(host.querySelector("form")!.getAttribute("data-aigui-form-outcome")).toBe("positive")
+    })
+
+    it("tells a model that several right answers means checkboxes", () => {
+      const spec = formPromptSpec()
+
+      expect(spec).toContain("checkboxes")
+      expect(spec).toContain("never radio")
+    })
   })
 })

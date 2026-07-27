@@ -1,8 +1,8 @@
 import { actionOutcome, ActionRuntimeError, type ActionOutcome, type ActionRuntime, type AIGuiPlugin, type ASTNode, type OutcomeTone, type RenderOutput } from "@ai-gui/core"
 
-const FIELD_TYPES = new Set<FormFieldType>(["text", "textarea", "number", "date", "select", "checkbox", "radio"])
+const FIELD_TYPES = new Set<FormFieldType>(["text", "textarea", "number", "date", "select", "checkbox", "checkboxes", "radio"])
 const FORM_KEYS = new Set(["id", "fields", "submitAction", "submitLabel"])
-const FIELD_KEYS = new Set(["name", "type", "label", "required", "minLength", "maxLength", "pattern", "min", "max", "options", "placeholder", "expect"])
+const FIELD_KEYS = new Set(["name", "type", "label", "required", "minLength", "maxLength", "pattern", "min", "max", "minSelected", "maxSelected", "options", "placeholder", "expect"])
 const OPTION_KEYS = new Set(["label", "value"])
 const SAFE_NAME = /^[A-Za-z][A-Za-z0-9_.-]{0,127}$/
 const SAFE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,127}$/
@@ -11,7 +11,7 @@ const MAX_FIELDS = 100
 const MAX_PATTERN_LENGTH = 128
 let nextFormInstanceId = 0
 
-export type FormFieldType = "text" | "textarea" | "number" | "date" | "select" | "checkbox" | "radio"
+export type FormFieldType = "text" | "textarea" | "number" | "date" | "select" | "checkbox" | "checkboxes" | "radio"
 
 export interface FormOption {
   label: string
@@ -32,8 +32,16 @@ interface FormFieldBase {
    * beside it this never blocks a submission: a wrong answer is an answer, and the person is told
    * rather than stopped.
    */
-  expect?: string | number | boolean
+  expect?: FormValue
 }
+
+/**
+ * What a field can carry.
+ *
+ * `string[]` is the multi-select case, and it is a list rather than a joined string on purpose: an
+ * option label containing the separator would otherwise split into two answers that were never given.
+ */
+export type FormValue = string | number | boolean | string[]
 
 export interface FormStringField extends FormFieldBase {
   type: "text" | "textarea"
@@ -61,7 +69,30 @@ export interface FormCheckboxField extends FormFieldBase {
   type: "checkbox"
 }
 
-export type FormField = FormStringField | FormDateField | FormNumberField | FormChoiceField | FormCheckboxField
+/**
+ * Several answers to one question — 多选, where more than one option is right at once.
+ *
+ * Distinct from `checkbox`, which is one box and answers yes or no. A question with several correct
+ * options cannot be asked with radios (they exclude each other) and should not be asked with a text
+ * box (the person has to guess the format, and "A、C" and "AC" and "a,c" are all the same answer). The
+ * value is the chosen option values, in the order the options were declared.
+ */
+export interface FormCheckboxesField extends FormFieldBase {
+  type: "checkboxes"
+  options: FormOption[]
+  /** How few may be chosen. `required` on its own already means at least one. */
+  minSelected?: number
+  /** How many may be chosen — for "pick two" rather than "pick all that apply". */
+  maxSelected?: number
+}
+
+export type FormField =
+  | FormStringField
+  | FormDateField
+  | FormNumberField
+  | FormChoiceField
+  | FormCheckboxField
+  | FormCheckboxesField
 
 export interface FormDefinition {
   id: string
@@ -76,13 +107,13 @@ export type FormParseResult =
 
 export interface FormValidationResult {
   valid: boolean
-  values: Record<string, string | number | boolean>
+  values: Record<string, FormValue>
   errors: Record<string, string>
 }
 
 /** What was answered, and how it turned out — enough to put a form back the way it was left. */
 export interface FormSubmission {
-  values: Record<string, string | number | boolean>
+  values: Record<string, FormValue>
   /**
    * The verdict, when the host kept one. Omitted, the fields' own `expect` is graded again, so a
    * quiz still comes back coloured without the host having to store the marking.
@@ -120,7 +151,8 @@ export interface FormPluginOptions {
 export function formPromptSpec(): string {
   return [
     "Forms (fenced): ```form <safe form JSON>```.",
-    "Fields: text, textarea, number, date, select, checkbox, radio. Constraints: required, minLength, maxLength, pattern, min, max.",
+    "Fields: text, textarea, number, date, select, radio, checkbox (one box, yes or no), checkboxes (several answers to one question). Constraints: required, minLength, maxLength, pattern, min, max; on checkboxes, minSelected and maxSelected.",
+    'A question with more than one right answer is `checkboxes` with `options`, never radio (they exclude each other) and never a text box (the format has to be guessed). Its value is the chosen option values, and its `expect` is the array of every correct one: {"name":"answer","type":"checkboxes","label":"...","options":[{"label":"A. ...","value":"A"}],"expect":["A","C"]}.',
     "submitAction must name an application-registered Action. Never emit URLs, scripts, HTML, handlers, or component names.",
   ].join("\n")
 }
@@ -206,10 +238,28 @@ export function validateFormValues(
   definition: FormDefinition,
   input: Record<string, unknown>,
 ): FormValidationResult {
-  const values: Record<string, string | number | boolean> = Object.create(null)
+  const values: Record<string, FormValue> = Object.create(null)
   const errors: Record<string, string> = Object.create(null)
   for (const field of definition.fields) {
     const raw = input[field.name]
+    if (field.type === "checkboxes") {
+      // Kept in the order the options were declared, so the same answer is the same value however it
+      // was clicked — a set that depended on click order would compare unequal to itself.
+      const chosen = Array.isArray(raw) ? raw.filter((item): item is string => typeof item === "string") : []
+      const allowed = field.options.map((option) => option.value)
+      const selected = allowed.filter((value) => chosen.includes(value))
+      values[field.name] = selected
+      if (chosen.some((value) => !allowed.includes(value))) {
+        errors[field.name] = "Select an allowed option."
+      } else if (selected.length === 0) {
+        if (field.required || (field.minSelected ?? 0) > 0) errors[field.name] = "This field is required."
+      } else if (field.minSelected !== undefined && selected.length < field.minSelected) {
+        errors[field.name] = `Choose at least ${field.minSelected}.`
+      } else if (field.maxSelected !== undefined && selected.length > field.maxSelected) {
+        errors[field.name] = `Choose at most ${field.maxSelected}.`
+      }
+      continue
+    }
     if (field.type === "checkbox") {
       const value = raw === true
       values[field.name] = value
@@ -268,6 +318,11 @@ function parseField(value: unknown, index: number, issues: string[]): FormField 
   const maxLength = readOptionalInteger(value.maxLength, `${path}.maxLength`, issues)
   const min = readOptionalNumber(value.min, `${path}.min`, issues)
   const max = readOptionalNumber(value.max, `${path}.max`, issues)
+  const minSelected = readOptionalInteger(value.minSelected, `${path}.minSelected`, issues)
+  const maxSelected = readOptionalInteger(value.maxSelected, `${path}.maxSelected`, issues)
+  if (minSelected !== undefined && maxSelected !== undefined && minSelected > maxSelected) {
+    issues.push(`${path}.minSelected cannot exceed maxSelected.`)
+  }
   if (minLength !== undefined && maxLength !== undefined && minLength > maxLength) issues.push(`${path}.minLength cannot exceed maxLength.`)
   if (min !== undefined && max !== undefined && min > max) issues.push(`${path}.min cannot exceed max.`)
   let pattern: string | undefined
@@ -281,13 +336,19 @@ function parseField(value: unknown, index: number, issues: string[]): FormField 
       }
     }
   }
-  let expected: string | number | boolean | undefined
+  let expected: FormValue | undefined
   if (value.expect !== undefined) {
     if (typeof value.expect === "string" || typeof value.expect === "number" || typeof value.expect === "boolean") {
       expected = value.expect
+    } else if (Array.isArray(value.expect) && value.expect.every((item) => typeof item === "string")) {
+      // A multi-select's answer is a set of options, so its expectation has to be one too.
+      expected = value.expect as string[]
     } else {
-      issues.push(`${path}.expect must be a string, a number, or a boolean.`)
+      issues.push(`${path}.expect must be a string, a number, a boolean, or an array of strings.`)
     }
+  }
+  if (type !== "checkboxes" && Array.isArray(expected)) {
+    issues.push(`${path}.expect may only be an array on a checkboxes field.`)
   }
   if (!name || !label || !type) return undefined
 
@@ -302,10 +363,27 @@ function parseField(value: unknown, index: number, issues: string[]): FormField 
     if (minLength !== undefined || maxLength !== undefined || pattern !== undefined || value.options !== undefined) issues.push(`${path} contains constraints unsupported by number fields.`)
     return { ...base, type, ...(min === undefined ? {} : { min }), ...(max === undefined ? {} : { max }) }
   }
+  if (minSelected !== undefined || maxSelected !== undefined) {
+    if (type !== "checkboxes") issues.push(`${path} may only limit selections on a checkboxes field.`)
+  }
   if (type === "select" || type === "radio") {
     if (minLength !== undefined || maxLength !== undefined || pattern !== undefined || min !== undefined || max !== undefined || placeholder !== undefined) issues.push(`${path} contains unsupported choice-field properties.`)
     const options = parseOptions(value.options, `${path}.options`, issues)
     return { ...base, type, options }
+  }
+  if (type === "checkboxes") {
+    if (minLength !== undefined || maxLength !== undefined || pattern !== undefined || min !== undefined || max !== undefined || placeholder !== undefined) issues.push(`${path} contains unsupported choice-field properties.`)
+    const options = parseOptions(value.options, `${path}.options`, issues)
+    if (maxSelected !== undefined && options.length > 0 && maxSelected > options.length) {
+      issues.push(`${path}.maxSelected cannot exceed the number of options.`)
+    }
+    return {
+      ...base,
+      type,
+      options,
+      ...(minSelected === undefined ? {} : { minSelected }),
+      ...(maxSelected === undefined ? {} : { maxSelected }),
+    }
   }
   if (type === "checkbox") {
     if (minLength !== undefined || maxLength !== undefined || pattern !== undefined || min !== undefined || max !== undefined || value.options !== undefined || placeholder !== undefined) issues.push(`${path} contains unsupported checkbox properties.`)
@@ -394,16 +472,14 @@ function mountForm(host: HTMLElement, definition: FormDefinition, options: FormP
    * Only fields carrying `expect` take part, so a plain form is never marked. The tone is the worst
    * of them: one wrong answer among three right ones is not a pass.
    */
-  const gradeAgainstExpectations = (values: Record<string, string | number | boolean>): ActionOutcome | undefined => {
+  const gradeAgainstExpectations = (values: Record<string, FormValue>): ActionOutcome | undefined => {
     const graded = definition.fields.filter((field) => field.expect !== undefined)
     if (graded.length === 0) return undefined
     const fieldTones: Record<string, OutcomeTone> = {}
     let wrong = 0
     for (const field of graded) {
       const submitted = values[field.name]
-      const matches = typeof field.expect === "string" && typeof submitted === "string"
-        ? submitted.trim() === field.expect.trim()
-        : submitted === field.expect
+      const matches = matchesExpectation(submitted, field.expect)
       fieldTones[field.name] = matches ? "positive" : "warning"
       if (!matches) wrong += 1
     }
@@ -529,7 +605,8 @@ interface RenderedField {
 }
 
 function createField(formId: string, field: FormField): RenderedField {
-  const container = document.createElement(field.type === "radio" ? "fieldset" : "div")
+  const grouped = field.type === "radio" || field.type === "checkboxes"
+  const container = document.createElement(grouped ? "fieldset" : "div")
   container.setAttribute("data-aigui-form-field", field.name)
   const controlId = `${formId}-${field.name.replace(/[^A-Za-z0-9_-]/g, "-")}`
   const errorId = `${controlId}-error`
@@ -539,7 +616,7 @@ function createField(formId: string, field: FormField): RenderedField {
   error.setAttribute("aria-live", "polite")
   error.hidden = true
 
-  if (field.type === "radio") {
+  if (grouped && (field.type === "radio" || field.type === "checkboxes")) {
     const legend = document.createElement("legend")
     legend.textContent = field.label
     container.appendChild(legend)
@@ -547,11 +624,13 @@ function createField(formId: string, field: FormField): RenderedField {
     for (const [index, option] of field.options.entries()) {
       const optionId = `${controlId}-${index}`
       const input = document.createElement("input")
-      input.type = "radio"
+      input.type = field.type === "radio" ? "radio" : "checkbox"
       input.id = optionId
       input.name = field.name
       input.value = option.value
-      input.required = field.required === true
+      // A required multi-select means "choose at least one", and `required` on every box would demand
+      // all of them — so that one is checked in `validateFormValues` instead of by the browser.
+      input.required = field.type === "radio" && field.required === true
       input.setAttribute("aria-describedby", errorId)
       const label = document.createElement("label")
       label.htmlFor = optionId
@@ -611,7 +690,14 @@ function readControls(
   for (const field of definition.fields) {
     const control = controls.get(field.name)
     if (!control) continue
-    if (field.type === "checkbox" && control instanceof HTMLInputElement) values[field.name] = control.checked
+    if (field.type === "checkboxes") {
+      const group = control.form?.elements.namedItem(field.name)
+      const inputs = group instanceof RadioNodeList ? Array.from(group) : [control]
+      values[field.name] = inputs
+        .filter((input): input is HTMLInputElement => input instanceof HTMLInputElement && input.checked)
+        .map((input) => input.value)
+    }
+    else if (field.type === "checkbox" && control instanceof HTMLInputElement) values[field.name] = control.checked
     else if (field.type === "radio") {
       const group = control.form?.elements.namedItem(field.name)
       values[field.name] = group instanceof RadioNodeList
@@ -633,13 +719,20 @@ function readControls(
 function writeControls(
   definition: FormDefinition,
   controls: Map<string, HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
-  values: Record<string, string | number | boolean>,
+  values: Record<string, FormValue>,
 ): void {
   for (const field of definition.fields) {
     const control = controls.get(field.name)
     const value = values[field.name]
     if (!control || value === undefined) continue
-    if (field.type === "checkbox" && control instanceof HTMLInputElement) {
+    if (field.type === "checkboxes") {
+      const chosen = new Set(Array.isArray(value) ? value : [String(value)])
+      const group = control.form?.elements.namedItem(field.name)
+      const inputs = group instanceof RadioNodeList ? Array.from(group) : [control]
+      for (const input of inputs) {
+        if (input instanceof HTMLInputElement) input.checked = chosen.has(input.value)
+      }
+    } else if (field.type === "checkbox" && control instanceof HTMLInputElement) {
       control.checked = value === true
     } else if (field.type === "radio") {
       const group = control.form?.elements.namedItem(field.name)
@@ -651,6 +744,25 @@ function writeControls(
       control.value = String(value)
     }
   }
+}
+
+/**
+ * Whether an answer is the answer that was expected.
+ *
+ * A multi-select is compared as a set: every correct option chosen and no incorrect one. Partial
+ * credit is deliberately not decided here — how much a half-right 多选 is worth is the host's marking
+ * scheme, and this only says whether it was right. The handler's own outcome still wins over this.
+ */
+function matchesExpectation(submitted: FormValue | undefined, expected: FormValue | undefined): boolean {
+  if (Array.isArray(expected)) {
+    if (!Array.isArray(submitted)) return false
+    const wanted = new Set(expected.map((value) => value.trim()))
+    const given = new Set(submitted.map((value) => value.trim()))
+    return wanted.size === given.size && [...wanted].every((value) => given.has(value))
+  }
+  if (Array.isArray(submitted)) return false
+  if (typeof expected === "string" && typeof submitted === "string") return submitted.trim() === expected.trim()
+  return submitted === expected
 }
 
 function renderErrors(
