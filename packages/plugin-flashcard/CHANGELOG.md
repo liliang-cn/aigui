@@ -1,0 +1,31 @@
+# @ai-gui/plugin-flashcard
+
+## 0.18.0
+
+### Minor Changes
+
+- a22ba20: **New package: cards to revise from.**
+
+  The moment a vocabulary list stops being a list. A word shown beside its meaning is a word being
+  _read_, and reading a word you have already read teaches nothing — what moves it into memory is being
+  asked for it and finding out whether it came. So a card hides its back, and the person says how it went
+  before they are told.
+
+  ```flashcards
+  {"version":1,"id":"de-week-1","gradeAction":"revise.word","cards":[{"id":"word-1","front":"der Kühlschrank","back":"冰箱","hint":"der Kühl-schrank","example":"Der Kühlschrank ist leer."}]}
+  ```
+
+  It schedules nothing: which card comes back tomorrow and which in a month is the host's, because only
+  the host knows what else this person is learning and when they last saw it. What travels out is one
+  grade per card — `again` / `hard` / `good` — through the same action allowlist a form's submission uses.
+  Three grades because "I half knew it" is the commonest answer and a two-way split forces it into a lie
+  in either direction.
+
+  `reveal: "immediate"` shows both sides of every card and grades nothing, for the teaching moment: hiding
+  the meaning of a word nobody has been told is a quiz on a lesson that has not happened.
+
+  The answer is written into the DOM only when it is asked for, not merely hidden — `hidden` is a style,
+  and an answer sitting in the card's text is one select-all away from being read first. Each card
+  dispatches under its own `cardId`, so the runtime's dedupe means "this card graded twice in one breath"
+  rather than dropping the second card's grade while the first is still in flight. Space or Enter reveals,
+  `1` `2` `3` grade, and a number pressed before the answer is shown does nothing.
