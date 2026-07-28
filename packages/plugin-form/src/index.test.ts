@@ -432,9 +432,17 @@ describe("plugin-form audio answers", () => {
     }
     const form = definitionOf(spoken)
 
-    const recorded = validateFormValues(form, { reading: "data:audio/webm;base64,GkXfo0AgQ==" })
-    expect(recorded.valid).toBe(true)
-    expect(recorded.values.reading).toBe("data:audio/webm;base64,GkXfo0AgQ==")
+    // The shape a browser actually produces, parameters and all: `MediaRecorder` reports
+    // `audio/webm;codecs=opus`, and a test that used the tidier `audio/webm` passed while every real
+    // recording was rejected at the moment of submitting it.
+    const real = "data:audio/webm;codecs=opus;base64,GkXfo0AgQ=="
+    const recorded = validateFormValues(form, { reading: real })
+    expect(recorded.valid, JSON.stringify(recorded.errors)).toBe(true)
+    expect(recorded.values.reading).toBe(real)
+
+    // Safari records mp4; the plain form still works too.
+    expect(validateFormValues(form, { reading: "data:audio/mp4;base64,AAAAIGZ0eXA=" }).valid).toBe(true)
+    expect(validateFormValues(form, { reading: "data:audio/webm;base64,GkXfo0AgQ==" }).valid).toBe(true)
 
     // A field the host forwards is a field that must not carry an arbitrary payload: only audio, and
     // only base64 — otherwise `data:text/html,<script>` travels wherever the recording was going.

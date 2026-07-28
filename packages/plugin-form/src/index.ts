@@ -334,7 +334,12 @@ export function validateFormValues(
       }
       // Only a recording, and only one small enough to travel in a submission. A `data:` URL of any
       // other type here would be an arbitrary payload smuggled through a field the host will forward.
-      if (!/^data:audio\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/i.test(value)) {
+      // The MIME type carries parameters. A browser's MediaRecorder produces `audio/webm;codecs=opus`,
+      // so a recording arrives as `data:audio/webm;codecs=opus;base64,…` — and a pattern without room
+      // for those parameters rejects every real recording while accepting the hand-written one in its
+      // own test. That is exactly what happened: the learner recorded, heard it play back, pressed
+      // submit and was told "Must be a recording."
+      if (!/^data:audio\/[a-z0-9.+-]+(?:;[a-z0-9-]+=[^;,]*)*;base64,[A-Za-z0-9+/=\s]+$/i.test(value)) {
         errors[field.name] = "Must be a recording."
         continue
       }
