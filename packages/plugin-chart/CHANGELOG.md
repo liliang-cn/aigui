@@ -1,5 +1,12 @@
 # @ai-gui/plugin-chart
 
+## 0.18.0
+
+### Patch Changes
+
+- Updated dependencies [a22ba20]
+  - @ai-gui/core@0.18.0
+
 ## 0.17.1
 
 ### Patch Changes
