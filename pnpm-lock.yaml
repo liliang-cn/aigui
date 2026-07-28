@@ -153,6 +153,12 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/plugin-flashcard:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/plugin-form:
     dependencies:
       '@ai-gui/core':
