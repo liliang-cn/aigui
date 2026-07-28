@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-citation",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "description": "Secure framework-neutral source citation fences for AIGUI.",
   "keywords": [
     "llm",

@@ -1,5 +1,12 @@
 # @ai-gui/plugin-molecule
 
+## 0.20.0
+
+### Patch Changes
+
+- Updated dependencies [b487b4d]
+  - @ai-gui/core@0.20.0
+
 ## 0.19.0
 
 ### Patch Changes

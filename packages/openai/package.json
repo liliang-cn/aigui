@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/openai",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "description": "OpenAI model stream adapter for AIGUI.",
   "keywords": [
     "openai",
