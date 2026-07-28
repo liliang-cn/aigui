@@ -455,11 +455,12 @@ describe("plugin-form audio rendering", () => {
     submitAction: "quiz.answer",
   }
 
-  function mountSpoken(options: Partial<FormPluginOptions> = {}) {
+  function mountSpoken(options: Partial<FormPluginOptions> = {}, fieldOverride: Record<string, unknown> = {}) {
     const registry = new ActionRegistry()
     registry.register({ type: "quiz.answer", run: () => ({ submitted: true }) })
     const plugin = form({ actionRuntime: createActionRuntime({ registry }), ...options })
-    const node = createParser({ plugins: [plugin] })(`\`\`\`form\n${JSON.stringify(spoken)}\n\`\`\``)[0]
+    const definition = { ...spoken, fields: [{ ...spoken.fields[0], ...fieldOverride }] }
+    const node = createParser({ plugins: [plugin] })(`\`\`\`form\n${JSON.stringify(definition)}\n\`\`\``)[0]
     const out = collectNodeRenderers([plugin]).form(node) as RenderOutput
     if (out.kind !== "mount") throw new Error("expected a mount output")
     const host = document.createElement("div")
@@ -487,6 +488,43 @@ describe("plugin-form audio rendering", () => {
     const player = host.querySelector<HTMLAudioElement>('[data-aigui-form-playback="reading"]')!
     expect(player.hidden).toBe(false)
     expect(player.getAttribute("src")).toBe(recording)
+  })
+
+  /** jsdom has no MediaRecorder and no microphone; a label test needs both to see the real button. */
+  function withRecorder(run: () => void) {
+    const originalRecorder = globalThis.MediaRecorder
+    const originalDevices = navigator.mediaDevices
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: { getUserMedia: vi.fn() },
+    })
+    // @ts-expect-error — a stand-in for the duration of one test
+    globalThis.MediaRecorder = class {}
+    try {
+      run()
+    } finally {
+      globalThis.MediaRecorder = originalRecorder
+      Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: originalDevices })
+    }
+  }
+
+  it("speaks the host's language on the controls it draws itself", () => {
+    // Every other word in a form is the model's, and comes out in the lesson's language. This one was
+    // not: a Chinese lesson asked a learner to read a German sentence aloud under a button saying
+    // "Record".
+    withRecorder(() => {
+      const host = mountSpoken({ labels: { record: "朗读并录音" } })
+      expect(host.querySelector('[data-aigui-form-record="reading"]')?.textContent).toBe("朗读并录音")
+    })
+  })
+
+  it("lets a field's own placeholder win over the host's default", () => {
+    // The tutor sometimes knows better what this particular recording is for — "读第二句" beats a generic
+    // label — so a field that says so keeps saying so.
+    withRecorder(() => {
+      const host = mountSpoken({ labels: { record: "朗读并录音" } }, { placeholder: "读第二句" })
+      expect(host.querySelector('[data-aigui-form-record="reading"]')?.textContent).toBe("读第二句")
+    })
   })
 
   it("disables recording where the browser cannot do it, instead of offering a dead button", () => {

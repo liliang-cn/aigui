@@ -13,6 +13,24 @@ let nextFormInstanceId = 0
 
 export type FormFieldType = "text" | "textarea" | "number" | "date" | "select" | "checkbox" | "checkboxes" | "radio" | "audio"
 
+export interface FormLabels {
+  /** The idle recorder button. A field's own `placeholder` still overrides it. */
+  record: string
+  /** While recording, given the seconds elapsed. */
+  stop: (seconds: number) => string
+  /** Shown in place of the button where the browser cannot record at all. */
+  recordingUnsupported: string
+  /** Shown when the microphone was refused, or there is none. */
+  microphoneRefused: string
+}
+
+const DEFAULT_FORM_LABELS: FormLabels = {
+  record: "Record",
+  stop: (seconds) => `Stop (${seconds}s)`,
+  recordingUnsupported: "Recording is not supported here",
+  microphoneRefused: "Microphone permission is needed to answer this.",
+}
+
 export interface FormOption {
   label: string
   value: string
@@ -163,6 +181,14 @@ export interface FormPluginOptions {
    * `undefined` to leave a label as plain text.
    */
   renderLabel?: (text: string) => Node | undefined
+  /**
+   * The words on the controls this plugin draws itself.
+   *
+   * Everything else in a form is the model's text and comes out in whatever language the lesson is in.
+   * The recorder's own button was not: it was hardcoded English, so a Chinese lesson asked a learner to
+   * read a German sentence aloud under a button saying "Record".
+   */
+  labels?: Partial<FormLabels>
   /** Mount every form as already submitted, useful when restoring persisted conversations. */
   submitted?: boolean
   /** Label shown after a successful or restored submission. */
@@ -526,7 +552,7 @@ function mountForm(host: HTMLElement, definition: FormDefinition, options: FormP
   // Kept so a per-field verdict can mark the field it belongs to.
   const fieldContainers = new Map<string, HTMLElement>()
   for (const field of definition.fields) {
-    const rendered = createField(instancePrefix, field, options.renderLabel)
+    const rendered = createField(instancePrefix, field, options.renderLabel, options.labels)
     formElement.appendChild(rendered.container)
     controls.set(field.name, rendered.control)
     errorElements.set(field.name, rendered.error)
@@ -709,7 +735,7 @@ interface RenderedField {
   error: HTMLElement
 }
 
-function createField(formId: string, field: FormField, renderLabel?: (text: string) => Node | undefined): RenderedField {
+function createField(formId: string, field: FormField, renderLabel?: (text: string) => Node | undefined, labels?: Partial<FormLabels>): RenderedField {
   const grouped = field.type === "radio" || field.type === "checkboxes"
   const container = document.createElement(grouped ? "fieldset" : "div")
   container.setAttribute("data-aigui-form-field", field.name)
@@ -748,7 +774,7 @@ function createField(formId: string, field: FormField, renderLabel?: (text: stri
   }
 
   if (field.type === "audio") {
-    return createAudioField(field, container, controlId, errorId, error, renderLabel)
+    return createAudioField(field, container, controlId, errorId, error, renderLabel, labels)
   }
 
   let control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -811,7 +837,9 @@ function createAudioField(
   errorId: string,
   error: HTMLElement,
   renderLabel?: (text: string) => Node | undefined,
+  hostLabels?: Partial<FormLabels>,
 ): RenderedField {
+  const words = { ...DEFAULT_FORM_LABELS, ...hostLabels }
   const label = document.createElement("label")
   label.htmlFor = controlId
   writeLabel(label, field.label, renderLabel)
@@ -826,7 +854,7 @@ function createAudioField(
   button.type = "button"
   button.setAttribute("data-aigui-form-record", field.name)
   button.setAttribute("aria-describedby", errorId)
-  const idleLabel = field.placeholder ?? "Record"
+  const idleLabel = field.placeholder ?? words.record
   button.textContent = idleLabel
 
   const player = document.createElement("audio")
@@ -844,7 +872,7 @@ function createAudioField(
     && typeof navigator.mediaDevices?.getUserMedia === "function"
   if (!supported) {
     button.disabled = true
-    button.textContent = "Recording is not supported here"
+    button.textContent = words.recordingUnsupported
   }
 
   const finish = () => {
@@ -863,7 +891,7 @@ function createAudioField(
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     } catch {
-      error.textContent = "Microphone permission is needed to answer this."
+      error.textContent = words.microphoneRefused
       error.hidden = false
       return
     }
@@ -893,7 +921,7 @@ function createAudioField(
     const started = Date.now()
     const render = () => {
       const elapsed = Math.round((Date.now() - started) / 1000)
-      button.textContent = `Stop (${elapsed}s)`
+      button.textContent = words.stop(elapsed)
     }
     render()
     tick = setInterval(render, 250)
