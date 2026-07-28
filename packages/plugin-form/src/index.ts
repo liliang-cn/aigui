@@ -1,8 +1,8 @@
 import { actionOutcome, ActionRuntimeError, type ActionOutcome, type ActionRuntime, type AIGuiPlugin, type ASTNode, type OutcomeTone, type RenderOutput } from "@ai-gui/core"
 
-const FIELD_TYPES = new Set<FormFieldType>(["text", "textarea", "number", "date", "select", "checkbox", "checkboxes", "radio"])
+const FIELD_TYPES = new Set<FormFieldType>(["text", "textarea", "number", "date", "select", "checkbox", "checkboxes", "radio", "audio"])
 const FORM_KEYS = new Set(["id", "fields", "submitAction", "submitLabel"])
-const FIELD_KEYS = new Set(["name", "type", "label", "required", "minLength", "maxLength", "pattern", "min", "max", "minSelected", "maxSelected", "options", "placeholder", "expect"])
+const FIELD_KEYS = new Set(["name", "type", "label", "required", "minLength", "maxLength", "pattern", "min", "max", "minSelected", "maxSelected", "options", "placeholder", "expect", "maxSeconds"])
 const OPTION_KEYS = new Set(["label", "value"])
 const SAFE_NAME = /^[A-Za-z][A-Za-z0-9_.-]{0,127}$/
 const SAFE_ID = /^[A-Za-z][A-Za-z0-9_-]{0,127}$/
@@ -11,7 +11,7 @@ const MAX_FIELDS = 100
 const MAX_PATTERN_LENGTH = 128
 let nextFormInstanceId = 0
 
-export type FormFieldType = "text" | "textarea" | "number" | "date" | "select" | "checkbox" | "checkboxes" | "radio"
+export type FormFieldType = "text" | "textarea" | "number" | "date" | "select" | "checkbox" | "checkboxes" | "radio" | "audio"
 
 export interface FormOption {
   label: string
@@ -42,6 +42,11 @@ interface FormFieldBase {
  * option label containing the separator would otherwise split into two answers that were never given.
  */
 export type FormValue = string | number | boolean | string[]
+
+/** How long a recording may run when the field does not say. */
+const DEFAULT_MAX_RECORDING_SECONDS = 60
+/** The largest recording a form will carry, as base64 in its own value. */
+const MAX_RECORDING_CHARS = 8 * 1024 * 1024
 
 export interface FormStringField extends FormFieldBase {
   type: "text" | "textarea"
@@ -86,6 +91,26 @@ export interface FormCheckboxesField extends FormFieldBase {
   maxSelected?: number
 }
 
+/**
+ * A spoken answer — the person records, and the recording itself is the value.
+ *
+ * For questions a written answer cannot carry. Asked to say a sentence in a language they are learning,
+ * a person who types it has demonstrated spelling; the recording is the only thing that holds whether
+ * the vowel was long, which syllable took the stress, or whether two words ran together. Transcribing it
+ * in the browser first would defeat the point: a recogniser returns the word it thinks was meant, so a
+ * mispronunciation arrives as the correct word and disappears before anyone is told about it.
+ *
+ * The value is a `data:` URL carrying the recorded bytes, which keeps a submission ordinary JSON that a
+ * handler can post onward or store. There is no `expect`: two recordings of the same sentence are never
+ * equal, so judging one is the host's job — this field only carries it there.
+ */
+export interface FormAudioField extends FormFieldBase {
+  type: "audio"
+  /** How long a recording may run. Defaults to 60 seconds; recording stops itself at the limit. */
+  maxSeconds?: number
+  expect?: never
+}
+
 export type FormField =
   | FormStringField
   | FormDateField
@@ -93,6 +118,7 @@ export type FormField =
   | FormChoiceField
   | FormCheckboxField
   | FormCheckboxesField
+  | FormAudioField
 
 export interface FormDefinition {
   id: string
@@ -151,8 +177,9 @@ export interface FormPluginOptions {
 export function formPromptSpec(): string {
   return [
     "Forms (fenced): ```form <safe form JSON>```.",
-    "Fields: text, textarea, number, date, select, radio, checkbox (one box, yes or no), checkboxes (several answers to one question). Constraints: required, minLength, maxLength, pattern, min, max; on checkboxes, minSelected and maxSelected.",
+    "Fields: text, textarea, number, date, select, radio, checkbox (one box, yes or no), checkboxes (several answers to one question), audio (a spoken answer, recorded in the browser). Constraints: required, minLength, maxLength, pattern, min, max; on checkboxes, minSelected and maxSelected; on audio, maxSeconds.",
     'A question with more than one right answer is `checkboxes` with `options`, never radio (they exclude each other) and never a text box (the format has to be guessed). Its value is the chosen option values, and its `expect` is the array of every correct one: {"name":"answer","type":"checkboxes","label":"...","options":[{"label":"A. ...","value":"A"}],"expect":["A","C"]}.',
+    'Ask for `audio` when a written answer cannot carry what is being assessed — pronunciation, intonation, fluency, reading aloud: {"name":"reading","type":"audio","label":"读出这句：Ich möchte über mein Projekt sprechen","required":true,"maxSeconds":20}. Its value is the recording itself, so never give it `expect` (two recordings are never equal; the application judges it) and never ask the person to type what they said instead — a spelling is not a pronunciation.',
     "submitAction must name an application-registered Action. Never emit URLs, scripts, HTML, handlers, or component names.",
   ].join("\n")
 }
@@ -260,6 +287,25 @@ export function validateFormValues(
       }
       continue
     }
+    if (field.type === "audio") {
+      const value = typeof raw === "string" ? raw : ""
+      if (value === "") {
+        if (field.required) errors[field.name] = "Record an answer."
+        continue
+      }
+      // Only a recording, and only one small enough to travel in a submission. A `data:` URL of any
+      // other type here would be an arbitrary payload smuggled through a field the host will forward.
+      if (!/^data:audio\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/i.test(value)) {
+        errors[field.name] = "Must be a recording."
+        continue
+      }
+      if (value.length > MAX_RECORDING_CHARS) {
+        errors[field.name] = "Recording is too long."
+        continue
+      }
+      values[field.name] = value
+      continue
+    }
     if (field.type === "checkbox") {
       const value = raw === true
       values[field.name] = value
@@ -350,6 +396,15 @@ function parseField(value: unknown, index: number, issues: string[]): FormField 
   if (type !== "checkboxes" && Array.isArray(expected)) {
     issues.push(`${path}.expect may only be an array on a checkboxes field.`)
   }
+  const maxSeconds = readOptionalInteger(value.maxSeconds, `${path}.maxSeconds`, issues)
+  if (maxSeconds !== undefined && type !== "audio") {
+    issues.push(`${path}.maxSeconds may only be set on an audio field.`)
+  }
+  if (type === "audio" && expected !== undefined) {
+    // Two recordings of the same sentence are never equal, so an expectation here could only ever be
+    // wrong. Judging a recording is the host's, and it is what the submission is forwarded for.
+    issues.push(`${path}.expect cannot be set on an audio field; a recording is judged by the host.`)
+  }
   if (!name || !label || !type) return undefined
 
   const base = {
@@ -358,6 +413,22 @@ function parseField(value: unknown, index: number, issues: string[]): FormField 
     ...(value.required === true ? { required: true as const } : {}),
     ...(placeholder === undefined ? {} : { placeholder }),
     ...(expected === undefined ? {} : { expect: expected }),
+  }
+  if (type === "audio") {
+    if (minLength !== undefined || maxLength !== undefined || pattern !== undefined || min !== undefined || max !== undefined || value.options !== undefined) {
+      issues.push(`${path} contains constraints unsupported by audio fields.`)
+    }
+    if (maxSeconds !== undefined && (maxSeconds < 1 || maxSeconds > 600)) {
+      issues.push(`${path}.maxSeconds must be between 1 and 600.`)
+    }
+    return {
+      name,
+      label,
+      type,
+      ...(value.required === true ? { required: true as const } : {}),
+      ...(placeholder === undefined ? {} : { placeholder }),
+      ...(maxSeconds === undefined ? {} : { maxSeconds }),
+    }
   }
   if (type === "number") {
     if (minLength !== undefined || maxLength !== undefined || pattern !== undefined || value.options !== undefined) issues.push(`${path} contains constraints unsupported by number fields.`)
@@ -642,6 +713,10 @@ function createField(formId: string, field: FormField): RenderedField {
     return { container, control: first as HTMLInputElement, error }
   }
 
+  if (field.type === "audio") {
+    return createAudioField(field, container, controlId, errorId, error)
+  }
+
   let control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
   if (field.type === "textarea") control = document.createElement("textarea")
   else if (field.type === "select") {
@@ -679,6 +754,122 @@ function createField(formId: string, field: FormField): RenderedField {
   label.textContent = field.label
   if (field.type === "checkbox") container.append(control, label, error)
   else container.append(label, control, error)
+  return { container, control, error }
+}
+
+/**
+ * A record button, a player, and a hidden input holding the recording.
+ *
+ * The hidden input is deliberately the control: it makes a recording an ordinary form value, so reading,
+ * restoring a previous submission and re-grading all work through the same paths as a text box, and a
+ * host that stored the answer gets the recording back when the form is rebuilt.
+ *
+ * Everything is feature-detected. A browser without `MediaRecorder`, or a person who declines the
+ * microphone, gets a disabled button and a sentence saying so — not a button that looks live and does
+ * nothing.
+ */
+function createAudioField(
+  field: FormAudioField,
+  container: HTMLElement,
+  controlId: string,
+  errorId: string,
+  error: HTMLElement,
+): RenderedField {
+  const label = document.createElement("label")
+  label.htmlFor = controlId
+  label.textContent = field.label
+
+  const control = document.createElement("input")
+  control.type = "hidden"
+  control.id = controlId
+  control.setAttribute("name", field.name)
+  control.setAttribute("data-aigui-form-audio", field.name)
+
+  const button = document.createElement("button")
+  button.type = "button"
+  button.setAttribute("data-aigui-form-record", field.name)
+  button.setAttribute("aria-describedby", errorId)
+  const idleLabel = field.placeholder ?? "Record"
+  button.textContent = idleLabel
+
+  const player = document.createElement("audio")
+  player.controls = true
+  player.hidden = true
+  player.setAttribute("data-aigui-form-playback", field.name)
+
+  const limit = field.maxSeconds ?? DEFAULT_MAX_RECORDING_SECONDS
+  let recorder: MediaRecorder | undefined
+  let stopTimer: ReturnType<typeof setTimeout> | undefined
+  let tick: ReturnType<typeof setInterval> | undefined
+
+  const supported = typeof MediaRecorder !== "undefined"
+    && typeof navigator !== "undefined"
+    && typeof navigator.mediaDevices?.getUserMedia === "function"
+  if (!supported) {
+    button.disabled = true
+    button.textContent = "Recording is not supported here"
+  }
+
+  const finish = () => {
+    if (stopTimer !== undefined) clearTimeout(stopTimer)
+    if (tick !== undefined) clearInterval(tick)
+    stopTimer = undefined
+    tick = undefined
+    recorder = undefined
+    button.textContent = idleLabel
+    button.removeAttribute("data-recording")
+  }
+
+  const start = async () => {
+    error.hidden = true
+    let stream: MediaStream
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+    } catch {
+      error.textContent = "Microphone permission is needed to answer this."
+      error.hidden = false
+      return
+    }
+    const media = new MediaRecorder(stream)
+    const chunks: Blob[] = []
+    media.ondataavailable = (event) => { if (event.data.size > 0) chunks.push(event.data) }
+    media.onstop = () => {
+      for (const track of stream.getTracks()) track.stop()
+      const blob = new Blob(chunks, { type: media.mimeType || "audio/webm" })
+      finish()
+      const reader = new FileReader()
+      reader.onload = () => {
+        const url = typeof reader.result === "string" ? reader.result : ""
+        control.value = url
+        player.src = url
+        player.hidden = url === ""
+        // A hidden input's value changing fires nothing, so the form is told by hand — this is what
+        // clears a "Record an answer." error and lets the submit button notice there is an answer.
+        control.dispatchEvent(new Event("input", { bubbles: true }))
+        control.dispatchEvent(new Event("change", { bubbles: true }))
+      }
+      reader.readAsDataURL(blob)
+    }
+    recorder = media
+    media.start()
+    button.setAttribute("data-recording", "true")
+    const started = Date.now()
+    const render = () => {
+      const elapsed = Math.round((Date.now() - started) / 1000)
+      button.textContent = `Stop (${elapsed}s)`
+    }
+    render()
+    tick = setInterval(render, 250)
+    // Stops itself at the limit rather than recording until the tab is closed.
+    stopTimer = setTimeout(() => { if (recorder?.state === "recording") recorder.stop() }, limit * 1000)
+  }
+
+  button.addEventListener("click", () => {
+    if (recorder?.state === "recording") { recorder.stop(); return }
+    void start()
+  })
+
+  container.append(label, button, player, control, error)
   return { container, control, error }
 }
 
@@ -742,6 +933,20 @@ function writeControls(
       }
     } else {
       control.value = String(value)
+      if (field.type === "audio") {
+        // The value alone is invisible: without this a restored form shows a Record button and no sign
+        // that an answer is already in it.
+        //
+        // Found by walking the siblings rather than by selector: a field name would have to be escaped
+        // into one, and `CSS.escape` is absent from older browsers and from some test environments — so
+        // a selector here turns "restore an answer" into a crash on the whole form.
+        const player = Array.from(control.parentElement?.children ?? [])
+          .find((element): element is HTMLAudioElement => element instanceof HTMLAudioElement)
+        if (player) {
+          player.src = String(value)
+          player.hidden = String(value) === ""
+        }
+      }
     }
   }
 }

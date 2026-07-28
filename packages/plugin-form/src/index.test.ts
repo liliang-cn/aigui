@@ -305,6 +305,136 @@ describe("plugin-form", () => {
   })
 })
 
+describe("plugin-form audio answers", () => {
+  const spoken = {
+    id: "speak",
+    fields: [
+      {
+        name: "reading",
+        type: "audio",
+        label: "读出这句：Ich möchte über mein Projekt sprechen",
+        required: true,
+        maxSeconds: 20,
+      },
+    ],
+    submitAction: "quiz.answer",
+  }
+
+  it("parses an audio field and keeps its own recording limit", () => {
+    const parsed = parseFormDefinition(JSON.stringify(spoken))
+
+    expect(parsed.valid).toBe(true)
+    if (!parsed.valid) return
+    const field = parsed.data.fields[0]
+    expect(field.type).toBe("audio")
+    expect(field.type === "audio" && field.maxSeconds).toBe(20)
+  })
+
+  it("refuses an expected answer on a recording", () => {
+    // Two recordings of one sentence are never equal, so an expectation could only ever be wrong. What
+    // makes this worth an error rather than a shrug: a form that greys itself green on a string compare
+    // would tell a learner their pronunciation was correct because the base64 happened to match.
+    const parsed = parseFormDefinition(JSON.stringify({
+      ...spoken,
+      fields: [{ ...spoken.fields[0], expect: "Ich möchte über mein Projekt sprechen" }],
+    }))
+
+    expect(parsed.valid).toBe(false)
+    if (parsed.valid) return
+    expect(parsed.issues.join(" ")).toContain("judged by the host")
+  })
+
+  it("refuses a recording limit on a field that does not record", () => {
+    const parsed = parseFormDefinition(JSON.stringify({
+      ...spoken,
+      fields: [{ name: "answer", type: "text", label: "写出来", maxSeconds: 20 }],
+    }))
+
+    expect(parsed.valid).toBe(false)
+    if (parsed.valid) return
+    expect(parsed.issues.join(" ")).toContain("only be set on an audio field")
+  })
+
+  it("carries a recording as its value and refuses anything that is not one", () => {
+    const definitionOf = (source: object) => {
+      const parsed = parseFormDefinition(JSON.stringify(source))
+      if (!parsed.valid) throw new Error(parsed.issues.join(" "))
+      return parsed.data
+    }
+    const form = definitionOf(spoken)
+
+    const recorded = validateFormValues(form, { reading: "data:audio/webm;base64,GkXfo0AgQ==" })
+    expect(recorded.valid).toBe(true)
+    expect(recorded.values.reading).toBe("data:audio/webm;base64,GkXfo0AgQ==")
+
+    // A field the host forwards is a field that must not carry an arbitrary payload: only audio, and
+    // only base64 — otherwise `data:text/html,<script>` travels wherever the recording was going.
+    const smuggled = validateFormValues(form, { reading: "data:text/html;base64,PHNjcmlwdD4=" })
+    expect(smuggled.valid).toBe(false)
+    expect(smuggled.errors.reading).toBe("Must be a recording.")
+
+    const nothing = validateFormValues(form, {})
+    expect(nothing.valid).toBe(false)
+    expect(nothing.errors.reading).toBe("Record an answer.")
+  })
+})
+
+describe("plugin-form audio rendering", () => {
+  const spoken = {
+    id: "speak",
+    fields: [{ name: "reading", type: "audio", label: "读出这句", required: true, maxSeconds: 20 }],
+    submitAction: "quiz.answer",
+  }
+
+  function mountSpoken(options: Partial<FormPluginOptions> = {}) {
+    const registry = new ActionRegistry()
+    registry.register({ type: "quiz.answer", run: () => ({ submitted: true }) })
+    const plugin = form({ actionRuntime: createActionRuntime({ registry }), ...options })
+    const node = createParser({ plugins: [plugin] })(`\`\`\`form\n${JSON.stringify(spoken)}\n\`\`\``)[0]
+    const out = collectNodeRenderers([plugin]).form(node) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected a mount output")
+    const host = document.createElement("div")
+    out.mount(host)
+    return host
+  }
+
+  it("renders a record button and carries the recording in the form's own value", () => {
+    // The hidden input is the control on purpose: it makes a recording an ordinary form value, so
+    // reading, restoring and re-grading all take the same path as a text box.
+    const host = mountSpoken()
+
+    expect(host.querySelector('[data-aigui-form-record="reading"]')).not.toBeNull()
+    const control = host.querySelector<HTMLInputElement>('input[name="reading"]')!
+    expect(control.type).toBe("hidden")
+    expect(host.querySelector<HTMLAudioElement>('[data-aigui-form-playback="reading"]')!.hidden).toBe(true)
+  })
+
+  it("brings the player back with a restored recording", () => {
+    // A restored value alone is invisible: the person would see a Record button and no sign that their
+    // answer is already in there, which reads as an answer that was lost.
+    const recording = "data:audio/webm;base64,GkXfo0AgQ=="
+    const host = mountSpoken({ restore: () => ({ values: { reading: recording } }) })
+
+    const player = host.querySelector<HTMLAudioElement>('[data-aigui-form-playback="reading"]')!
+    expect(player.hidden).toBe(false)
+    expect(player.getAttribute("src")).toBe(recording)
+  })
+
+  it("disables recording where the browser cannot do it, instead of offering a dead button", () => {
+    const original = globalThis.MediaRecorder
+    // @ts-expect-error — deleting a global for the duration of one test
+    delete globalThis.MediaRecorder
+    try {
+      const host = mountSpoken()
+      const button = host.querySelector<HTMLButtonElement>('[data-aigui-form-record="reading"]')!
+      expect(button.disabled).toBe(true)
+      expect(button.textContent).toMatch(/not supported/i)
+    } finally {
+      globalThis.MediaRecorder = original
+    }
+  })
+})
+
 describe("plugin-form outcomes", () => {
   const quiz = {
     id: "q1",
@@ -665,6 +795,16 @@ describe("plugin-form restored submissions", () => {
       // and be unable to say with what.
       expect(checked).toEqual(["B", "C"])
       expect(host.querySelector("form")!.getAttribute("data-aigui-form-outcome")).toBe("positive")
+    })
+
+    it("tells a model that a pronunciation question needs a recording, not a spelling", () => {
+      const spec = formPromptSpec()
+
+      expect(spec).toContain("audio")
+      expect(spec).toContain("maxSeconds")
+      // The two things a model gets wrong here: grading a recording, and asking for it in writing.
+      expect(spec).toContain("never give it `expect`")
+      expect(spec).toMatch(/a spelling is not a pronunciation/)
     })
 
     it("tells a model that several right answers means checkboxes", () => {
