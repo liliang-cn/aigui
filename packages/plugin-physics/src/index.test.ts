@@ -130,3 +130,54 @@ describe("plugin-physics", () => {
     expect(spec).toContain("Never emit URLs")
   })
 })
+
+describe("what the view box has to hold", () => {
+  /** Parse or fail loudly: a test that silently rendered nothing would pass for the wrong reason. */
+  const asDiagram = (source: string) => {
+    const parsed = parsePhysicsDiagram(source)
+    if (!parsed.valid) throw new Error(parsed.issues.join(" "))
+    return parsed.data
+  }
+
+  /** The numbers the renderer actually draws with, so a test cannot drift from them silently. */
+  const box = (svg: string) => (/viewBox="(-?[\d.]+) (-?[\d.]+) ([\d.]+) ([\d.]+)"/.exec(svg) ?? []).slice(1).map(Number)
+
+  it("holds an angle mark and its label", () => {
+    // The 30° at the foot of an incline is drawn 28 away from its vertex and labelled 14 further out,
+    // and none of that was measured — so on a diagram whose incline starts at the left edge, the angle
+    // was simply outside the picture. It is the one label a mechanics diagram cannot do without.
+    const source = JSON.stringify({
+      version: 1,
+      surfaces: [{ from: [0, 0], to: [200, 100] }],
+      angles: [{ at: [0, 0], from: 0, to: 30, radius: 28, label: "30°" }],
+    })
+    const svg = renderPhysicsSVG(asDiagram(source))
+    const [minX, minY] = box(svg)
+
+    // The label sits at 28 + 14 from the vertex at the origin, so anything at or right of -42 clips it.
+    expect(minX).toBeLessThan(-42)
+    expect(minY).toBeLessThan(-42)
+  })
+
+  it("holds a vector's label, which hangs past the arrowhead", () => {
+    // "mg cos(30°)" is written past the tip of the arrow it names. Measuring the tip alone leaves the
+    // words hanging outside the frame — the reader sees an arrow pointing at nothing.
+    const source = JSON.stringify({
+      version: 1,
+      bodies: [{ at: [0, 0], shape: "point" }],
+      vectors: [{ magnitude: 60, angle: 0, label: "mg cos(30°)" }],
+    })
+    const svg = renderPhysicsSVG(asDiagram(source))
+    const [minX, , width] = box(svg)
+
+    // Tip at x=60; the label starts 8 past it and runs the length of its text.
+    expect(minX + width).toBeGreaterThan(60 + 8 + 40)
+  })
+
+  it("leaves an explicit view alone", () => {
+    // A diagram that names its own box means it, and widening it would move everything in it.
+    const source = JSON.stringify({ version: 1, view: [-10, -10, 110, 110], bodies: [{ at: [0, 0] }] })
+    const svg = renderPhysicsSVG(asDiagram(source))
+    expect(box(svg)).toEqual([-10, -10, 120, 120])
+  })
+})

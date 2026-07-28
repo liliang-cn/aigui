@@ -278,11 +278,59 @@ function viewBoxOf(diagram: PhysicsDiagram): [number, number, number, number] {
   for (const vector of diagram.vectors ?? []) {
     const start = vector.from ?? (diagram.bodies?.[0]?.at ?? [0, 0])
     note(start)
-    note(tipOf(vector, start))
+    const tip = tipOf(vector, start)
+    note(tip)
+    if (vector.label) {
+      // The label is written past the arrowhead — see the renderer, which offsets by the same 8 — and
+      // then runs the width of its own text. Measuring the tip alone left "mg cos(30°)" outside the
+      // frame: an arrow pointing at nothing, with its name cut off at the edge of the picture.
+      const lx = tip[0] + (tip[0] - start[0]) * 0.08 + 8
+      const ly = tip[1] + (tip[1] - start[1]) * 0.08
+      note([lx, ly])
+      note([lx + textWidth(vector.label), ly + LABEL_HEIGHT])
+      note([lx, ly - LABEL_HEIGHT])
+    }
+  }
+  // Angle marks were measured by nothing at all, which is how the 30° at the foot of an incline ended
+  // up outside the picture — the one label a mechanics diagram cannot do without.
+  for (const angle of diagram.angles ?? []) {
+    const radius = angle.radius ?? 28
+    const reach = radius + (angle.label ? ANGLE_LABEL_OFFSET + textWidth(angle.label) : 0)
+    // Every direction: the arc runs from `from` to `to`, and the label sits on the bisector of whichever
+    // pair those are — cheaper and safer to bound the whole circle than to reason about the sweep.
+    note([angle.at[0] - reach, angle.at[1] - reach])
+    note([angle.at[0] + reach, angle.at[1] + reach])
+  }
+  for (const surface of diagram.surfaces ?? []) {
+    if (!surface.hatch) continue
+    // Hatching hangs below the line by its own length; a surface at the bottom of a diagram loses it.
+    note([Math.min(surface.from[0], surface.to[0]) - HATCH_REACH, Math.min(surface.from[1], surface.to[1]) - HATCH_REACH])
   }
   if (xs.length === 0) return [0, 0, 100, 100]
   const pad = 40
   return [Math.min(...xs) - pad, Math.min(...ys) - pad, Math.max(...xs) + pad, Math.max(...ys) + pad]
+}
+
+/** How far past the arc a label sits, as the renderer places it. */
+const ANGLE_LABEL_OFFSET = 14
+/** How far the hatching hangs off a surface, as the renderer draws it. */
+const HATCH_REACH = 15
+/** One line of label text, in the same units the diagram is drawn in. */
+const LABEL_HEIGHT = 14
+
+/**
+ * Roughly how wide a label will be.
+ *
+ * An estimate on purpose: measuring text needs a DOM, and this renders to a string on whatever runs it.
+ * Wide-erring — CJK counted at a full em, Latin at half — because a box slightly too big shows white
+ * space, and a box slightly too small cuts a word off.
+ */
+function textWidth(label: string): number {
+  let width = 0
+  for (const character of label) {
+    width += /[\u3000-\u9fff\uff00-\uffef]/.test(character) ? LABEL_HEIGHT : LABEL_HEIGHT * 0.55
+  }
+  return width
 }
 
 /** Where a vector ends, whether it was given as a point or as a magnitude and angle. */
