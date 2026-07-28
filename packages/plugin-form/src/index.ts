@@ -150,6 +150,19 @@ export interface FormSubmission {
 export interface FormPluginOptions {
   /** Shared core runtime whose registry is the only allowlist for submitAction. */
   actionRuntime: ActionRuntime
+  /**
+   * Turn a label into rendered content, for hosts that typeset it.
+   *
+   * Every label here is model output, so the default is `textContent` — a question that arrives with
+   * markup in it must not become markup. That default is also why a maths question renders as
+   * `34.6 N (20\sqrt{3} N)`: the host's typesetter never sees a label, because a label never becomes
+   * anything but text.
+   *
+   * Returning a `Node` opts out of that default for one label and hands the escaping to the host, which
+   * is the only side that knows what it is willing to render — KaTeX output, and nothing else. Return
+   * `undefined` to leave a label as plain text.
+   */
+  renderLabel?: (text: string) => Node | undefined
   /** Mount every form as already submitted, useful when restoring persisted conversations. */
   submitted?: boolean
   /** Label shown after a successful or restored submission. */
@@ -513,7 +526,7 @@ function mountForm(host: HTMLElement, definition: FormDefinition, options: FormP
   // Kept so a per-field verdict can mark the field it belongs to.
   const fieldContainers = new Map<string, HTMLElement>()
   for (const field of definition.fields) {
-    const rendered = createField(instancePrefix, field)
+    const rendered = createField(instancePrefix, field, options.renderLabel)
     formElement.appendChild(rendered.container)
     controls.set(field.name, rendered.control)
     errorElements.set(field.name, rendered.error)
@@ -669,13 +682,34 @@ function mountForm(host: HTMLElement, definition: FormDefinition, options: FormP
   }
 }
 
+/**
+ * Put a label's text into an element, through the host's renderer when there is one.
+ *
+ * Falls back to `textContent` when the host has no renderer, when it declines this label, or when it
+ * throws — a typesetter that fails must cost the formula's appearance, not the question.
+ */
+function writeLabel(element: HTMLElement, text: string, render?: (text: string) => Node | undefined): void {
+  if (render) {
+    try {
+      const rendered = render(text)
+      if (rendered) {
+        element.replaceChildren(rendered)
+        return
+      }
+    } catch {
+      // Fall through to text.
+    }
+  }
+  element.textContent = text
+}
+
 interface RenderedField {
   container: HTMLElement
   control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
   error: HTMLElement
 }
 
-function createField(formId: string, field: FormField): RenderedField {
+function createField(formId: string, field: FormField, renderLabel?: (text: string) => Node | undefined): RenderedField {
   const grouped = field.type === "radio" || field.type === "checkboxes"
   const container = document.createElement(grouped ? "fieldset" : "div")
   container.setAttribute("data-aigui-form-field", field.name)
@@ -689,7 +723,7 @@ function createField(formId: string, field: FormField): RenderedField {
 
   if (grouped && (field.type === "radio" || field.type === "checkboxes")) {
     const legend = document.createElement("legend")
-    legend.textContent = field.label
+    writeLabel(legend, field.label, renderLabel)
     container.appendChild(legend)
     let first: HTMLInputElement | undefined
     for (const [index, option] of field.options.entries()) {
@@ -705,7 +739,7 @@ function createField(formId: string, field: FormField): RenderedField {
       input.setAttribute("aria-describedby", errorId)
       const label = document.createElement("label")
       label.htmlFor = optionId
-      label.textContent = option.label
+      writeLabel(label, option.label, renderLabel)
       container.append(input, label)
       first ??= input
     }
@@ -714,7 +748,7 @@ function createField(formId: string, field: FormField): RenderedField {
   }
 
   if (field.type === "audio") {
-    return createAudioField(field, container, controlId, errorId, error)
+    return createAudioField(field, container, controlId, errorId, error, renderLabel)
   }
 
   let control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -728,6 +762,8 @@ function createField(formId: string, field: FormField): RenderedField {
     for (const option of field.options) {
       const element = document.createElement("option")
       element.value = option.value
+      // Not through the host's renderer: a `<select>`'s option renders text and nothing else, so
+      // typeset markup there is markup the browser drops on the floor.
       element.textContent = option.label
       select.appendChild(element)
     }
@@ -751,7 +787,7 @@ function createField(formId: string, field: FormField): RenderedField {
   }
   const label = document.createElement("label")
   label.htmlFor = controlId
-  label.textContent = field.label
+  writeLabel(label, field.label, renderLabel)
   if (field.type === "checkbox") container.append(control, label, error)
   else container.append(label, control, error)
   return { container, control, error }
@@ -774,10 +810,11 @@ function createAudioField(
   controlId: string,
   errorId: string,
   error: HTMLElement,
+  renderLabel?: (text: string) => Node | undefined,
 ): RenderedField {
   const label = document.createElement("label")
   label.htmlFor = controlId
-  label.textContent = field.label
+  writeLabel(label, field.label, renderLabel)
 
   const control = document.createElement("input")
   control.type = "hidden"

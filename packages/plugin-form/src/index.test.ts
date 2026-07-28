@@ -305,6 +305,75 @@ describe("plugin-form", () => {
   })
 })
 
+describe("plugin-form label rendering", () => {
+  const mathy = {
+    id: "concept-check",
+    fields: [
+      {
+        name: "answer",
+        type: "radio",
+        label: "$G_\\parallel$ 的值是多少？",
+        required: true,
+        expect: "B",
+        options: [
+          { label: "A. 20 N", value: "A" },
+          { label: "B. $20\\sqrt{3}$ N", value: "B" },
+        ],
+      },
+    ],
+    submitAction: "quiz.answer",
+  }
+
+  function mountMathy(renderLabel?: FormPluginOptions["renderLabel"]) {
+    const registry = new ActionRegistry()
+    registry.register({ type: "quiz.answer", run: () => ({ submitted: true }) })
+    const plugin = form({ actionRuntime: createActionRuntime({ registry }), renderLabel })
+    const node = createParser({ plugins: [plugin] })(`\`\`\`form\n${JSON.stringify(mathy)}\n\`\`\``)[0]
+    const out = collectNodeRenderers([plugin]).form(node) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected a mount output")
+    const host = document.createElement("div")
+    out.mount(host)
+    return host
+  }
+
+  it("leaves a label as text when the host has no renderer", () => {
+    // The default has to stay text: every label here is model output, and a question that arrives with
+    // markup in it must not become markup.
+    const host = mountMathy()
+
+    expect(host.querySelector("legend")?.textContent).toBe("$G_\\parallel$ 的值是多少？")
+    expect(host.querySelector("legend")?.querySelector("*")).toBeNull()
+  })
+
+  it("lets the host typeset a label, including an option's", () => {
+    // Without this a maths question renders as "$20\sqrt{3}$ N" in front of the learner — the answer
+    // they are being asked to choose, written in source.
+    const host = mountMathy((text) => {
+      const span = document.createElement("span")
+      span.className = "typeset"
+      span.textContent = text.replace(/\$([^$]+)\$/g, "⟨$1⟩")
+      return span
+    })
+
+    expect(host.querySelector("legend .typeset")?.textContent).toBe("⟨G_\\parallel⟩ 的值是多少？")
+    const optionLabels = Array.from(host.querySelectorAll("label .typeset")).map((node) => node.textContent)
+    expect(optionLabels).toContain("B. ⟨20\\sqrt{3}⟩ N")
+  })
+
+  it("falls back to text when the host's renderer declines or throws", () => {
+    // A typesetter that cannot parse one formula must cost that formula's appearance, not the question:
+    // an exception here would otherwise take down the whole form and leave nothing to answer.
+    const declined = mountMathy(() => undefined)
+    expect(declined.querySelector("legend")?.textContent).toBe("$G_\\parallel$ 的值是多少？")
+
+    const threw = mountMathy(() => {
+      throw new Error("KaTeX gave up")
+    })
+    expect(threw.querySelector("legend")?.textContent).toBe("$G_\\parallel$ 的值是多少？")
+    expect(threw.querySelectorAll("label").length).toBeGreaterThan(0)
+  })
+})
+
 describe("plugin-form audio answers", () => {
   const spoken = {
     id: "speak",
