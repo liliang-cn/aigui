@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-progress",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "Live progress steps for a long turn — several per request, updated in place.",
   "keywords": [
     "llm",
