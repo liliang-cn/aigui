@@ -1,5 +1,11 @@
 # @ai-gui/plugin-highlight
 
+## 0.19.0
+
+### Patch Changes
+
+- @ai-gui/core@0.19.0
+
 ## 0.18.0
 
 ### Patch Changes
