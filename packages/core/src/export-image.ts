@@ -25,6 +25,14 @@ export interface ExportImageOptions {
   height?: number
   type?: "image/png" | "image/jpeg" | "image/webp"
   quality?: number
+  /**
+   * Told about each drawing that could not be exported, instead of the whole export failing.
+   *
+   * Some drawings cannot be rasterised at all: a Mermaid diagram lays its labels out in a
+   * `<foreignObject>`, and a browser taints the canvas the moment one is drawn onto it, so `toDataURL`
+   * throws `SecurityError`. One of those used to take every other drawing on the page down with it.
+   */
+  onSkip?: (drawing: SVGElement, reason: unknown) => void
 }
 
 export interface ExportedImage {
@@ -49,6 +57,46 @@ function measure(svg: SVGElement, options: ExportImageOptions): { width: number;
 }
 
 /**
+ * A copy of the drawing that a canvas will accept.
+ *
+ * The problem is `<foreignObject>`. Mermaid lays every node label out as HTML inside one, and a browser
+ * taints the canvas the moment an image containing one is drawn — after which `toDataURL` throws
+ * `SecurityError` and the export is lost. Nothing about the diagram is unsafe; the rule is categorical.
+ *
+ * So each `<foreignObject>` becomes plain SVG `<text>` at the same position, carrying the same words.
+ * The result is a slightly plainer label — no wrapping, no HTML styling — and a diagram that exports at
+ * all, which is the trade the alternative does not offer.
+ */
+function rasterisable(svg: SVGElement): SVGElement {
+  const copy = svg.cloneNode(true) as SVGElement
+  const foreign = Array.from(copy.querySelectorAll("foreignObject"))
+  for (const object of foreign) {
+    const words = (object.textContent ?? "").trim()
+    const parent = object.parentNode
+    if (!parent) continue
+    if (!words) {
+      parent.removeChild(object)
+      continue
+    }
+    const x = Number.parseFloat(object.getAttribute("x") ?? "0")
+    const y = Number.parseFloat(object.getAttribute("y") ?? "0")
+    const width = Number.parseFloat(object.getAttribute("width") ?? "0")
+    const height = Number.parseFloat(object.getAttribute("height") ?? "0")
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text")
+    // Centred in the box the label had, which is where the diagram expected to see it.
+    text.setAttribute("x", String(x + width / 2))
+    text.setAttribute("y", String(y + height / 2))
+    text.setAttribute("text-anchor", "middle")
+    text.setAttribute("dominant-baseline", "middle")
+    text.setAttribute("font-size", "14")
+    text.setAttribute("fill", "currentColor")
+    text.textContent = words
+    parent.replaceChild(text, object)
+  }
+  return copy
+}
+
+/**
  * Render an SVG element to a raster data URL.
  *
  * The element is serialized as it stands, so whatever a plugin drew — including the theme it drew
@@ -57,7 +105,9 @@ function measure(svg: SVGElement, options: ExportImageOptions): { width: number;
 export async function exportSVGToImage(svg: SVGElement, options: ExportImageOptions = {}): Promise<ExportedImage> {
   const { width, height } = measure(svg, options)
   const scale = options.scale && options.scale > 0 ? options.scale : (globalThis.devicePixelRatio || 1)
-  const source = new XMLSerializer().serializeToString(svg)
+  // Measured from the original, which is on the page and has a layout; serialised from a copy whose
+  // foreignObjects have been replaced, because those are what a canvas refuses.
+  const source = new XMLSerializer().serializeToString(rasterisable(svg))
   // A serialized fragment carries no namespace of its own, and an `Image` refuses to decode SVG
   // without one.
   const namespaced = /\sxmlns=/.test(source) ? source : source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"')
@@ -89,9 +139,21 @@ export async function exportSVGToImage(svg: SVGElement, options: ExportImageOpti
  * decide what lands in it.
  */
 export async function exportRenderedImages(root: ParentNode, options: ExportImageOptions = {}): Promise<ExportedImage[]> {
-  const drawings = Array.from(root.querySelectorAll("svg"))
   const exported: ExportedImage[] = []
-  for (const drawing of drawings) exported.push(await exportSVGToImage(drawing, options))
+  for (const drawing of Array.from(root.querySelectorAll("svg"))) {
+    // A formula is not a drawing. KaTeX renders every radical and brace as its own inline SVG, so a
+    // page with maths on it would otherwise export one image per square-root sign — dozens of 20-pixel
+    // files, and the diagram somewhere among them.
+    if (drawing.closest(".katex")) continue
+    try {
+      exported.push(await exportSVGToImage(drawing, options))
+    } catch (reason) {
+      // Skipped, not fatal: one drawing a browser refuses to rasterise must not cost the others. The
+      // caller is told which, because an export that quietly returns three of four images is an export
+      // that has lost one without saying so.
+      options.onSkip?.(drawing, reason)
+    }
+  }
   return exported
 }
 

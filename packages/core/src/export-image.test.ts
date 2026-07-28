@@ -87,3 +87,64 @@ describe("exportRenderedImages", () => {
     expect(images.map((image) => image.width)).toEqual([10, 20])
   })
 })
+
+describe("what a canvas will not take", () => {
+  it("turns a Mermaid label into plain SVG text, so the diagram exports at all", async () => {
+    // A browser taints the canvas the moment an image containing a `<foreignObject>` is drawn on it, and
+    // `toDataURL` then throws SecurityError. Mermaid puts every node label in one, so a mind map could
+    // not be exported at all — the button was there and it took the page down.
+    stubCanvas()
+    const serialise = vi.spyOn(XMLSerializer.prototype, "serializeToString")
+    const diagram = svg(
+      `<svg width="200" height="100"><g><foreignObject x="10" y="20" width="80" height="40">` +
+        `<div xmlns="http://www.w3.org/1999/xhtml">复习到期词汇</div></foreignObject></g></svg>`,
+    )
+
+    await exportSVGToImage(diagram)
+
+    const written = serialise.mock.results[0].value as string
+    expect(written).not.toContain("foreignObject")
+    expect(written).toContain("复习到期词汇")
+    // Centred where the label's box was, so the diagram still reads.
+    expect(written).toContain('x="50"')
+    expect(written).toContain('y="40"')
+    // And the drawing on the page is untouched: it is still being displayed.
+    expect(diagram.querySelectorAll("foreignObject")).toHaveLength(1)
+  })
+
+  it("skips a drawing it cannot rasterise instead of losing the whole export", async () => {
+    // One diagram a browser refuses must not cost the others, and the caller has to be told which —
+    // an export that quietly returns one of two images has lost one without saying so.
+    stubCanvas()
+    let attempt = 0
+    vi.spyOn(HTMLCanvasElement.prototype, "toDataURL").mockImplementation(() => {
+      attempt += 1
+      if (attempt === 1) throw new DOMException("Tainted canvases may not be exported.", "SecurityError")
+      return "data:image/png;base64,stub"
+    })
+    const root = document.createElement("div")
+    root.innerHTML = `<svg width="100" height="100"></svg><svg width="120" height="90"></svg>`
+    const skipped: unknown[] = []
+
+    const images = await exportRenderedImages(root, { onSkip: (_, reason) => skipped.push(reason) })
+
+    expect(images).toHaveLength(1)
+    expect(skipped).toHaveLength(1)
+    expect(String(skipped[0])).toContain("Tainted")
+  })
+
+  it("does not export a square-root sign as its own image", async () => {
+    // KaTeX draws every radical as an inline SVG. Without this, a page with maths on it exports dozens
+    // of 20-pixel files with the actual diagram somewhere among them.
+    stubCanvas()
+    const root = document.createElement("div")
+    root.innerHTML =
+      `<span class="katex"><span class="mord sqrt"><svg width="12" height="8"></svg></span></span>` +
+      `<div data-aigui-mermaid="1"><svg width="300" height="200"></svg></div>`
+
+    const images = await exportRenderedImages(root)
+
+    expect(images).toHaveLength(1)
+    expect(images[0].width).toBeGreaterThan(100)
+  })
+})
