@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-map",
-  "version": "0.20.1",
+  "version": "0.20.2",
   "description": "Secure, accessible Leaflet maps for AIGUI.",
   "keywords": [
     "llm",

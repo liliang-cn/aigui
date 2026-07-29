@@ -4,6 +4,7 @@ This guide has two independent parts. Read the one that matches your job:
 
 - **Part A** — you are a coding agent **integrating** `@ai-gui` into a project.
 - **Part B** — you are the **LLM generating content** that an AIGUI frontend will render.
+- **Part C** — you are **maintaining this repo** and need to release it.
 
 For the human-facing overview see [README.md](./README.md); for the checklist form see [SKILL.md](./SKILL.md).
 
@@ -227,3 +228,45 @@ Artifact commands are declarative. Never claim a command succeeded. Do not emit 
 ### The one rule
 
 Only emit registered cards and enabled block types (per your system prompt). Everything else is plain markdown. Keep UI/card/chart/molecule/map/primitive/source/artifact bodies as valid JSON.
+
+
+---
+
+## Part C — Releasing
+
+**Never run `npm publish` here.** Releases go through
+[`.github/workflows/release.yml`](.github/workflows/release.yml), triggered by pushing a
+`vX.Y.Z` tag. The npm token lives in the `NPM_TOKEN` repository secret; the token in a
+local `~/.npmrc` is not the one that works.
+
+```sh
+# 1. bump every public package to the same new version
+pnpm changeset version        # or edit versions by hand — they must all match
+
+# 2. commit, tag, push
+git commit -am "chore: release v0.20.2"
+git tag v0.20.2 && git push origin main --tags
+```
+
+The workflow then runs `validate:release-tag` → `build` → `typecheck` → `test:unit` →
+`validate:packages` → `pnpm -r publish --access public --provenance`.
+
+Two constraints that will fail a release if ignored:
+
+- **Every public package shares one version, and the tag equals it.**
+  `scripts/release-tag.mjs` enforces this. A new package therefore cannot be released
+  on its own tag — bump the whole workspace. `pnpm -r publish` skips versions already on
+  the registry, so the packages that have not changed are not republished.
+
+- **`npm publish` would ship `"@ai-gui/core": "workspace:*"` verbatim** and break every
+  install. Only pnpm/changesets rewrite the workspace protocol.
+
+### Adding a new package
+
+`files` in `package.json` lists `README.md`, `LICENSE` and `CHANGELOG.md`. Create all
+three — `pnpm validate:packages` runs publint, which does not check for them, and a
+package published without a README serves a blank page on npm.
+
+After a **first-ever** publish, `pnpm install` may fail with `ERR_PNPM_FETCH_404` for a
+few minutes while `npm view` on the same package succeeds. That is npm's
+abbreviated-packument CDN lagging, not a broken publish.

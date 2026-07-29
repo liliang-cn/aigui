@@ -1,5 +1,14 @@
 # @ai-gui/core
 
+## 0.20.2
+
+### Patch Changes
+
+- First release of `@ai-gui/plugin-evidence`: host-owned query provenance. The
+  application appends an ` ```evidence ` fence from the statements it actually
+  executed, and `evidencePromptSpec()` tells the model never to write one — a
+  model that can invent a number can invent the query said to have produced it.
+
 ## 0.20.1
 
 ## 0.20.0
