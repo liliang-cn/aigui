@@ -147,6 +147,12 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/plugin-evidence:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/plugin-figure:
     dependencies:
       '@ai-gui/core':
