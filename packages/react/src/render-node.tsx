@@ -19,6 +19,8 @@ export interface RenderContext {
   sanitized?: boolean
   /** The host's colour scheme, handed to every plugin that renders a node. */
   theme?: string
+  /** The host's locale, handed to every plugin so its own labels match the page. */
+  locale?: string
 }
 
 export function renderNode(node: ASTNode, ctx: RenderContext): ReactNode {
@@ -60,6 +62,7 @@ interface CachedPluginOutput {
   renderer: NodeRenderer
   signature: string | ASTNode
   theme: string | undefined
+  locale: string | undefined
   output: RenderOutput | Promise<RenderOutput>
 }
 
@@ -67,11 +70,12 @@ function PluginOutputHost({ node, renderer, context }: PluginOutputHostProps): R
   const cache = useRef<CachedPluginOutput>()
   const signature = nodeSignature(node)
   const theme = context.theme
+  const locale = context.locale
   try {
     // The theme belongs in the cache key: the node has not changed when the page switches to dark,
     // but the diagram drawn for the light one is the wrong picture now.
-    if (!cache.current || cache.current.renderer !== renderer || cache.current.signature !== signature || cache.current.theme !== theme) {
-      cache.current = { renderer, signature, theme, output: renderer(node, { theme }) }
+    if (!cache.current || cache.current.renderer !== renderer || cache.current.signature !== signature || cache.current.theme !== theme || cache.current.locale !== locale) {
+      cache.current = { renderer, signature, theme, locale, output: renderer(node, { theme, locale }) }
     }
     const output = cache.current.output
     if (output && typeof (output as { then?: unknown }).then === "function") {

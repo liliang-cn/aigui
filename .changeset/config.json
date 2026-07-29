@@ -24,6 +24,7 @@
       "@ai-gui/plugin-progress",
       "@ai-gui/plugin-flashcard",
       "@ai-gui/plugin-map",
+      "@ai-gui/plugin-evidence",
       "@ai-gui/openai",
       "@ai-gui/anthropic",
       "@ai-gui/vercel-ai",

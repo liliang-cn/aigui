@@ -164,7 +164,13 @@ function mathBlock(state: BlockState, start: number, end: number, silent: boolea
   return true
 }
 
-/** KaTeX stylesheet import hint — consumers must load KaTeX's CSS for correct layout. */
+/**
+ * KaTeX stylesheet import hint — consumers must load KaTeX's CSS for correct layout.
+ *
+ * This is a bare specifier, which only a bundler can resolve, so unlike other plugins' `css` it
+ * cannot be injected into a `<style>` at runtime and the renderers skip it. Import the stylesheet
+ * instead: `import "@ai-gui/plugin-katex/style.css"`.
+ */
 export const katexCss = '@import "katex/dist/katex.min.css";'
 
 /**

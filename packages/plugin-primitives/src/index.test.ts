@@ -31,6 +31,28 @@ describe("plugin-primitives", () => {
     expect(String(spec)).toContain("list")
   })
   it("sets a non-empty promptSpec on the returned plugin", () => {
-    expect(primitives().promptSpec).toContain("list")
+    const spec = primitives().promptSpec
+    expect(typeof spec).toBe("function")
+    expect((spec as (locale?: string) => string)()).toContain("list")
+  })
+})
+
+describe("primitives promptSpec locale", () => {
+  it("is English by default", () => {
+    expect(primitivesPromptSpec()).toContain("```")
+    expect(primitivesPromptSpec()).not.toContain("基础 UI 块")
+  })
+
+  it("is Chinese for zh-CN", () => {
+    expect(primitivesPromptSpec("zh-CN")).toContain("基础 UI 块")
+  })
+
+  it("falls back to English for a locale nobody translated", () => {
+    expect(primitivesPromptSpec("ja")).toBe(primitivesPromptSpec())
+  })
+
+  it("is what the plugin hands buildSystemPrompt", () => {
+    const spec = primitives().promptSpec as (locale?: string) => string
+    expect(spec("zh-CN")).toBe(primitivesPromptSpec("zh-CN"))
   })
 })

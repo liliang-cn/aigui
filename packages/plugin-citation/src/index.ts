@@ -1,4 +1,4 @@
-import type { AIGuiPlugin, ASTNode, RenderOutput } from "@ai-gui/core"
+import { translate, type AIGuiPlugin, type ASTNode, type MessageBundle, type RenderOutput } from "@ai-gui/core"
 
 const MAX_SOURCE_BYTES = 64 * 1024
 const MAX_SOURCES = 100
@@ -39,12 +39,26 @@ export const citationCss = [
   "[data-aigui-citations-invalid]{margin:1rem 0;color:color-mix(in srgb,currentColor 72%,transparent)}",
 ].join("\n")
 
-export function citationPromptSpec(): string {
-  return [
-    "Sources (fenced JSON): ```sources {\"sources\":[{\"id\":\"safe-id\",\"title\":\"Source title\",\"url\":\"https://example.com/page\",\"citedText\":\"Optional exact supporting text\"}]} ```.",
-    "Use 1-100 sources. IDs must be unique and contain only letters, numbers, underscores, or hyphens, starting with a letter.",
-    "Use HTTPS URLs unless the application explicitly permits an HTTP host. Never emit HTML, actions, scripts, handlers, credentials, or extra fields.",
-  ].join("\n")
+const PROMPT: MessageBundle = {
+  en: {
+    spec: [
+      "Sources (fenced JSON): ```sources {\"sources\":[{\"id\":\"safe-id\",\"title\":\"Source title\",\"url\":\"https://example.com/page\",\"citedText\":\"Optional exact supporting text\"}]} ```.",
+      "Use 1-100 sources. IDs must be unique and contain only letters, numbers, underscores, or hyphens, starting with a letter.",
+      "Use HTTPS URLs unless the application explicitly permits an HTTP host. Never emit HTML, actions, scripts, handlers, credentials, or extra fields.",
+    ].join("\n"),
+  },
+  "zh-CN": {
+    spec: [
+      "来源（围栏 JSON）：```sources {\"sources\":[{\"id\":\"safe-id\",\"title\":\"来源标题\",\"url\":\"https://example.com/page\",\"citedText\":\"可选：原文摘录\"}]} ```。",
+      "来源数量 1-100 条。id 必须唯一，只能包含字母、数字、下划线或连字符，且以字母开头。",
+      "除非应用明确允许 HTTP，一律使用 HTTPS 链接。禁止输出 HTML、动作、脚本、事件回调、凭据或额外字段。",
+    ].join("\n"),
+  },
+}
+
+/** The model-facing rules for source lists, in the given locale (English by default). */
+export function citationPromptSpec(locale?: string): string {
+  return translate(PROMPT, locale, "spec")
 }
 
 export function citation(options: CitationOptions = {}): AIGuiPlugin {
@@ -58,7 +72,7 @@ export function citation(options: CitationOptions = {}): AIGuiPlugin {
     name: "citation",
     nodeRenderers: { sources: render },
     css: citationCss,
-    promptSpec: citationPromptSpec(),
+    promptSpec: (locale) => citationPromptSpec(locale),
   }
 }
 

@@ -1,5 +1,5 @@
 import { defineComponent, h, onBeforeUnmount, shallowRef, watch, type PropType } from "vue"
-import { collectNodeRenderers, exportRenderedImages, type ActionRuntime, type AIGuiPlugin, type CardRegistry, type CardStore, type ExportImageOptions, type FeedOptions, type FeedSource, type RendererOptions } from "@ai-gui/core"
+import { collectNodeRenderers, exportRenderedImages, injectPluginStyles, type ActionRuntime, type AIGuiPlugin, type CardRegistry, type CardStore, type ExportImageOptions, type FeedOptions, type FeedSource, type NodeRenderer, type RendererOptions } from "@ai-gui/core"
 import { useAIRenderer } from "./use-ai-renderer"
 import { renderNode, type RenderContext } from "./render-node"
 
@@ -16,29 +16,48 @@ export const AIRenderer = defineComponent({
     text: { type: String, default: undefined },
     /** The host's colour scheme, "light" or "dark" by convention, handed to every plugin. */
     theme: { type: String, default: undefined },
+    /**
+     * The host's locale as a BCP-47 tag, e.g. "zh-CN".
+     *
+     * Handed to every plugin so the chrome it draws is in the page's language.
+     */
+    locale: { type: String, default: undefined },
     registry: { type: Object as PropType<CardRegistry>, default: undefined },
     plugins: { type: Array as PropType<AIGuiPlugin[]>, default: undefined },
     sanitize: { type: [Boolean, Object] as PropType<RendererOptions["sanitize"]>, default: undefined },
     actionRuntime: { type: Object as PropType<ActionRuntime>, default: undefined },
     cardStore: { type: Object as PropType<CardStore>, default: undefined },
+    /**
+     * Renderers for individual node types, overriding whatever the plugins supply.
+     *
+     * Lets a host replace one block without dropping the plugin that renders the rest.
+     */
+    nodeRenderers: { type: Object as PropType<Record<string, NodeRenderer>>, default: undefined },
     debug: { type: Boolean, default: false },
     onDebugEvent: { type: Function as PropType<NonNullable<RendererOptions["onDebugEvent"]>>, default: undefined },
   },
   setup(props, { emit, expose }) {
     const current = shallowRef(useAIRenderer({ registry: props.registry, sanitize: props.sanitize, plugins: props.plugins, debug: props.debug, onDebugEvent: props.onDebugEvent }))
-    const nodeRenderers = shallowRef(collectNodeRenderers(props.plugins, { debugTarget: current.value.renderer }))
+    // Host renderers win over the plugins that claim the same node type.
+    const mergeNodeRenderers = () => ({
+      ...collectNodeRenderers(props.plugins, { debugTarget: current.value.renderer }),
+      ...props.nodeRenderers,
+    })
+    const nodeRenderers = shallowRef(mergeNodeRenderers())
+    injectPluginStyles(props.plugins)
     let actionScope = { controller: new AbortController(), owner: {} }
     const resetActionScope = () => {
       actionScope.controller.abort()
       actionScope = { controller: new AbortController(), owner: {} }
     }
     watch(
-      () => [props.registry, props.sanitize, props.plugins, props.debug, props.onDebugEvent] as const,
+      () => [props.registry, props.sanitize, props.plugins, props.debug, props.onDebugEvent, props.nodeRenderers] as const,
       () => {
         resetActionScope()
         current.value.destroy()
         current.value = useAIRenderer({ registry: props.registry, sanitize: props.sanitize, plugins: props.plugins, debug: props.debug, onDebugEvent: props.onDebugEvent })
-        nodeRenderers.value = collectNodeRenderers(props.plugins, { debugTarget: current.value.renderer })
+        nodeRenderers.value = mergeNodeRenderers()
+        injectPluginStyles(props.plugins)
       },
     )
     watch(() => props.actionRuntime, resetActionScope)
@@ -87,7 +106,7 @@ export const AIRenderer = defineComponent({
         }
         emit("card-action", action)
       }
-      const ctx: RenderContext = { registry: props.registry, cardStore: props.cardStore, plugins: props.plugins, nodeRenderers: nodeRenderers.value, onCardAction, sanitize: props.sanitize, sanitized: true, theme: props.theme }
+      const ctx: RenderContext = { registry: props.registry, cardStore: props.cardStore, plugins: props.plugins, nodeRenderers: nodeRenderers.value, onCardAction, sanitize: props.sanitize, sanitized: true, theme: props.theme, locale: props.locale }
       return h("div", { "data-aigui-renderer": "", ref: root }, current.value.nodes.value.map((n) => renderNode(n, ctx)))
     }
   },

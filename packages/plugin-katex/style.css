@@ -1,0 +1,9 @@
+@import "katex/dist/katex.min.css";
+
+/* Long formulas scroll inside their own box rather than widening the page on a phone. */
+[data-aigui-renderer] .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 2px;
+}

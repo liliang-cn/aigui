@@ -5,6 +5,14 @@ export interface BuildSystemPromptOptions {
   base?: string
   registry?: CardRegistry
   plugins?: AIGuiPlugin[]
+  /**
+   * The locale to write the guidance in, as a BCP-47 tag, e.g. "zh-CN".
+   *
+   * A product whose persona says "always answer in Chinese" ends up appending English rules to
+   * it, which reads as a contradiction. Plugins fall back to English for locales they have not
+   * been translated into.
+   */
+  locale?: string
 }
 
 /**
@@ -18,7 +26,7 @@ export function buildSystemPrompt(options: BuildSystemPromptOptions = {}): strin
   const cardSpec = options.registry?.toPromptSpec()
   if (cardSpec) parts.push(cardSpec)
   for (const plugin of options.plugins ?? []) {
-    const spec = typeof plugin.promptSpec === "function" ? plugin.promptSpec() : plugin.promptSpec
+    const spec = typeof plugin.promptSpec === "function" ? plugin.promptSpec(options.locale) : plugin.promptSpec
     if (spec) parts.push(spec)
   }
   return parts.join("\n\n")

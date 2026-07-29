@@ -1,4 +1,9 @@
-import type { AIGuiPlugin, ASTNode, PluginCommitContext, RenderOutput } from "@ai-gui/core"
+import { translator, type AIGuiPlugin, type ASTNode, type MessageBundle, type NodeRenderContext, type PluginCommitContext, type RenderOutput } from "@ai-gui/core"
+
+const UI: MessageBundle = {
+  en: { copy: "Copy", download: "Download", view: "Artifact view" },
+  "zh-CN": { copy: "复制", download: "下载", view: "制品视图" },
+}
 
 const CREATE_KEYS = new Set(["version", "operationId", "artifact"])
 const ARTIFACT_KEYS = new Set(["id", "title", "filename", "kind", "language", "content"])
@@ -311,13 +316,13 @@ export function artifact(options: ArtifactPluginOptions = {}): AIGuiPlugin {
   const outputs = new WeakMap<ASTNode, RenderOutput>()
   let anchor: ASTNode | undefined
 
-  const render = (node: ASTNode): RenderOutput => {
+  const render = (node: ASTNode, context?: NodeRenderContext): RenderOutput => {
     const cached = outputs.get(node)
     if (cached) return cached
     const state = status.get(node) ?? (node.complete ? "rejected" : "loading")
     let output: RenderOutput
     if (node === anchor && state === "accepted") {
-      output = { kind: "mount", mount: (host: HTMLElement) => mountArtifactWorkspace(host, store) }
+      output = { kind: "mount", mount: (host: HTMLElement) => mountArtifactWorkspace(host, store, context?.locale) }
     } else if (state === "loading") {
       output = { kind: "element", tag: "div", props: { "data-aigui-block-loading": "", "data-block-type": node.type }, children: [] }
     } else {
@@ -363,7 +368,8 @@ export function artifact(options: ArtifactPluginOptions = {}): AIGuiPlugin {
   }
 }
 
-export function mountArtifactWorkspace(host: HTMLElement, store: ArtifactStore): () => void {
+export function mountArtifactWorkspace(host: HTMLElement, store: ArtifactStore, locale?: string): () => void {
+  const t = translator(UI, locale)
   if (!host || typeof host.replaceChildren !== "function") throw new TypeError("Artifact workspace requires an HTMLElement host.")
   if (!(store instanceof ArtifactStore)) throw new TypeError("Artifact workspace requires an ArtifactStore.")
   let selectedId: string | undefined
@@ -400,12 +406,12 @@ export function mountArtifactWorkspace(host: HTMLElement, store: ArtifactStore):
       identity.append(element("p", { "data-artifact-meta": "" }, `${selected.filename} · ${selected.kind} · revision ${selected.revision}`))
       header.append(identity)
       const actions = element("div", { "data-artifact-actions": "" })
-      const copy = element("button", { type: "button", "data-artifact-copy": "" }, "Copy") as HTMLButtonElement
+      const copy = element("button", { type: "button", "data-artifact-copy": "" }, t("copy")) as HTMLButtonElement
       copy.addEventListener("click", () => { void copyText(selected.content) })
-      const download = element("button", { type: "button", "data-artifact-download": "" }, "Download") as HTMLButtonElement
+      const download = element("button", { type: "button", "data-artifact-download": "" }, t("download")) as HTMLButtonElement
       download.addEventListener("click", () => downloadRecord(selected, objectUrls, timers))
       actions.append(copy, download); header.append(actions); main.append(header)
-      const tabs = element("div", { role: "tablist", "aria-label": "Artifact view", "data-artifact-tabs": "" })
+      const tabs = element("div", { role: "tablist", "aria-label": t("view"), "data-artifact-tabs": "" })
       const previewTab = tabButton("preview", activeTab, () => { activeTab = "preview"; render() })
       const sourceTab = tabButton("source", activeTab, () => { activeTab = "source"; render() })
       const onTabKey = (event: KeyboardEvent) => {

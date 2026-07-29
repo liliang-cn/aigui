@@ -156,7 +156,8 @@ describe("citation plugin", () => {
     expect(citationPromptSpec()).toContain("```sources")
     expect(citationPromptSpec()).toContain("HTTPS")
     expect(citationPromptSpec()).toContain("Never emit HTML")
-    expect(citation().promptSpec).toBe(citationPromptSpec())
+    const spec = citation().promptSpec as (locale?: string) => string
+    expect(spec()).toBe(citationPromptSpec())
   })
 })
 
@@ -173,5 +174,25 @@ describe("serializeSourcesFence", () => {
     expect(() => serializeSourcesFence(definition)).toThrow(TypeError)
     expect(serializeSourcesFence(definition, { allowedHttpHosts: ["localhost"] })).toContain("http://localhost:4317/")
     expect(() => serializeSourcesFence({ sources: [], extra: true } as never)).toThrow(TypeError)
+  })
+})
+
+describe("citation promptSpec locale", () => {
+  it("is English by default", () => {
+    expect(citationPromptSpec()).toContain("```")
+    expect(citationPromptSpec()).not.toContain("来源")
+  })
+
+  it("is Chinese for zh-CN", () => {
+    expect(citationPromptSpec("zh-CN")).toContain("来源")
+  })
+
+  it("falls back to English for a locale nobody translated", () => {
+    expect(citationPromptSpec("ja")).toBe(citationPromptSpec())
+  })
+
+  it("is what the plugin hands buildSystemPrompt", () => {
+    const spec = citation().promptSpec as (locale?: string) => string
+    expect(spec("zh-CN")).toBe(citationPromptSpec("zh-CN"))
   })
 })

@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/vanilla",
-  "version": "0.20.2",
+  "version": "0.21.0",
   "description": "Framework-free DOM adapter for AIGUI — stream LLM output straight into the DOM.",
   "keywords": [
     "llm",

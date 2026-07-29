@@ -1,6 +1,7 @@
 export { useAIRenderer } from "./use-ai-renderer"
 export type { UseAIRendererResult } from "./use-ai-renderer"
 export { useActionState } from "./use-action-state"
+export { usePluginStyles } from "./use-plugin-styles"
 export { AIRenderer } from "./ai-renderer"
 export type { AIRendererHandle, AIRendererProps } from "./ai-renderer"
 export { renderNode } from "./render-node"

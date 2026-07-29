@@ -1,4 +1,4 @@
-import { collectNodeRenderers, exportRenderedImages, Renderer, type ActionRuntime, type ASTNode, type CardStore, type DebugEventListener, type ExportedImage, type ExportImageOptions, type FeedOptions, type FeedSource, type Patch, type RendererOptions } from "@ai-gui/core"
+import { collectNodeRenderers, exportRenderedImages, injectPluginStyles, Renderer, type ActionRuntime, type ASTNode, type CardStore, type DebugEventListener, type ExportedImage, type ExportImageOptions, type FeedOptions, type FeedSource, type NodeRenderer, type Patch, type RendererOptions } from "@ai-gui/core"
 import { type DomRenderContext } from "./render-node-dom"
 import { createReconcileState, disposeEl, reconcile } from "./reconcile"
 
@@ -6,8 +6,22 @@ export interface CreateRendererOptions extends Omit<RendererOptions, "onPatch"> 
   actionRuntime?: ActionRuntime
   cardStore?: CardStore
   onCardAction?: DomRenderContext["onCardAction"]
+  /**
+   * Renderers for individual node types, overriding whatever the plugins supply.
+   *
+   * Lets a host replace one block — its own code block, say — without dropping the plugin that
+   * renders everything else.
+   */
+  nodeRenderers?: Record<string, NodeRenderer>
   /** The host's colour scheme, handed to every plugin. Change it later with `setTheme`. */
   theme?: string
+  /**
+   * The host's locale as a BCP-47 tag, e.g. "zh-CN".
+   *
+   * Handed to every plugin so the chrome it draws — a Copy button, an error line — is in the
+   * page's language. English is the fallback for anything untranslated.
+   */
+  locale?: string
   /** Called with the nodes on screen whenever they change. */
   onRender?: (nodes: ASTNode[]) => void
 }
@@ -33,7 +47,8 @@ export interface VanillaRenderer {
 }
 
 export function createRenderer(el: HTMLElement, options: CreateRendererOptions = {}): VanillaRenderer {
-  const { actionRuntime, cardStore, onCardAction, theme, onRender, ...rendererOpts } = options
+  const { actionRuntime, cardStore, onCardAction, nodeRenderers: hostNodeRenderers, theme, locale, onRender, ...rendererOpts } = options
+  injectPluginStyles(options.plugins, el.ownerDocument)
   let rendered = ""
   let latestNodes: ASTNode[] = []
   let actionScope = { owner: {}, controller: new AbortController() }
@@ -57,7 +72,7 @@ export function createRenderer(el: HTMLElement, options: CreateRendererOptions =
       onRender?.(nodes)
     },
   })
-  const ctx: DomRenderContext = { registry: options.registry, cardStore, onCardAction: handleCardAction, plugins: options.plugins, nodeRenderers: collectNodeRenderers(options.plugins, { debugTarget: renderer }), sanitize: options.sanitize, sanitized: true, theme }
+  const ctx: DomRenderContext = { registry: options.registry, cardStore, onCardAction: handleCardAction, plugins: options.plugins, nodeRenderers: { ...collectNodeRenderers(options.plugins, { debugTarget: renderer }), ...hostNodeRenderers }, sanitize: options.sanitize, sanitized: true, theme, locale }
   // Run cleanup for every mounted widget before tearing down tracked elements.
   const disposeAll = () => { for (const entry of state.els.values()) disposeEl(entry.el) }
   const resetActionScope = () => {

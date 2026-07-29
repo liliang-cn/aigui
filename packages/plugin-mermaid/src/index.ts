@@ -1,5 +1,5 @@
 import type { MermaidConfig } from "mermaid"
-import type { AIGuiPlugin, ASTNode, NodeRenderContext, RenderOutput } from "@ai-gui/core"
+import { translate, type AIGuiPlugin, type ASTNode, type MessageBundle, type NodeRenderContext, type RenderOutput } from "@ai-gui/core"
 
 export interface MermaidOptions {
   theme?: string
@@ -43,12 +43,26 @@ function errorHtml(): RenderOutput {
   return { kind: "html", html: `<pre data-aigui-mermaid-error>${escapeHtml("Diagram could not be rendered.")}</pre>` }
 }
 
-export function mermaidPromptSpec(): string {
-  return [
-    "Diagrams (fenced): ```mermaid <Mermaid diagram syntax>```.",
-    "Supported examples include flowchart, sequenceDiagram, classDiagram (UML), stateDiagram-v2, erDiagram, journey, gantt, pie, mindmap, timeline, and gitGraph.",
-    "Use concise labels and valid Mermaid syntax. Never emit HTML, scripts, click handlers, URLs, initialization directives, remote resources, or credentials.",
-  ].join("\n")
+const PROMPT: MessageBundle = {
+  en: {
+    spec: [
+      "Diagrams (fenced): ```mermaid <Mermaid diagram syntax>```.",
+      "Supported examples include flowchart, sequenceDiagram, classDiagram (UML), stateDiagram-v2, erDiagram, journey, gantt, pie, mindmap, timeline, and gitGraph.",
+      "Use concise labels and valid Mermaid syntax. Never emit HTML, scripts, click handlers, URLs, initialization directives, remote resources, or credentials.",
+    ].join("\n"),
+  },
+  "zh-CN": {
+    spec: [
+      "图示（围栏代码块）：```mermaid <Mermaid 图示语法>```。",
+      "可用类型包括 flowchart、sequenceDiagram、classDiagram（UML）、stateDiagram-v2、erDiagram、journey、gantt、pie、mindmap、timeline、gitGraph。",
+      "标签保持简洁，语法必须合法。禁止输出 HTML、脚本、点击回调、URL、初始化指令、远程资源或任何凭据。",
+    ].join("\n"),
+  },
+}
+
+/** The model-facing rules for diagrams, in the given locale (English by default). */
+export function mermaidPromptSpec(locale?: string): string {
+  return translate(PROMPT, locale, "spec")
 }
 
 export function mermaid(opts: MermaidOptions = {}): AIGuiPlugin {
@@ -103,5 +117,5 @@ export function mermaid(opts: MermaidOptions = {}): AIGuiPlugin {
     return output
   }
 
-  return { name: "mermaid", nodeRenderers: { mermaid: render }, promptSpec: mermaidPromptSpec() }
+  return { name: "mermaid", nodeRenderers: { mermaid: render }, promptSpec: (locale) => mermaidPromptSpec(locale) }
 }

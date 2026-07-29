@@ -181,3 +181,27 @@ describe("plugin-mermaid cleanup", () => {
     expect(document.body.textContent).not.toContain("Syntax error in text")
   })
 })
+
+describe("mermaid promptSpec locale", () => {
+  it("is English by default", async () => {
+    const { mermaidPromptSpec } = await import("./index")
+    expect(mermaidPromptSpec()).toContain("```")
+    expect(mermaidPromptSpec()).not.toContain("图示")
+  })
+
+  it("is Chinese for zh-CN", async () => {
+    const { mermaidPromptSpec } = await import("./index")
+    expect(mermaidPromptSpec("zh-CN")).toContain("图示")
+  })
+
+  it("falls back to English for a locale nobody translated", async () => {
+    const { mermaidPromptSpec } = await import("./index")
+    expect(mermaidPromptSpec("ja")).toBe(mermaidPromptSpec())
+  })
+
+  it("is what the plugin hands buildSystemPrompt", async () => {
+    const { mermaid, mermaidPromptSpec } = await import("./index")
+    const spec = mermaid().promptSpec as (locale?: string) => string
+    expect(spec("zh-CN")).toBe(mermaidPromptSpec("zh-CN"))
+  })
+})

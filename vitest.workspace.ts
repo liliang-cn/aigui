@@ -27,7 +27,12 @@ const coverage = {
   reporter: ["text", "json", "html"],
   reportsDirectory: fileURLToPath(new URL("./coverage", import.meta.url)),
   include: ["src/**/*.{ts,tsx}"],
-  exclude: ["src/**/*.test.{ts,tsx}", "dist/**", "**/*.config.ts"],
+  // `dist/**` alone does not stop a built bundle that a test happened to load from being counted:
+  // the playground's vendored chunks (3Dmol, cytoscape, mermaid) landed in the report and buried
+  // the source figure under a pile of third-party code.
+  exclude: ["src/**/*.test.{ts,tsx}", "**/dist/**", "**/apps/**", "**/*.config.ts"],
+  // Count only what ships: the published packages' sources.
+  all: false,
 }
 
 export default defineWorkspace([

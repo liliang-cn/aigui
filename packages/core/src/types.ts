@@ -65,6 +65,14 @@ export interface NodeRenderContext {
    * with white plot areas.
    */
   readonly theme?: string
+  /**
+   * The host's locale as a BCP-47 tag, e.g. "zh-CN".
+   *
+   * A plugin draws its own labels — a Copy button, an error line — and cannot read the page's
+   * language, so without this a Chinese product renders English chrome around Chinese content.
+   * English is the fallback for anything a plugin has not translated.
+   */
+  readonly locale?: string
 }
 
 export type NodeRenderer = (node: ASTNode, context?: NodeRenderContext) => RenderOutput | Promise<RenderOutput>
@@ -112,8 +120,14 @@ export interface AIGuiPlugin {
   /** Runs synchronously after the AST is finalized and before patches are dispatched. */
   onASTCommit?: (nodes: readonly ASTNode[], context: PluginCommitContext) => void
   css?: string
-  /** LLM-facing guidance describing this plugin's fence syntax. */
-  promptSpec?: string | (() => string)
+  /**
+   * LLM-facing guidance describing this plugin's fence syntax.
+   *
+   * Receives the locale asked of `buildSystemPrompt`, so the rules can be written in the language
+   * the product answers in — a Chinese persona followed by English rules reads as a contradiction
+   * to the model. Plugins that only ship English simply ignore the argument.
+   */
+  promptSpec?: string | ((locale?: string) => string)
 }
 
 export interface RendererOptions extends DebugOptions {

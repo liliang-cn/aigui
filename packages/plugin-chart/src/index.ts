@@ -50,7 +50,7 @@ import {
 import { init, use, type ECharts, type EChartsCoreOption } from "echarts/core"
 import { LabelLayout, UniversalTransition } from "echarts/features"
 import { CanvasRenderer, SVGRenderer } from "echarts/renderers"
-import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type NodeRenderContext, type RenderOutput } from "@ai-gui/core"
+import { parsePartialJSON, translate, type AIGuiPlugin, type ASTNode, type MessageBundle, type NodeRenderContext, type RenderOutput } from "@ai-gui/core"
 
 use([
   BarChart,
@@ -129,12 +129,26 @@ let glReady: Promise<unknown> | null = null
 const loadGl = () => (glReady ??= import("echarts-gl"))
 
 /** Prompt spec describing the ```chart``` fence for LLM system prompts. */
-export function chartPromptSpec(): string {
-  return [
-    "Charts (fenced): ```chart <ECharts option JSON>```.",
-    'Example: ```chart {"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[1,2]}]}```',
-    "When gl mode is enabled, 3D types are available: bar3D, scatter3D, surface, line3D, globe, map3D (WebGL, live-only).",
-  ].join("\n")
+const PROMPT: MessageBundle = {
+  en: {
+    spec: [
+      "Charts (fenced): ```chart <ECharts option JSON>```.",
+      'Example: ```chart {"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[1,2]}]}```',
+      "When gl mode is enabled, 3D types are available: bar3D, scatter3D, surface, line3D, globe, map3D (WebGL, live-only).",
+    ].join("\n"),
+  },
+  "zh-CN": {
+    spec: [
+      "图表（围栏代码块）：```chart <ECharts option JSON>```。",
+      '示例：```chart {"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[1,2]}]}```',
+      "启用 gl 模式后可用 3D 类型：bar3D、scatter3D、surface、line3D、globe、map3D（WebGL，仅实时渲染）。",
+    ].join("\n"),
+  },
+}
+
+/** The model-facing rules for charts, in the given locale (English by default). */
+export function chartPromptSpec(locale?: string): string {
+  return translate(PROMPT, locale, "spec")
 }
 
 /**
@@ -210,5 +224,5 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
       inst?.dispose()
     }
   }
-  return { name: "chart", nodeRenderers: { chart: render }, promptSpec: chartPromptSpec() }
+  return { name: "chart", nodeRenderers: { chart: render }, promptSpec: (locale) => chartPromptSpec(locale) }
 }

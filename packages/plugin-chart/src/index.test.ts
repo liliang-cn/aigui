@@ -39,7 +39,9 @@ describe("plugin-chart", () => {
     expect(chartPromptSpec()).toContain("chart")
   })
   it("sets a non-empty promptSpec on the returned plugin", () => {
-    expect(chart().promptSpec).toContain("chart")
+    const spec = chart().promptSpec
+    expect(typeof spec).toBe("function")
+    expect((spec as (locale?: string) => string)()).toContain("chart")
   })
   it("interactive mode returns a mount RenderOutput for a complete option", () => {
     const r = collectNodeRenderers([chart({ interactive: true })]).chart
@@ -105,5 +107,25 @@ describe("plugin-chart", () => {
     const out = r({ key: "0:c", type: "chart", content: '{"series":[{"type":"bar3D"' } as ASTNode) as RenderOutput
     expect(out.kind).toBe("html")
     if (out.kind === "html") expect(out.html).toContain("data-aigui-chart-loading")
+  })
+})
+
+describe("chart promptSpec locale", () => {
+  it("is English by default", () => {
+    expect(chartPromptSpec()).toContain("```")
+    expect(chartPromptSpec()).not.toContain("图表")
+  })
+
+  it("is Chinese for zh-CN", () => {
+    expect(chartPromptSpec("zh-CN")).toContain("图表")
+  })
+
+  it("falls back to English for a locale nobody translated", () => {
+    expect(chartPromptSpec("ja")).toBe(chartPromptSpec())
+  })
+
+  it("is what the plugin hands buildSystemPrompt", () => {
+    const spec = chart().promptSpec as (locale?: string) => string
+    expect(spec("zh-CN")).toBe(chartPromptSpec("zh-CN"))
   })
 })

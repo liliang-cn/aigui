@@ -32,6 +32,8 @@ export interface DomRenderContext {
   sanitized?: boolean
   /** The host's colour scheme, handed to every plugin that renders a node. */
   theme?: string
+  /** The host's locale, handed to every plugin so its own labels match the page. */
+  locale?: string
 }
 
 export function renderNodeToElement(node: ASTNode, ctx: DomRenderContext): HTMLElement {
@@ -44,7 +46,7 @@ export function renderNodeToElement(node: ASTNode, ctx: DomRenderContext): HTMLE
       return loading
     }
     try {
-      const out = r(node, { theme: ctx.theme })
+      const out = r(node, { theme: ctx.theme, locale: ctx.locale })
       if (typeof (out as { then?: unknown })?.then === "function") {
         const host = document.createElement("div") as ManagedElement
         host.setAttribute("data-aigui-async-pending", "")

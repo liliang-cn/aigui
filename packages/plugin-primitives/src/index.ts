@@ -1,4 +1,4 @@
-import { parsePartialJSON, type AIGuiPlugin, type ASTNode, type RenderOutput } from "@ai-gui/core"
+import { parsePartialJSON, translate, type AIGuiPlugin, type ASTNode, type MessageBundle, type RenderOutput } from "@ai-gui/core"
 
 const el = (tag: string, props: Record<string, unknown> | undefined, children: RenderOutput[]): RenderOutput => ({ kind: "element", tag, props, children })
 const text = (s: string): RenderOutput => ({ kind: "html", html: escapeHtml(s) })
@@ -32,17 +32,30 @@ function renderLayout(node: ASTNode): RenderOutput {
   return el("div", { "data-aigui-primitive": "layout", style: `display:flex;flex-direction:${dir}` }, items.map((i) => el("div", undefined, [text(String(i))])))
 }
 
-export function primitivesPromptSpec(): string {
-  return [
-    "Primitive UI blocks (fenced): ```list {\"items\":[...]}```; ```table {\"headers\":[...],\"rows\":[[...]]}```;",
-    "```key-value {\"pairs\":{\"k\":\"v\"}}```; ```layout {\"direction\":\"row|column\",\"items\":[...]}```.",
-  ].join("\n")
+const PROMPT: MessageBundle = {
+  en: {
+    spec: [
+      "Primitive UI blocks (fenced): ```list {\"items\":[...]}```; ```table {\"headers\":[...],\"rows\":[[...]]}```;",
+      "```key-value {\"pairs\":{\"k\":\"v\"}}```; ```layout {\"direction\":\"row|column\",\"items\":[...]}```.",
+    ].join("\n"),
+  },
+  "zh-CN": {
+    spec: [
+      "基础 UI 块（围栏代码块）：```list {\"items\":[...]}```；```table {\"headers\":[...],\"rows\":[[...]]}```；",
+      "```key-value {\"pairs\":{\"k\":\"v\"}}```；```layout {\"direction\":\"row|column\",\"items\":[...]}```。",
+    ].join("\n"),
+  },
+}
+
+/** The model-facing rules for these blocks, in the given locale (English by default). */
+export function primitivesPromptSpec(locale?: string): string {
+  return translate(PROMPT, locale, "spec")
 }
 
 export function primitives(): AIGuiPlugin {
   return {
     name: "primitives",
     nodeRenderers: { list: renderList, "key-value": renderKeyValue, table: renderTable, layout: renderLayout },
-    promptSpec: primitivesPromptSpec(),
+    promptSpec: (locale) => primitivesPromptSpec(locale),
   }
 }

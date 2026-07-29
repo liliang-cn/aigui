@@ -1,5 +1,48 @@
 # @ai-gui/plugin-primitives
 
+## 0.21.0
+
+### Minor Changes
+
+- Host node renderers, automatic plugin styles, and locales
+
+  **`nodeRenderers` on every adapter.** The renderers were collected from the plugins and never
+  exposed, so a host that wanted its own code block — with its copy button — had to drop the plugin
+  that claimed `code` and reimplement everything else it rendered. React, Vue and vanilla now accept
+  a `nodeRenderers` map that merges over the plugin-collected one, host wins.
+
+  **Plugin CSS is installed by the renderer.** `AIGuiPlugin.css` was declared by ten plugins and read
+  by nobody, leaving every host to work out which of its plugins shipped styles and import each by
+  hand. Each adapter now injects them, once per plugin name, and `collectPluginStyles` /
+  `injectPluginStyles` are exported for hosts that manage their own document.
+
+  **Blocks stay inside the viewport.** A base stylesheet ships with that injection: tables and code
+  scroll within their own box, images and widgets are capped at the column width, and long URLs wrap
+  — so an answer written without knowledge of the screen no longer pushes a phone page sideways.
+
+  `@ai-gui/plugin-katex` now exposes `./style.css`, matching `@ai-gui/plugin-map`. Its `css` field is
+  a bare-specifier `@import` that only a bundler can resolve, so it is skipped by the injector; import
+  `@ai-gui/plugin-katex/style.css` instead.
+
+  **Locales.** `buildSystemPrompt({ locale })` threads a BCP-47 tag through each plugin's
+  `promptSpec`, and `locale` on the renderers reaches every plugin through `NodeRenderContext` — a
+  product whose persona says "always answer in Chinese" no longer appends English rules to it, and the
+  chrome plugins draw follows the page. `zh-CN` ships for the primitives, mermaid, chart and citation
+  prompt specs and for the artifact workspace's labels; everything else falls back to English, which
+  is also what an untranslated locale resolves to.
+
+  `promptSpec` may now be `(locale?: string) => string`. Plugins that ignore the argument, and plain
+  string specs, are unaffected.
+
+  Also: `@ai-gui/plugin-evidence` joins the fixed version group it was missing from, so every public
+  package shares one version again, and coverage is measured over package sources only — the
+  playground's built vendor bundles were being counted, reporting 22% where the packages are at 95%.
+
+### Patch Changes
+
+- Updated dependencies
+  - @ai-gui/core@0.21.0
+
 ## 0.20.2
 
 ### Patch Changes

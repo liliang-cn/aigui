@@ -31,6 +31,9 @@ jobs:
 
       - run: pnpm test:unit
 
+      # Fails below the 75% thresholds set in vitest.config.ts.
+      - run: pnpm test:coverage
+
       - run: pnpm test:release
 
       - if: matrix.node-version == 20

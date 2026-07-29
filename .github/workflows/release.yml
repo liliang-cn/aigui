@@ -38,6 +38,9 @@ jobs:
 
       - run: pnpm test:unit
 
+      # Fails below the 75% thresholds set in vitest.config.ts.
+      - run: pnpm test:coverage
+
       - run: pnpm validate:packages
 
       # Publishes every workspace package whose version is not yet on the registry.

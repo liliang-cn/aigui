@@ -1,5 +1,6 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react"
-import { collectNodeRenderers, exportRenderedImages, type ActionRuntime, type AIGuiPlugin, type ASTNode, type CardRegistry, type CardStore, type DebugEventListener, type ExportedImage, type ExportImageOptions, type FeedOptions, type FeedSource, type RendererOptions } from "@ai-gui/core"
+import { collectNodeRenderers, exportRenderedImages, type ActionRuntime, type AIGuiPlugin, type ASTNode, type CardRegistry, type CardStore, type DebugEventListener, type ExportedImage, type ExportImageOptions, type FeedOptions, type FeedSource, type NodeRenderer, type RendererOptions } from "@ai-gui/core"
+import { usePluginStyles } from "./use-plugin-styles"
 import { useAIRenderer } from "./use-ai-renderer"
 import { renderNode, type RenderContext } from "./render-node"
 
@@ -35,6 +36,14 @@ export interface AIRendererProps {
   actionRuntime?: ActionRuntime
   onCardAction?: RenderContext["onCardAction"]
   /**
+   * Renderers for individual node types, overriding whatever the plugins supply.
+   *
+   * A host that wants its own code block — with its copy button, its theme — otherwise has to
+   * drop the plugin that claims `code` and reimplement everything else it rendered. Keep the
+   * object stable across renders, as with `plugins`.
+   */
+  nodeRenderers?: Record<string, NodeRenderer>
+  /**
    * Called with the nodes currently on screen, whenever they change.
    *
    * What a model produced is only knowable from the parsed nodes: a host that wants to offer
@@ -49,6 +58,13 @@ export interface AIRendererProps {
    * answer rendered on a dark page comes back with white plot areas until the host says so.
    */
   theme?: string
+  /**
+   * The host's locale as a BCP-47 tag, e.g. "zh-CN".
+   *
+   * Handed to every plugin so the chrome it draws — a Copy button, an error line — is in the
+   * page's language. English is the fallback for anything untranslated.
+   */
+  locale?: string
   className?: string
   debug?: RendererOptions["debug"]
   onDebugEvent?: RendererOptions["onDebugEvent"]
@@ -64,7 +80,8 @@ function createActionScope(): ActionScope {
 }
 
 export const AIRenderer = forwardRef<AIRendererHandle, AIRendererProps>(function AIRenderer(props, ref) {
-  const { text, registry, cardStore, sanitize, plugins, actionRuntime, onCardAction, onRender, theme, className, debug, onDebugEvent } = props
+  const { text, registry, cardStore, sanitize, plugins, actionRuntime, onCardAction, nodeRenderers: hostNodeRenderers, onRender, theme, locale, className, debug, onDebugEvent } = props
+  usePluginStyles(plugins)
   const opts: Omit<RendererOptions, "onPatch"> = { registry, sanitize, plugins, debug, onDebugEvent }
   const { renderer, nodes, push, feed, reset: resetRenderer } = useAIRenderer(opts)
   const actionScope = useRef(createActionScope())
@@ -116,8 +133,13 @@ export const AIRenderer = forwardRef<AIRendererHandle, AIRendererProps>(function
     [],
   )
   useImperativeHandle(ref, () => ({ debugSource: "renderer" as const, subscribeDebug: (listener) => renderer.subscribeDebug(listener), push, feed, exportImages, reset }), [renderer, push, feed, exportImages, reset])
-  const nodeRenderers = useMemo(() => collectNodeRenderers(plugins, { debugTarget: renderer }), [plugins, renderer])
-  const ctx: RenderContext = { registry, cardStore, plugins, nodeRenderers, onCardAction: handleCardAction, sanitize, sanitized: true, theme }
+  // Host renderers win: overriding one node type must not mean giving up the plugin that
+  // renders the rest.
+  const nodeRenderers = useMemo(
+    () => ({ ...collectNodeRenderers(plugins, { debugTarget: renderer }), ...hostNodeRenderers }),
+    [plugins, renderer, hostNodeRenderers],
+  )
+  const ctx: RenderContext = { registry, cardStore, plugins, nodeRenderers, onCardAction: handleCardAction, sanitize, sanitized: true, theme, locale }
   return (
     <div className={className} data-aigui-renderer ref={root}>
       {nodes.map((n) => renderNode(n, ctx))}

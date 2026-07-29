@@ -11,7 +11,7 @@ AIGUI turns a raw model stream into a live, structured UI. Text and markdown ren
 - **App-defined cards** — the LLM only fills data into fenced `card:<type>` blocks; your app owns the schema, the render component, and the real API calls behind buttons.
 - **Declarative generated UI** — one bounded `ui` tree composes layout, data, forms, registered actions, local bindings, and host-owned card components without generated code.
 - **Pluggable blocks** — KaTeX math, Mermaid/UML diagrams, molecular structures, interactive maps, ECharts charts, primitive UI, and secure source lists.
-- **Prompt assembly** — `buildSystemPrompt` produces the system-prompt guidance (card specs + each plugin's prompt spec) so the model knows exactly what it may emit.
+- **Prompt assembly** — `buildSystemPrompt` produces the system-prompt guidance (card specs + each plugin's prompt spec) so the model knows exactly what it may emit. Pass `locale` to get those rules in the product's language: `buildSystemPrompt({ registry, plugins, locale: "zh-CN" })`.
 - **Safe by default** — the core sanitizes all HTML output.
 - **Observable when requested** — opt-in debug events and `@ai-gui/devtools` provide a bounded, redacted runtime timeline and deterministic stream simulator.
 - **Revisioned artifacts** — models can create and update persistent text, code, Markdown, and JSON documents without executing generated code.
@@ -183,7 +183,11 @@ import { ArtifactStore, artifact } from "@ai-gui/plugin-artifact"
 import { ui } from "@ai-gui/plugin-ui"
 import { molecule } from "@ai-gui/plugin-molecule"
 import { map } from "@ai-gui/plugin-map"
-import "@ai-gui/plugin-map/style.css"
+
+// Stylesheets that pull in a third-party CSS file must be imported by the host; every other
+// plugin's CSS is injected automatically by the renderer.
+import "@ai-gui/plugin-map/style.css"     // Leaflet
+import "@ai-gui/plugin-katex/style.css"   // KaTeX
 
 // Keep plugin instances stable across component renders.
 const artifactStore = new ArtifactStore()
@@ -192,6 +196,9 @@ const plugins = [ui({ registry, actionRuntime }), katex(), highlight(), mermaid(
 <AIRenderer
   registry={registry}
   plugins={plugins}
+  theme="dark"          // charts and diagrams pick their own colours; tell them the page's
+  locale="zh-CN"        // labels a plugin draws follow the host's language, English otherwise
+  nodeRenderers={mine}  // optional: override individual node types, e.g. your own code block
 />
 ```
 
