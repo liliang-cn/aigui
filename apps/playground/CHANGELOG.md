@@ -1,5 +1,21 @@
 # @ai-gui/playground
 
+## 0.0.30
+
+### Patch Changes
+
+- @ai-gui/core@0.21.1
+- @ai-gui/react@0.21.1
+- @ai-gui/vue@0.21.1
+- @ai-gui/vanilla@0.21.1
+- @ai-gui/plugin-mermaid@0.21.1
+- @ai-gui/plugin-citation@0.21.1
+- @ai-gui/plugin-artifact@0.21.1
+- @ai-gui/plugin-ui@0.21.1
+- @ai-gui/plugin-molecule@0.21.1
+- @ai-gui/plugin-map@0.21.1
+- @ai-gui/devtools@0.21.1
+
 ## 0.0.29
 
 ### Patch Changes

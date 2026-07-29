@@ -1,5 +1,17 @@
 # @ai-gui/plugin-katex
 
+## 0.21.1
+
+### Patch Changes
+
+- Ship the `./style.css` export
+
+  0.21.0 documented `import "@ai-gui/plugin-katex/style.css"` and the file was in
+  the repository, but the `exports` and `files` entries never made it into the
+  published package, so the import failed to resolve.
+
+  - @ai-gui/core@0.21.1
+
 ## 0.21.0
 
 ### Minor Changes
