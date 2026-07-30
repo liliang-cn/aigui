@@ -7,6 +7,7 @@ AIGUI turns a raw model stream into a live, structured UI. Text and markdown ren
 ## Features
 
 - **Streaming-first** — progressive markdown with live repair of incomplete syntax; block types are complete-gated (skeleton → full render).
+- **CJK-correct markdown** — emphasis closes where CommonMark refuses to, so `**严格单调（单射）**的函数` renders bold instead of showing its asterisks. ASCII parsing is unchanged.
 - **Framework-agnostic core** — one headless engine, adapters for React / Vue / vanilla.
 - **App-defined cards** — the LLM only fills data into fenced `card:<type>` blocks; your app owns the schema, the render component, and the real API calls behind buttons.
 - **Declarative generated UI** — one bounded `ui` tree composes layout, data, forms, registered actions, local bindings, and host-owned card components without generated code.

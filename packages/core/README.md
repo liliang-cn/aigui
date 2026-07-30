@@ -113,6 +113,7 @@ const runtime = createActionRuntime({ registry: actions, cardStore })
 - `Renderer` — `push(chunk)`, `feed(AsyncIterable | ReadableStream)`, `reset()`, `setPlugins(plugins)`; constructor `{ registry?, plugins?, sanitize?, rawHtml?, onPatch?(patches, nodes) }`.
   - `setPlugins` swaps the grammar and reparses the buffered source, so plugins deferred behind a dynamic import can arrive mid-answer without the host replaying what it pushed.
   - `rawHtml: false` escapes raw HTML the model wrote instead of interpreting it — a stray `<code>` in prose otherwise swallows the rest of the line.
+  - Emphasis is parsed CJK-friendly, one deliberate deviation from CommonMark. CommonMark will not let `**` close when it follows punctuation and precedes a character that is neither whitespace nor punctuation, so `**严格单调（单射）**的函数` renders its asterisks literally. ASCII is unaffected: `a * b * c` and `snake_case_word` parse exactly as before.
 - `StreamRouter` — demultiplex one stream into named channels: `.channel(name, sink)`, `.on(name, cb)`, `.feed(source)`.
 - `CardRegistry` — `register(def)`, `parse(type, rawJson)`, `getRender(type)`, `toPromptSpec()`, `toJSONSchema()`.
 - `CardStore` — `register`, `get`, `list`, `subscribe`, `apply`, `applyAll`, `delete`, `clear`, `snapshot`, and `restore` for Cards with stable IDs.

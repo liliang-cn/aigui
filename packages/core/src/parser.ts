@@ -1,4 +1,5 @@
 import MarkdownIt from "markdown-it"
+import cjkFriendly from "markdown-it-cjk-friendly"
 import type { CardRegistry } from "./card-registry"
 import { pluginNodeTypes } from "./plugins"
 import type { AIGuiPlugin, ASTNode } from "./types"
@@ -44,6 +45,13 @@ export function createParserWithMetadata(
   options: ParserOptions = {},
 ): (src: string, rawSrc?: string, sourceOffset?: number) => ParseResult {
   const md = new MarkdownIt({ html: options.rawHtml !== false, linkify: true })
+  // CommonMark decides whether `**` may close by what surrounds it: preceded by punctuation, it
+  // must be followed by whitespace or punctuation. A CJK character is neither, so
+  // `**严格单调（单射）**的函数` — bold, a bracket, then more Chinese — leaves its asterisks on
+  // screen. The rule was written for scripts that separate words with spaces and there is no way
+  // for a model to avoid the shape, so the emphasis rules are relaxed for East Asian text. ASCII
+  // is untouched: `a * b * c` and `snake_case_word` parse exactly as before.
+  md.use(cjkFriendly)
   options.configureMd?.(md)
   for (const plugin of options.plugins ?? []) plugin.extendParser?.(md)
   const hasParserExtensions = Boolean(options.configureMd || options.plugins?.some((plugin) => plugin.extendParser))
