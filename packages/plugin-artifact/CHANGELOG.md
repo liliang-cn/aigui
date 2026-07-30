@@ -1,5 +1,12 @@
 # @ai-gui/plugin-artifact
 
+## 0.22.1
+
+### Patch Changes
+
+- Updated dependencies [d2945bc]
+  - @ai-gui/core@0.22.1
+
 ## 0.22.0
 
 ### Patch Changes
