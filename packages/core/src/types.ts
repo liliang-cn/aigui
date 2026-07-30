@@ -134,6 +134,17 @@ export interface RendererOptions extends DebugOptions {
   registry?: CardRegistry
   plugins?: AIGuiPlugin[]
   sanitize?: boolean | import("./sanitizer").SanitizeHtmlOptions
+  /**
+   * Whether raw HTML in the model's output is interpreted as markup. On by default.
+   *
+   * A tag a model wrote inside prose is usually text it is describing, not markup it means: one
+   * stray `<code>` in a sentence about code swallows the rest of the line into an element. Turning
+   * this off escapes every tag the model writes and shows the characters instead, which is what a
+   * product wants when the model is meant to produce markdown and nothing else. It is not a
+   * substitute for `sanitize` — a plugin's own markup and the host's cards are unaffected either
+   * way.
+   */
+  rawHtml?: boolean
   /** Coalesce multiple pushes by scheduling one render callback. */
   scheduler?: (render: () => void) => void
   onPatch?: (patches: Patch[], nodes: ASTNode[]) => void

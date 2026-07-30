@@ -1,6 +1,7 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef } from "react"
-import { collectNodeRenderers, exportRenderedImages, type ActionRuntime, type AIGuiPlugin, type ASTNode, type CardRegistry, type CardStore, type DebugEventListener, type ExportedImage, type ExportImageOptions, type FeedOptions, type FeedSource, type NodeRenderer, type RendererOptions } from "@ai-gui/core"
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, type MouseEvent } from "react"
+import { collectNodeRenderers, exportRenderedImages, type ActionRuntime, type ASTNode, type CardRegistry, type CardStore, type DebugEventListener, type ExportedImage, type ExportImageOptions, type FeedOptions, type FeedSource, type NodeRenderer, type PluginSource, type RendererOptions } from "@ai-gui/core"
 import { usePluginStyles } from "./use-plugin-styles"
+import { usePlugins } from "./use-plugins"
 import { useAIRenderer } from "./use-ai-renderer"
 import { renderNode, type RenderContext } from "./render-node"
 
@@ -32,7 +33,18 @@ export interface AIRendererProps {
   registry?: CardRegistry
   cardStore?: CardStore
   sanitize?: RendererOptions["sanitize"]
-  plugins?: AIGuiPlugin[]
+  rawHtml?: RendererOptions["rawHtml"]
+  /**
+   * The plugins, or a function that loads them.
+   *
+   * Diagrams, maths and charts are the heaviest thing a page carrying them loads, and an answer
+   * that draws none should not pay for them:
+   * `plugins={() => import("@ai-gui/plugin-mermaid").then((m) => [m.mermaid()])}`. Until the import
+   * resolves the answer renders as plain markdown; when it lands the renderer reparses the text it
+   * has buffered, so nothing already streamed is lost. Keep the loader stable — define it outside
+   * the component or wrap it in `useCallback` — as it runs again whenever its identity changes.
+   */
+  plugins?: PluginSource
   actionRuntime?: ActionRuntime
   onCardAction?: RenderContext["onCardAction"]
   /**
@@ -51,6 +63,16 @@ export interface AIRendererProps {
    * for the elements a plugin happened to create.
    */
   onRender?: (nodes: ASTNode[]) => void
+  /**
+   * Called when a click lands inside a rendered block, with the node that block came from.
+   *
+   * What the reader clicked is only meaningful against the model's output: an absolute path in
+   * inline code that should reveal a file, a citation that should open its source, a code block
+   * with a copy button. Without this a host listens on a container of its own and guesses from the
+   * DOM — `closest("code")` and the like — which reads a structure the renderer rebuilds as it
+   * streams and never promised. `event.target` is the exact element clicked inside the block.
+   */
+  onNodeClick?: (node: ASTNode, event: MouseEvent<HTMLElement>) => void
   /**
    * The host's colour scheme, "light" or "dark" by convention, handed to every plugin.
    *
@@ -80,17 +102,26 @@ function createActionScope(): ActionScope {
 }
 
 export const AIRenderer = forwardRef<AIRendererHandle, AIRendererProps>(function AIRenderer(props, ref) {
-  const { text, registry, cardStore, sanitize, plugins, actionRuntime, onCardAction, nodeRenderers: hostNodeRenderers, onRender, theme, locale, className, debug, onDebugEvent } = props
+  const { text, registry, cardStore, sanitize, rawHtml, plugins: pluginSource, actionRuntime, onCardAction, nodeRenderers: hostNodeRenderers, onRender, onNodeClick, theme, locale, className, debug, onDebugEvent } = props
+  const { plugins, error: pluginsError } = usePlugins(pluginSource)
   usePluginStyles(plugins)
-  const opts: Omit<RendererOptions, "onPatch"> = { registry, sanitize, plugins, debug, onDebugEvent }
+  const opts: Omit<RendererOptions, "onPatch"> = { registry, sanitize, rawHtml, plugins, debug, onDebugEvent }
   const { renderer, nodes, push, feed, reset: resetRenderer } = useAIRenderer(opts)
+  useEffect(() => {
+    // A chunk that fails to load — offline, a bad deploy — leaves the answer as plain markdown
+    // rather than taking the page down, but it should not do so silently.
+    if (pluginsError !== undefined) renderer.emitDebug("plugins-load-failed", { error: pluginsError })
+  }, [renderer, pluginsError])
   const actionScope = useRef(createActionScope())
   const rendered = useRef("")
   const root = useRef<HTMLDivElement>(null)
+  // Plugins are deliberately absent: a deferred import landing mid-answer is not a configuration
+  // change, and aborting the card action the reader just triggered because a diagram library
+  // finished loading is never what a host meant.
   useEffect(() => () => {
     actionScope.current.controller.abort()
     actionScope.current = createActionScope()
-  }, [actionRuntime, registry, sanitize, plugins])
+  }, [actionRuntime, registry, sanitize])
   const reset = useCallback(() => {
     actionScope.current.controller.abort()
     actionScope.current = createActionScope()
@@ -142,7 +173,18 @@ export const AIRenderer = forwardRef<AIRendererHandle, AIRendererProps>(function
   const ctx: RenderContext = { registry, cardStore, plugins, nodeRenderers, onCardAction: handleCardAction, sanitize, sanitized: true, theme, locale }
   return (
     <div className={className} data-aigui-renderer ref={root}>
-      {nodes.map((n) => renderNode(n, ctx))}
+      {nodes.map((n) => onNodeClick
+        ? (
+          // `display: contents` so a block that reports its clicks lays out exactly as one that
+          // does not. The wrapper is what makes the mapping from click to node exact — a plugin
+          // owns the markup inside it, and nothing about that markup is promised.
+          <div key={n.key} data-aigui-node={n.key} style={NODE_CLICK_WRAPPER} onClick={(event) => onNodeClick(n, event)}>
+            {renderNode(n, ctx)}
+          </div>
+        )
+        : renderNode(n, ctx))}
     </div>
   )
 })
+
+const NODE_CLICK_WRAPPER = { display: "contents" } as const

@@ -13,10 +13,8 @@ export interface UseAIRendererResult {
 export function useAIRenderer(options: Omit<RendererOptions, "onPatch"> = {}): UseAIRendererResult {
   const [nodes, setNodes] = useState<ASTNode[]>([])
   const active = useRef<object | null>(null)
-  // A session is rebuilt when the plugins change, and rebuilding it throws away everything already
-  // rendered. `plugins={[chart, katex]}` is a new array on every render but the same two plugins,
-  // so keying on the array itself wiped the answer mid-stream and left hosts holding their plugins
-  // in a ref to work around it. What matters is the members.
+  // `plugins={[chart, katex]}` is a new array on every render but the same two plugins. What
+  // matters is the members, so a fresh array holding the same ones must not count as a change.
   const pluginList = useStableList(options.plugins)
 
   const session = useMemo(() => {
@@ -30,7 +28,7 @@ export function useAIRenderer(options: Omit<RendererOptions, "onPatch"> = {}): U
     active.current = token
     return { renderer, token }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options.registry, options.sanitize, pluginList, options.scheduler, options.debug, options.onDebugEvent])
+  }, [options.registry, options.sanitize, options.rawHtml, options.scheduler, options.debug, options.onDebugEvent])
 
   useEffect(() => {
     // Re-arm on every mount, not just when the session is created: StrictMode's development
@@ -45,6 +43,14 @@ export function useAIRenderer(options: Omit<RendererOptions, "onPatch"> = {}): U
       }
     }
   }, [session])
+
+  // Plugins are the one part of the configuration that does not need a new session: the renderer
+  // swaps the grammar and reparses the text it already holds. That is what lets a deferred import
+  // resolve mid-answer without the host holding the stream back or replaying what it pushed. It
+  // runs after the session effect above so the patches land on an armed renderer.
+  useEffect(() => {
+    session.renderer.setPlugins(pluginList)
+  }, [session, pluginList])
 
   const push = useCallback((chunk: string) => {
     if (active.current === session.token) session.renderer.push(chunk)

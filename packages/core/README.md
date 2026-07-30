@@ -110,12 +110,15 @@ const runtime = createActionRuntime({ registry: actions, cardStore })
 
 ## Exports
 
-- `Renderer` — `push(chunk)`, `feed(AsyncIterable | ReadableStream)`, `reset()`; constructor `{ registry?, plugins?, sanitize?, onPatch?(patches, nodes) }`.
+- `Renderer` — `push(chunk)`, `feed(AsyncIterable | ReadableStream)`, `reset()`, `setPlugins(plugins)`; constructor `{ registry?, plugins?, sanitize?, rawHtml?, onPatch?(patches, nodes) }`.
+  - `setPlugins` swaps the grammar and reparses the buffered source, so plugins deferred behind a dynamic import can arrive mid-answer without the host replaying what it pushed.
+  - `rawHtml: false` escapes raw HTML the model wrote instead of interpreting it — a stray `<code>` in prose otherwise swallows the rest of the line.
 - `StreamRouter` — demultiplex one stream into named channels: `.channel(name, sink)`, `.on(name, cb)`, `.feed(source)`.
 - `CardRegistry` — `register(def)`, `parse(type, rawJson)`, `getRender(type)`, `toPromptSpec()`, `toJSONSchema()`.
 - `CardStore` — `register`, `get`, `list`, `subscribe`, `apply`, `applyAll`, `delete`, `clear`, `snapshot`, and `restore` for Cards with stable IDs.
 - `ActionRegistry`, `ActionRuntime`, `createActionRuntime`, `getActionKey`, `getIdleActionState` — validated application-owned action execution and observable lifecycle state.
-- `buildSystemPrompt({ base?, registry?, plugins? })`.
+- `buildSystemPrompt({ base?, registry?, plugins?, locale? })` — collects the card specs and every plugin's `promptSpec`. Pass `plugins`: installing a plugin teaches the renderer to draw a block, not the model to ask for one.
+- `loadPlugins(source)` / `samePlugins(a, b)` — normalize `AIGuiPlugin[] | (() => Promise<AIGuiPlugin[]>)` and compare two lists by members.
 - Utilities: `parsePartialJSON`, `repairMarkdown`, `sanitizeHtml`, `createParser`, `diffAst`, `collectNodeRenderers`.
 - Types: `ASTNode`, `Patch`, `RenderOutput` (`html | element | card | mount`), `CardDef`, `AIGuiPlugin`, `NodeRenderer`, `RendererOptions`, `JSONSchema`.
 

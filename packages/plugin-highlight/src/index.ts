@@ -1,5 +1,5 @@
 import type { Highlighter } from "shiki"
-import type { AIGuiPlugin, ASTNode, NodeRenderContext, RenderOutput } from "@ai-gui/core"
+import { translate, type AIGuiPlugin, type ASTNode, type MessageBundle, type NodeRenderContext, type RenderOutput } from "@ai-gui/core"
 
 /** Options for the Shiki-backed code highlighter plugin. */
 export interface HighlightOptions {
@@ -18,6 +18,23 @@ export interface HighlightOptions {
   lightTheme?: string
   /** Theme for a dark page. Must be among `themes`. */
   darkTheme?: string
+}
+
+const PROMPT: MessageBundle = {
+  en: { spec: "Code: put every code sample in a fenced block tagged with its language, e.g. ```ts. An untagged block is shown unhighlighted." },
+  "zh-CN": { spec: "代码：所有代码都写在标注了语言的围栏代码块里，例如 ```ts。没有标注语言的代码块不会高亮。" },
+}
+
+/**
+ * The model-facing rules for code blocks, in the given locale (English by default).
+ *
+ * This plugin can only colour a block whose language it was told, and a model left to itself opens
+ * a bare ``` about half the time — so the highlighter a host installed does nothing for the answer
+ * it was installed for. The loaded grammars are listed so the model prefers one of them.
+ */
+export function highlightPromptSpec(locale?: string, langs: string[] = []): string {
+  const spec = translate(PROMPT, locale, "spec")
+  return langs.length > 0 ? `${spec} (${langs.join(", ")})` : spec
 }
 
 /** Escape a raw string for safe embedding inside `<pre><code>`. */
@@ -65,5 +82,5 @@ export function highlight(opts: HighlightOptions = {}): AIGuiPlugin {
     }
   }
 
-  return { name: "highlight", nodeRenderers: { code: render } }
+  return { name: "highlight", nodeRenderers: { code: render }, promptSpec: (locale) => highlightPromptSpec(locale, langs) }
 }

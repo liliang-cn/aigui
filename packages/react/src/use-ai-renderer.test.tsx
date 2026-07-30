@@ -48,11 +48,26 @@ describe("useAIRenderer", () => {
     expect(result.current.nodes.some((n) => n.type === "heading")).toBe(true)
   })
   it("clears old content when renderer configuration changes", () => {
-    const plugin: AIGuiPlugin = { name: "one" }
-    const { result, rerender } = renderHook(({ plugins }) => useAIRenderer({ plugins }), { initialProps: { plugins: [] as AIGuiPlugin[] } })
+    const { result, rerender } = renderHook(({ sanitize }) => useAIRenderer({ sanitize }), { initialProps: { sanitize: true as boolean } })
     act(() => result.current.push("old"))
-    rerender({ plugins: [plugin] })
+    rerender({ sanitize: false })
     expect(result.current.nodes).toEqual([])
+  })
+
+  it("keeps the rendered answer when plugins arrive after it, and reparses it", () => {
+    const widget: AIGuiPlugin = {
+      name: "widget",
+      nodeRenderers: { widget: () => ({ kind: "html", html: "drawn" }) },
+    }
+    const { result, rerender } = renderHook(({ plugins }) => useAIRenderer({ plugins }), { initialProps: { plugins: undefined as AIGuiPlugin[] | undefined } })
+    act(() => result.current.push("# Title\n\n```widget\nhello\n```"))
+    expect(result.current.nodes.map((node) => node.type)).toEqual(["heading", "code"])
+
+    // A deferred import resolving mid-answer. The renderer still holds the text, so the host does
+    // not have to remember what it pushed and send it again.
+    rerender({ plugins: [widget] })
+
+    expect(result.current.nodes.map((node) => node.type)).toEqual(["heading", "widget"])
   })
 
   it("keeps the rendered answer when the same plugins arrive in a new array", () => {
@@ -73,13 +88,12 @@ describe("useAIRenderer", () => {
       await new Promise<void>((resolve) => { release = resolve })
       yield " late"
     })()
-    // A real configuration change: the same plugins in a fresh array are not one.
-    const first: AIGuiPlugin[] = []
-    const second: AIGuiPlugin[] = [{ name: "added" }]
-    const { result, rerender } = renderHook(({ plugins }) => useAIRenderer({ plugins }), { initialProps: { plugins: first } })
+    // A real configuration change. Plugins are not one: they swap the grammar in place so the
+    // stream that is running keeps going.
+    const { result, rerender } = renderHook(({ sanitize }) => useAIRenderer({ sanitize }), { initialProps: { sanitize: true as boolean } })
     let feeding!: Promise<void>
     await act(async () => { feeding = result.current.feed(source); await Promise.resolve() })
-    rerender({ plugins: second })
+    rerender({ sanitize: false })
     act(() => result.current.push("new"))
     await act(async () => { release(); await feeding })
     expect(result.current.nodes.map((node) => node.content ?? node.html).join(" ")).toContain("new")
@@ -93,13 +107,12 @@ describe("useAIRenderer", () => {
       cancel,
       releaseLock: vi.fn(),
     }
-    // A real configuration change: the same plugins in a fresh array are not one.
-    const first: AIGuiPlugin[] = []
-    const second: AIGuiPlugin[] = [{ name: "added" }]
-    const { result, rerender } = renderHook(({ plugins }) => useAIRenderer({ plugins }), { initialProps: { plugins: first } })
+    // A real configuration change. A plugin swap is not one: the feed carries on into the new
+    // grammar.
+    const { result, rerender } = renderHook(({ sanitize }) => useAIRenderer({ sanitize }), { initialProps: { sanitize: true as boolean } })
     const feeding = result.current.feed({ getReader: () => reader } as unknown as ReadableStream<string>)
     await act(async () => { await Promise.resolve() })
-    rerender({ plugins: second })
+    rerender({ sanitize: false })
     expect(cancel).toHaveBeenCalledOnce()
     resolveRead({ done: true, value: undefined })
     await feeding

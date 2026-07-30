@@ -7,6 +7,17 @@ export interface ParserOptions {
   registry?: CardRegistry
   plugins?: AIGuiPlugin[]
   configureMd?: (md: MarkdownIt) => void
+  /**
+   * Whether raw HTML in the model's output is interpreted as markup. On by default.
+   *
+   * A model writing *about* code emits tags in prose it never meant as markup — a line like
+   * `return "done\n<code>"` is text, but interpreting it swallows everything after the tag into an
+   * element and the rest of the sentence lands outside it. Sanitizing does not help: `<code>` is a
+   * tag any allowlist keeps. Turn this off and every tag the model writes is escaped and shown as
+   * the characters it wrote, so a model that gets HTML wrong produces an ugly line rather than a
+   * mangled answer.
+   */
+  rawHtml?: boolean
 }
 
 export interface SourceBlock {
@@ -32,7 +43,7 @@ export function createParser(options: ParserOptions = {}): (src: string, rawSrc?
 export function createParserWithMetadata(
   options: ParserOptions = {},
 ): (src: string, rawSrc?: string, sourceOffset?: number) => ParseResult {
-  const md = new MarkdownIt({ html: true, linkify: true })
+  const md = new MarkdownIt({ html: options.rawHtml !== false, linkify: true })
   options.configureMd?.(md)
   for (const plugin of options.plugins ?? []) plugin.extendParser?.(md)
   const hasParserExtensions = Boolean(options.configureMd || options.plugins?.some((plugin) => plugin.extendParser))

@@ -49,7 +49,9 @@ await r.feed(response.body!) // r.push(chunk) / r.reset() / r.destroy()
 
 ## Exports
 
-- `createRenderer(el, { registry?, cardStore?, plugins?, sanitize?, actionRuntime?, onCardAction? })` → `{ push, feed, reset, destroy }`.
+- `createRenderer(el, { registry?, cardStore?, plugins?, sanitize?, rawHtml?, actionRuntime?, onCardAction?, onNodeClick? })` → `{ push, setText, feed, reset, destroy, setTheme, setPlugins, exportImages }`.
+  - `plugins` also takes a loader — `() => import("@ai-gui/plugin-mermaid").then(m => [m.mermaid()])` — and the renderer reparses what it buffered when the chunk lands.
+  - `onNodeClick(node, event)` reports which parsed block a click landed in; `event.target` is the exact element clicked inside it.
 - `VanillaCardInstance` is `{ element, update(data, { state, onAction }), destroy? }`. Its host and `element` stay mounted while AST data, store data, or action state changes.
 - Legacy factories returning an `HTMLElement` remain supported. For cards with an `id` and a `cardStore`, the adapter may rebuild that child element after store updates so it displays current data.
 - Cards with a valid top-level `id` register their initial data in the supplied external `CardStore`. The adapter subscribes but never clears that store; a shared store updates every renderer displaying the same card id.

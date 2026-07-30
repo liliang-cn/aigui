@@ -41,7 +41,17 @@
         "default": "./dist/index.cjs"
       }
     },
-    "./style.css": "./style.css"
+    "./style.css": "./style.css",
+    "./inline-css": {
+      "import": {
+        "types": "./dist/inline-css.d.ts",
+        "default": "./dist/inline-css.js"
+      },
+      "require": {
+        "types": "./dist/inline-css.d.cts",
+        "default": "./dist/inline-css.cjs"
+      }
+    }
   },
   "files": [
     "dist",
@@ -55,7 +65,8 @@
   "scripts": {
     "build": "tsdown",
     "test": "pnpm --dir ../.. exec vitest run --project plugin-katex",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "generate:css": "node scripts/generate-css.mjs"
   },
   "dependencies": {
     "@ai-gui/core": "workspace:*",

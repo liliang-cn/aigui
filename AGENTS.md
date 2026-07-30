@@ -103,6 +103,17 @@ const artifactStore = new ArtifactStore()
 const plugins = [ui({ registry, actionRuntime }), katex(), highlight(), mermaid(), molecule(), map(), chart({ interactive: true }), primitives(), citation(), artifact({ store: artifactStore })]
 ```
 
+Diagrams, maths and charts are the heaviest thing a page carrying them loads. To keep them out of the first load, pass a loader instead of an array — the answer renders as plain markdown until it resolves, and the renderer then reparses the text it has buffered:
+
+```ts
+const loadPlugins = () => Promise.all([
+  import("@ai-gui/plugin-katex"),
+  import("@ai-gui/plugin-mermaid"),
+]).then(([k, m]) => [k.katex(), m.mermaid()])
+```
+
+Every plugin's `css` is injected by the renderer, once per plugin name. The two exceptions are `@ai-gui/plugin-map/style.css` and `@ai-gui/plugin-katex/style.css`, whose CSS points at files by a path only a bundler can resolve; import those yourself.
+
 ### 6. Build the system prompt
 
 Assemble the model's guidance from the **same** registry and plugins, then prepend it to your system prompt. This is what tells the model which cards and blocks exist.

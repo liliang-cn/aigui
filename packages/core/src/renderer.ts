@@ -1,10 +1,11 @@
 import { createParserWithMetadata } from "./parser"
 import type { ParseResult } from "./parser"
 import { diffAst } from "./diff"
+import { samePlugins } from "./plugins"
 import { repairMarkdown } from "./repair-markdown"
 import { sanitizeHtml } from "./sanitizer"
 import type { SanitizeHtmlOptions } from "./sanitizer"
-import type { ASTNode, FeedChunk, FeedOptions, FeedSource, Patch, RendererOptions } from "./types"
+import type { AIGuiPlugin, ASTNode, FeedChunk, FeedOptions, FeedSource, Patch, RendererOptions } from "./types"
 import { DebugEmitter } from "./debug-events"
 import type { DebugEventListener } from "./debug-events"
 
@@ -40,12 +41,46 @@ export class Renderer {
       ? false
       : typeof options.sanitize === "object" ? options.sanitize : {}
     // Register plugin-provided cards into the registry once (not per render).
-    if (options.registry) {
-      for (const plugin of options.plugins ?? []) {
-        for (const card of plugin.cards ?? []) options.registry.register(card)
-      }
+    this.registerPluginCards(options.plugins)
+    this.parse = createParserWithMetadata({ registry: options.registry, plugins: options.plugins, rawHtml: options.rawHtml })
+  }
+
+  /** The plugins currently parsing and rendering this renderer's output. */
+  get plugins(): readonly AIGuiPlugin[] {
+    return this.options.plugins ?? []
+  }
+
+  /**
+   * Swap the plugins in and redraw the answer already buffered.
+   *
+   * A plugin bundle is worth deferring — diagrams, maths and charts together outweigh everything
+   * else a page loads — but the stream does not wait for the import, so whatever arrived meanwhile
+   * was parsed under the plain-markdown grammar. Reparsing the buffer this renderer still holds is
+   * what turns that text into diagrams, which is why a host does not have to remember what it
+   * pushed and replay it once the chunk lands.
+   *
+   * Passing the same plugins again is a no-op, so a host may call this on every render.
+   */
+  setPlugins(plugins: AIGuiPlugin[] | undefined): void {
+    if (samePlugins(this.options.plugins, plugins)) return
+    this.options = { ...this.options, plugins }
+    this.registerPluginCards(plugins)
+    this.parse = createParserWithMetadata({ registry: this.options.registry, plugins, rawHtml: this.options.rawHtml })
+    // The cached blocks came from the previous grammar, so the stable-prefix shortcut would hand
+    // the new parser a tail it cannot align with what is already parsed.
+    this.parsed = undefined
+    this.renderScheduled = false
+    this.scheduleGeneration++
+    if (this.debug.active) this.debug.emit("plugins-changed", { plugins: (plugins ?? []).map((plugin) => plugin.name) })
+    this.render()
+  }
+
+  private registerPluginCards(plugins: AIGuiPlugin[] | undefined): void {
+    const registry = this.options.registry
+    if (!registry) return
+    for (const plugin of plugins ?? []) {
+      for (const card of plugin.cards ?? []) registry.register(card)
     }
-    this.parse = createParserWithMetadata({ registry: options.registry, plugins: options.plugins })
   }
 
   get debugEnabled(): boolean {

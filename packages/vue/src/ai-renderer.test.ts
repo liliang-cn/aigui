@@ -484,16 +484,18 @@ describe("AIRenderer", () => {
     expect(nextRun).toHaveBeenCalledOnce()
   })
   it("recreates and clears the renderer when configuration changes", async () => {
-    const w = mount(AIRenderer, { props: { plugins: [] } })
+    const w = mount(AIRenderer, { props: { sanitize: true } })
     ;(w.vm as any).push("old")
     await nextTick()
-    await w.setProps({ plugins: [] })
+    await w.setProps({ sanitize: false })
     expect(w.text()).toBe("")
     ;(w.vm as any).push("new")
     await nextTick()
     expect(w.text()).toContain("new")
   })
-  it.each(["registry", "sanitize", "plugins"] as const)("resets the action scope when %s changes", async (property) => {
+  // Plugins are deliberately absent: a deferred import landing mid-answer is not a configuration
+  // change, and it must not abort the card action the reader just triggered.
+  it.each(["registry", "sanitize"] as const)("resets the action scope when %s changes", async (property) => {
     let signal!: AbortSignal
     const actions = new ActionRegistry()
     actions.register({ type: "vote", run: (_, context) => {
@@ -512,11 +514,7 @@ describe("AIRenderer", () => {
     await nextTick()
     await w.find("button").trigger("click")
 
-    const next = property === "registry"
-      ? createPollRegistry()
-      : property === "sanitize"
-        ? false
-        : []
+    const next = property === "registry" ? createPollRegistry() : false
     await w.setProps({ [property]: next })
 
     expect(signal.aborted).toBe(true)

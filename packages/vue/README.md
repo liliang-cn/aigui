@@ -41,7 +41,9 @@ async function ask() {
 
 ## Exports
 
-- `<AIRenderer :registry :card-store :plugins :sanitize :action-runtime @card-action />` — a render-function component; imperative `push` / `feed` / `reset` via a template ref (exposed).
+- `<AIRenderer :registry :card-store :plugins :sanitize :raw-html :action-runtime @card-action @node-click />` — a render-function component; imperative `push` / `feed` / `reset` / `exportImages` via a template ref (exposed).
+  - `:plugins` also takes a loader — `:plugins="() => import('@ai-gui/plugin-mermaid').then(m => [m.mermaid()])"` — and the renderer reparses what it buffered when the chunk lands.
+  - `@node-click="(node, event) => …"` reports which parsed block a click landed in; `event.target` is the exact element clicked inside it.
 - `useAIRenderer()` — composable returning `{ nodes, push, feed, reset }`.
 - `useActionState(runtime, key)` — reactive action lifecycle state.
 

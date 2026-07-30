@@ -1,5 +1,5 @@
 import katexLib from "katex"
-import type { AIGuiPlugin } from "@ai-gui/core"
+import { translate, type AIGuiPlugin, type MessageBundle } from "@ai-gui/core"
 
 /**
  * Render a TeX expression to a KaTeX HTML string.
@@ -173,6 +173,38 @@ function mathBlock(state: BlockState, start: number, end: number, silent: boolea
  */
 export const katexCss = '@import "katex/dist/katex.min.css";'
 
+const PROMPT: MessageBundle = {
+  en: {
+    spec: [
+      "Maths: write it as TeX — `$...$` inline, `$$...$$` on its own lines for a displayed equation.",
+      "Use maths for every formula, variable and unit rather than describing it in words or plain text: `$v = d/t$`, not `v = d/t`.",
+      "A literal dollar sign in prose must be escaped as `\\$`. Never emit HTML, MathML or images for maths.",
+    ].join("\n"),
+    chemistry: "Chemistry: use mhchem inside maths — `$\\ce{2H2 + O2 -> 2H2O}$` for reactions and `$\\pu{22.4 L}$` for quantities with units.",
+  },
+  "zh-CN": {
+    spec: [
+      "数学公式：用 TeX 书写 —— 行内写 `$...$`，独立成行的公式写 `$$...$$`。",
+      "所有公式、变量和单位都用数学公式表示，不要用文字或纯文本描述：写 `$v = d/t$`，不要写 v = d/t。",
+      "正文里表示货币的美元符号必须转义为 `\\$`。禁止用 HTML、MathML 或图片表示数学内容。",
+    ].join("\n"),
+    chemistry: "化学：在数学公式内使用 mhchem —— 反应式写 `$\\ce{2H2 + O2 -> 2H2O}$`，带单位的量写 `$\\pu{22.4 L}$`。",
+  },
+}
+
+/**
+ * The model-facing rules for maths, in the given locale (English by default).
+ *
+ * Without these the model has no reason to write TeX at all: it answers a physics question in plain
+ * text, and a product that installed this plugin renders nothing it could not have rendered
+ * without it. `chemistry` adds the mhchem notation, which is only worth asking for when the plugin
+ * was built with that extension loaded.
+ */
+export function katexPromptSpec(locale?: string, options: { chemistry?: boolean } = {}): string {
+  const spec = translate(PROMPT, locale, "spec")
+  return options.chemistry ? `${spec}\n${translate(PROMPT, locale, "chemistry")}` : spec
+}
+
 /**
  * KaTeX plugin: renders inline `$...$` and block `$$...$$` math to HTML during
  * markdown parsing, flowing through the core Renderer's sanitized `html` pipeline.
@@ -186,6 +218,16 @@ export interface KatexOptions {
    * mhchem is a chunk of grammar that a maths or physics lesson never touches.
    */
   chemistry?: boolean
+  /**
+   * The stylesheet this plugin declares, overriding the default `@import` hint.
+   *
+   * KaTeX's CSS points at `fonts/…` relative to its own file, so the default value cannot be
+   * injected into a `<style>` and the renderers skip it — with a bundler, `import
+   * "@ai-gui/plugin-katex/style.css"` is the answer. A host with no build step passes the
+   * stylesheet itself: `css: katexInlineCss({ fontBase: "/assets/katex/fonts/" })` from
+   * `@ai-gui/plugin-katex/inline-css`.
+   */
+  css?: string
 }
 
 export function katex(options: KatexOptions = {}): AIGuiPlugin {
@@ -198,7 +240,8 @@ export function katex(options: KatexOptions = {}): AIGuiPlugin {
   }
   return {
     name: "katex",
-    css: katexCss,
+    css: options.css ?? katexCss,
+    promptSpec: (locale) => katexPromptSpec(locale, { chemistry: options.chemistry }),
     extendParser: (md) => {
       md.inline.ruler.after("escape", "math_inline", mathInline as never)
       md.block.ruler.after("blockquote", "math_block", mathBlock as never, {

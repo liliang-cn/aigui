@@ -1,3 +1,3 @@
 import { defineConfig } from "tsdown"
 
-export default defineConfig({ entry: ["src/index.ts"], format: ["esm", "cjs"], dts: true, clean: true, external: ["katex"] })
+export default defineConfig({ entry: ["src/index.ts", "src/inline-css.ts"], format: ["esm", "cjs"], dts: true, clean: true, external: ["katex"] })

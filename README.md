@@ -12,7 +12,9 @@ AIGUI turns a raw model stream into a live, structured UI. Text and markdown ren
 - **Declarative generated UI** — one bounded `ui` tree composes layout, data, forms, registered actions, local bindings, and host-owned card components without generated code.
 - **Pluggable blocks** — KaTeX math, Mermaid/UML diagrams, molecular structures, interactive maps, ECharts charts, primitive UI, and secure source lists.
 - **Prompt assembly** — `buildSystemPrompt` produces the system-prompt guidance (card specs + each plugin's prompt spec) so the model knows exactly what it may emit. Pass `locale` to get those rules in the product's language: `buildSystemPrompt({ registry, plugins, locale: "zh-CN" })`.
-- **Safe by default** — the core sanitizes all HTML output.
+- **Deferrable plugins** — pass a loader instead of an array (`plugins={() => import("@ai-gui/plugin-mermaid").then(m => [m.mermaid()])}`); the answer streams as plain markdown and the renderer reparses what it buffered once the chunk lands, with no replay in the host.
+- **Clicks mapped to the model's output** — `onNodeClick(node, event)` reports which parsed block a click landed in, so a path in inline code or a citation can be actionable without reading the DOM.
+- **Safe by default** — the core sanitizes all HTML output, and `rawHtml={false}` escapes the tags a model writes in prose instead of interpreting them.
 - **Observable when requested** — opt-in debug events and `@ai-gui/devtools` provide a bounded, redacted runtime timeline and deterministic stream simulator.
 - **Revisioned artifacts** — models can create and update persistent text, code, Markdown, and JSON documents without executing generated code.
 - **Tiny surface, well tested** — 150+ tests, built with [tsdown](https://github.com/rolldown/tsdown).
@@ -74,7 +76,8 @@ function Chat() {
   const ref = useRef<React.ComponentRef<typeof AIRenderer>>(null)
 
   async function ask(prompt: string) {
-    const system = buildSystemPrompt({ registry })
+    // Pass `plugins` too, or the model is never told it may draw a diagram or write TeX.
+    const system = buildSystemPrompt({ registry, plugins })
     const res = await fetch("/api/chat", {
       method: "POST",
       body: JSON.stringify({ system, prompt }),
@@ -112,7 +115,8 @@ const registry = new CardRegistry()
 const r = ref<InstanceType<typeof AIRenderer>>()
 
 async function ask(prompt: string) {
-  const res = await fetch("/api/chat", { method: "POST", body: JSON.stringify({ system: buildSystemPrompt({ registry }), prompt }) })
+  // Pass `plugins` too, or the model is never told it may draw a diagram or write TeX.
+  const res = await fetch("/api/chat", { method: "POST", body: JSON.stringify({ system: buildSystemPrompt({ registry, plugins }), prompt }) })
   r.value?.reset()
   await r.value?.feed(res.body!)
 }
@@ -148,7 +152,8 @@ const r = createRenderer(document.getElementById("out")!, {
   onCardAction: ({ type, params, cardType }) => {/* app handles it */},
 })
 
-const res = await fetch("/api/chat", { method: "POST", body: JSON.stringify({ system: buildSystemPrompt({ registry }) }) })
+// Pass `plugins` too, or the model is never told it may draw a diagram or write TeX.
+const res = await fetch("/api/chat", { method: "POST", body: JSON.stringify({ system: buildSystemPrompt({ registry, plugins }) }) })
 await r.feed(res.body!)
 // r.push(chunk) / r.reset() / r.destroy() also available
 ```
@@ -185,7 +190,9 @@ import { molecule } from "@ai-gui/plugin-molecule"
 import { map } from "@ai-gui/plugin-map"
 
 // Stylesheets that pull in a third-party CSS file must be imported by the host; every other
-// plugin's CSS is injected automatically by the renderer.
+// plugin's CSS is injected automatically by the renderer (once per plugin name, `plugin.css`).
+// These two are the exceptions because their CSS points at files — fonts, marker images — by a
+// path only a bundler can resolve.
 import "@ai-gui/plugin-map/style.css"     // Leaflet
 import "@ai-gui/plugin-katex/style.css"   // KaTeX
 
@@ -201,6 +208,42 @@ const plugins = [ui({ registry, actionRuntime }), katex(), highlight(), mermaid(
   nodeRenderers={mine}  // optional: override individual node types, e.g. your own code block
 />
 ```
+
+### Deferring the plugin bundle
+
+Diagrams, maths and charts are the heaviest thing a page carrying them loads, and an answer that draws none should not pay for them. Pass a loader instead of an array and the renderer handles the rest: the answer renders as plain markdown until the import resolves, and then the buffered text is reparsed under the new grammar.
+
+```tsx
+// Stable across renders — define it outside the component or wrap it in useCallback.
+const loadPlugins = () => Promise.all([
+  import("@ai-gui/plugin-katex"),
+  import("@ai-gui/plugin-mermaid"),
+]).then(([k, m]) => [k.katex(), m.mermaid()])
+
+<AIRenderer text={answer} plugins={loadPlugins} />
+```
+
+The host does not replay what it already pushed: the renderer keeps the source text and reparses it, so a diagram half-written when the chunk lands still renders. A failed import (offline, a bad deploy) leaves the answer as plain markdown and emits a `plugins-load-failed` debug event. The same shape works in every adapter — `createRenderer(el, { plugins: loadPlugins })`, `:plugins="loadPlugins"` — and each has `setPlugins` / a reactive prop for changing them later.
+
+### Reacting to clicks on the model's output
+
+`onNodeClick` reports the parsed block a click landed in, which is what makes an absolute path in inline code, a citation, or a code block's copy button possible without reading a DOM shape the renderer rebuilds as it streams.
+
+```tsx
+<AIRenderer
+  text={answer}
+  onNodeClick={(node, event) => {
+    const path = (event.target as HTMLElement).closest("code")?.textContent
+    if (node.type === "paragraph" && path?.startsWith("/")) revealInFinder(path)
+  }}
+/>
+```
+
+`node` is the AST node — its `type`, `content`, and `key` — while `event.target` is the exact element clicked inside it.
+
+### Raw HTML the model did not mean as markup
+
+Raw HTML in model output is interpreted by default, which is right for a model that is asked to write it and wrong for one that is not: a line like `return "done\n<code>"` is text the model is describing, and interpreting it swallows the rest of the sentence into an element. Sanitizing does not help, since `<code>` is a tag every allowlist keeps. Pass `rawHtml={false}` (`rawHtml: false` in the core and vanilla) and every tag the model writes is escaped and shown as the characters it wrote. Cards, `ui` trees, and a plugin's own markup are unaffected.
 
 By default `chart()` renders a static SSR SVG; `chart({ interactive: true })` renders a live ECharts instance (tooltip / dataZoom / click); `chart({ gl: true })` renders 3D charts via `echarts-gl` (WebGL, live-only). Charts are complete-gated: skeleton while streaming, full render when the option JSON is complete.
 
@@ -338,6 +381,8 @@ The timeline captures stream/feed lifecycle, repaired Markdown, AST snapshots an
 ## How the LLM should generate
 
 Don't hand-write generation rules — call `buildSystemPrompt({ base, registry, plugins })` and prepend the result to your system prompt. It assembles the card specs (from the registry) and each plugin's prompt spec, so the model is told exactly which fenced blocks it may emit. Everything else it writes is plain markdown.
+
+**Pass `plugins`, not just `registry`.** Installing `mermaid()` teaches the renderer to draw a diagram; it does not teach the model that it may ask for one. A product that omits `plugins` here ships a chart, maths and diagram stack the model never uses. When the plugins are deferred behind a loader, build the prompt from the same list the loader resolves to — the prompt is assembled on the server or before the request, where the import cost does not apply.
 
 The fence conventions it may use (only for **registered / enabled** block types):
 

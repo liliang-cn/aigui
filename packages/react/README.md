@@ -53,7 +53,9 @@ function Chat() {
 
 ## Exports
 
-- `<AIRenderer ref registry cardStore plugins sanitize actionRuntime onCardAction />` — imperative `ref.current.push/feed/reset`.
+- `<AIRenderer ref registry cardStore plugins sanitize rawHtml actionRuntime onCardAction onNodeClick onRender theme locale />` — imperative `ref.current.push/feed/reset/exportImages`.
+  - `plugins` also takes a loader — `plugins={() => import("@ai-gui/plugin-mermaid").then(m => [m.mermaid()])}` — and the renderer reparses what it buffered when the chunk lands. Keep the loader stable across renders. `usePlugins(source)` is the hook form.
+  - `onNodeClick(node, event)` reports which parsed block a click landed in; `event.target` is the exact element clicked inside it.
 - `useAIRenderer(options)` → `{ nodes, push, feed, reset }` — the hook form when you want to render `nodes` yourself.
 - `useActionState(runtime, key)` — subscribe to one action's `idle | pending | success | error | cancelled` state.
 

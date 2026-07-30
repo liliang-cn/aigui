@@ -522,7 +522,6 @@ describe("AIRenderer", () => {
   it.each([
     ["registry", { registry: setupActionCard() }, { registry: setupActionCard() }],
     ["sanitize", { sanitize: true }, { sanitize: false }],
-    ["plugins", { plugins: [] as AIGuiPlugin[] }, { plugins: [{ name: "added" }] as AIGuiPlugin[] }],
   ] as const)("changing %s clears the AST and cancels the old action scope", async (_name, initial, next) => {
     const registry = setupActionCard()
     const actions = new ActionRegistry()

@@ -6,6 +6,43 @@ export interface CollectNodeRendererOptions extends DebugOptions {
   debugTarget?: DebugInstrumentationTarget
 }
 
+/** A function that produces the plugins, loading them first if they are not in the bundle yet. */
+export type PluginsLoader = () => AIGuiPlugin[] | Promise<AIGuiPlugin[]>
+
+/**
+ * Either the plugins themselves or a function that loads them.
+ *
+ * Diagrams, maths and charts are the heaviest thing a page carrying them loads, and an answer that
+ * never draws one should not pay for them. A loader lets the host defer the import: the renderer
+ * shows plain markdown until it resolves and reparses what has arrived by then, so the host does
+ * not have to hold the stream or replay it.
+ */
+export type PluginSource = AIGuiPlugin[] | PluginsLoader
+
+/**
+ * Resolve a plugin source to what the caller can act on now: the array itself, or a promise of it.
+ *
+ * The array form must stay synchronous. Deferring it by a microtask would render the first chunk
+ * of every answer under the plain-markdown grammar and then redraw it, which is a visible flash
+ * for a host that had its plugins all along.
+ */
+export function loadPlugins(source?: PluginSource): AIGuiPlugin[] | Promise<AIGuiPlugin[]> {
+  if (!source) return []
+  return Array.isArray(source) ? source : source()
+}
+
+/**
+ * Whether two lists hold the same plugins in the same order.
+ *
+ * `plugins={[chart, katex]}` is a new array on every render and the same two plugins every time.
+ * What matters is the members, not the array.
+ */
+export function samePlugins(a?: AIGuiPlugin[], b?: AIGuiPlugin[]): boolean {
+  if (a === b) return true
+  if (!a || !b || a.length !== b.length) return false
+  return a.every((plugin, index) => plugin === b[index])
+}
+
 /** Merge every plugin's `nodeRenderers` into a single map (later plugins win). */
 export function collectNodeRenderers(plugins: AIGuiPlugin[] = [], debugOptions: CollectNodeRendererOptions = {}): Record<string, NodeRenderer> {
   const map: Record<string, NodeRenderer> = {}

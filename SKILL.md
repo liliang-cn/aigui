@@ -19,9 +19,10 @@ AIGUI is a framework-agnostic TypeScript SDK that renders **streaming** LLM outp
    - React render: component gets `{ data, onAction }`. Vue: props `data`, emits `action`. Vanilla: `(data, { onAction }) => HTMLElement`.
 3. **Mount the renderer**: `<AIRenderer ref registry plugins onCardAction />` (React/Vue) or `createRenderer(el, { registry, plugins, onCardAction })` (vanilla). Imperative API: `push` / `feed` / `reset` (+ `destroy` in vanilla).
 4. **Wire `onCardAction({ type, params, cardType })`** to your real APIs. Buttons are declarative — the app makes the request, never the LLM.
-5. **Add plugins**: create a stable array outside render, then pass `plugins={plugins}`.
-6. **Build the system prompt** from the same registry + plugins: `buildSystemPrompt({ base, registry, plugins })`; prepend it to your system prompt. Backend just streams text.
-7. **Feed the stream**: `reset()` then `feed(response.body)` — accepts a `ReadableStream` or `AsyncIterable<string>`. Renders progressively.
+5. **Add plugins**: create a stable array outside render, then pass `plugins={plugins}` — or a stable loader, `plugins={() => import("@ai-gui/plugin-mermaid").then(m => [m.mermaid()])}`, to keep the heavy bundle out of the first load. The renderer reparses what it buffered when the import lands, so no replay is needed. Plugin CSS is injected automatically; `plugin-map/style.css` and `plugin-katex/style.css` must be imported by the host.
+6. **Build the system prompt** from the same registry + plugins: `buildSystemPrompt({ base, registry, plugins })`; prepend it to your system prompt. Passing `plugins` is what tells the model it may draw a diagram or write TeX — installing a plugin only teaches the renderer to draw one. Backend just streams text.
+7. **Optional host hooks**: `onNodeClick(node, event)` maps a click to the parsed block it landed in; `rawHtml={false}` escapes raw HTML the model wrote instead of interpreting it.
+8. **Feed the stream**: `reset()` then `feed(response.body)` — accepts a `ReadableStream` or `AsyncIterable<string>`. Renders progressively.
 
 ## Generation fence cheat-sheet
 
