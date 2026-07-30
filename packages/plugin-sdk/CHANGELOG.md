@@ -1,5 +1,12 @@
 # @ai-gui/plugin-sdk
 
+## 0.22.0
+
+### Patch Changes
+
+- Updated dependencies [7633f85]
+  - @ai-gui/core@0.22.0
+
 ## 0.21.1
 
 ### Patch Changes

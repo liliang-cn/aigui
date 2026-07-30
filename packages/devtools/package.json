@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/devtools",
-  "version": "0.21.1",
+  "version": "0.22.0",
   "description": "Framework-agnostic runtime timeline and stream simulator for AIGUI.",
   "keywords": [
     "aigui",
