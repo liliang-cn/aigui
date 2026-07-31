@@ -1,5 +1,12 @@
 # @ai-gui/plugin-flashcard
 
+## 0.23.0
+
+### Patch Changes
+
+- Updated dependencies [5e15f72]
+  - @ai-gui/core@0.23.0
+
 ## 0.22.1
 
 ### Patch Changes
