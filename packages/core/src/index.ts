@@ -70,7 +70,7 @@ export type {
 } from "./actions"
 export { createParser, createParserWithMetadata } from "./parser"
 export type { ParserOptions, ParseResult, SourceBlock } from "./parser"
-export { collectNodeRenderers, loadPlugins, pluginNodeTypes, samePlugins } from "./plugins"
+export { assertPlugins, collectNodeRenderers, loadPlugins, pluginNodeTypes, samePlugins } from "./plugins"
 export type { PluginSource, PluginsLoader } from "./plugins"
 export { baseCss, collectPluginStyles, injectPluginStyles } from "./plugin-styles"
 export type { PluginStyle } from "./plugin-styles"

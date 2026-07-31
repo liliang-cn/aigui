@@ -55,3 +55,13 @@ describe("the generated stylesheet", () => {
     expect(KATEX_CSS_TEMPLATE).toBe(css.replace(/url\(fonts\//g, `url(${FONT_PLACEHOLDER}`))
   })
 })
+
+describe("katexCssImport", () => {
+  it("is the @import statement, and the old name still points at it", async () => {
+    const { katexCss, katexCssImport } = await import("./index")
+    expect(katexCssImport).toBe('@import "katex/dist/katex.min.css";')
+    // Renamed, not removed: `katexCss` read as "here is KaTeX's CSS", which is what led hosts to
+    // inject it into a <style> and get 404s and overlapping spans.
+    expect(katexCss).toBe(katexCssImport)
+  })
+})

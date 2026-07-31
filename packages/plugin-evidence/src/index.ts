@@ -60,6 +60,9 @@ export const evidenceCss = [
  * Provenance is only worth showing when the host wrote it. A model that can invent a number can
  * invent the query said to have produced it, so the prompt tells the model to leave this fence
  * alone; the host appends it from what it actually executed.
+ * You rarely want this directly: `buildSystemPrompt({ registry, plugins, locale })` from
+ * `@ai-gui/core` collects the card specs and every enabled plugin's spec in one call, in the
+ * product's language. Reach for this only to inspect or override one plugin's rules.
  */
 export function evidencePromptSpec(): string {
   return [

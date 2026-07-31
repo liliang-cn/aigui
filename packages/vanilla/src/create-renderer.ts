@@ -1,4 +1,4 @@
-import { collectNodeRenderers, exportRenderedImages, injectPluginStyles, loadPlugins, Renderer, samePlugins, type ActionRuntime, type AIGuiPlugin, type ASTNode, type CardStore, type DebugEventListener, type ExportedImage, type ExportImageOptions, type FeedOptions, type FeedSource, type NodeRenderer, type Patch, type PluginSource, type RendererOptions } from "@ai-gui/core"
+import { assertPlugins, collectNodeRenderers, exportRenderedImages, injectPluginStyles, loadPlugins, Renderer, samePlugins, type ActionRuntime, type AIGuiPlugin, type ASTNode, type CardStore, type DebugEventListener, type ExportedImage, type ExportImageOptions, type FeedOptions, type FeedSource, type NodeRenderer, type Patch, type PluginSource, type RendererOptions } from "@ai-gui/core"
 import { type DomRenderContext } from "./render-node-dom"
 import { createReconcileState, disposeEl, reconcile } from "./reconcile"
 
@@ -113,6 +113,9 @@ export function createRenderer(el: HTMLElement, options: CreateRendererOptions =
   // Run cleanup for every mounted widget before tearing down tracked elements.
   const disposeAll = () => { for (const entry of state.els.values()) disposeEl(entry.el) }
   const setPlugins = (plugins: AIGuiPlugin[] | undefined) => {
+    // Checked before anything is mutated: the renderer would reject these too, but only after the
+    // context and the DOM below had already been torn down for a swap that cannot happen.
+    assertPlugins(plugins)
     if (destroyed || samePlugins(ctx.plugins, plugins)) return
     ctx.plugins = plugins
     ctx.nodeRenderers = mergeNodeRenderers(plugins)

@@ -1,7 +1,7 @@
 import { createParserWithMetadata } from "./parser"
 import type { ParseResult } from "./parser"
 import { diffAst } from "./diff"
-import { samePlugins } from "./plugins"
+import { assertPlugins, samePlugins } from "./plugins"
 import { repairMarkdown } from "./repair-markdown"
 import { sanitizeHtml } from "./sanitizer"
 import type { SanitizeHtmlOptions } from "./sanitizer"
@@ -35,6 +35,9 @@ export class Renderer {
 
   constructor(options: RendererOptions = {}) {
     this.options = options
+    // Before anything else: a factory passed instead of a plugin used to be accepted and silently
+    // do nothing, and that is the mistake an integration is most likely to make.
+    assertPlugins(options.plugins)
     this.debug = new DebugEmitter(this.debugSource, options)
     // Sanitization is on by default; only an explicit `false` disables it.
     this.sanitize = options.sanitize === false
@@ -62,6 +65,7 @@ export class Renderer {
    * Passing the same plugins again is a no-op, so a host may call this on every render.
    */
   setPlugins(plugins: AIGuiPlugin[] | undefined): void {
+    assertPlugins(plugins)
     if (samePlugins(this.options.plugins, plugins)) return
     this.options = { ...this.options, plugins }
     this.registerPluginCards(plugins)

@@ -47,7 +47,13 @@ const PROMPT: MessageBundle = {
   },
 }
 
-/** The model-facing rules for these blocks, in the given locale (English by default). */
+/**
+ * The model-facing rules for these blocks, in the given locale (English by default).
+ *
+ * You rarely want this directly: `buildSystemPrompt({ registry, plugins, locale })` from
+ * `@ai-gui/core` collects the card specs and every enabled plugin's spec in one call, in the
+ * product's language. Reach for this only to inspect or override one plugin's rules.
+ */
 export function primitivesPromptSpec(locale?: string): string {
   return translate(PROMPT, locale, "spec")
 }

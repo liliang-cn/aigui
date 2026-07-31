@@ -143,3 +143,29 @@ describe("VanillaRenderer.setPlugins", () => {
     r.destroy()
   })
 })
+
+describe("a factory passed instead of a plugin", () => {
+  function widgetFactory() { return widget }
+
+  it("throws instead of rendering an answer with the plugin's blocks missing", () => {
+    const el = document.createElement("div")
+    expect(() => createRenderer(el, { plugins: [widgetFactory] as never })).toThrow("Call it: widgetFactory()")
+  })
+  it("throws from setPlugins without tearing down what is on screen", () => {
+    const el = document.createElement("div")
+    const r = createRenderer(el, { plugins: [widget] })
+    r.setText("```widget\nhello\n```")
+    expect(() => r.setPlugins([widgetFactory] as never)).toThrow("Call it: widgetFactory()")
+    expect(el.querySelector("[data-widget]")?.textContent).toBe("hello")
+    r.destroy()
+  })
+  it("rejects what a loader resolved to, on the same path the loader uses", async () => {
+    const el = document.createElement("div")
+    const resolved = [widgetFactory] as never
+    const r = createRenderer(el, { plugins: () => Promise.resolve(resolved) })
+    // The loader's continuation is `setPlugins`, so a resolved list of factories fails there — as a
+    // rejected promise rather than synchronously, since it arrives a microtask later.
+    await expect(Promise.resolve(resolved).then((p) => r.setPlugins(p))).rejects.toThrow("Call it: widgetFactory()")
+    r.destroy()
+  })
+})

@@ -291,6 +291,11 @@ export function serializeArtifactUpdate(command: ArtifactUpdateCommand): string 
   return `\`\`\`artifact-update\n${JSON.stringify(parsed.data, null, 2)}\n\`\`\``
 }
 
+/**
+ * You rarely want this directly: `buildSystemPrompt({ registry, plugins, locale })` from
+ * `@ai-gui/core` collects the card specs and every enabled plugin's spec in one call, in the
+ * product's language. Reach for this only to inspect or override one plugin's rules.
+ */
 export function artifactPromptSpec(store?: ArtifactStore): string {
   const records = store?.list() ?? []
   const current = records.length === 0

@@ -197,6 +197,8 @@ import { map } from "@ai-gui/plugin-map"
 import "@ai-gui/plugin-map/style.css"     // Leaflet
 import "@ai-gui/plugin-katex/style.css"   // KaTeX
 
+// Call the factories. `plugins={[katex]}` is the easy mistake and it used to be silent — a
+// function has a `name` of its own, so the renderer took it and did nothing. It now throws.
 // Keep plugin instances stable across component renders.
 const artifactStore = new ArtifactStore()
 const plugins = [ui({ registry, actionRuntime }), katex(), highlight(), mermaid(), molecule(), map(), chart({ interactive: true }), primitives(), citation(), artifact({ store: artifactStore })]

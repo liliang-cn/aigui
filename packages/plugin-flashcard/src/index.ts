@@ -363,6 +363,11 @@ function mountDeck(
   }
 }
 
+/**
+ * You rarely want this directly: `buildSystemPrompt({ registry, plugins, locale })` from
+ * `@ai-gui/core` collects the card specs and every enabled plugin's spec in one call, in the
+ * product's language. Reach for this only to inspect or override one plugin's rules.
+ */
 export function flashcardPromptSpec(): string {
   return [
     "Flashcards (fenced): ```flashcards <safe deck JSON>```.",

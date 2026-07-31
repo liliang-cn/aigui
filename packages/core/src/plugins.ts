@@ -43,8 +43,39 @@ export function samePlugins(a?: AIGuiPlugin[], b?: AIGuiPlugin[]): boolean {
   return a.every((plugin, index) => plugin === b[index])
 }
 
+/**
+ * Reject anything in the list that is not a plugin, naming what to do about it.
+ *
+ * Every plugin package exports a factory, so `plugins: [katex]` instead of `plugins: [katex()]` is
+ * the easiest mistake to make — and it used to be the quietest. A function has a `name` of its
+ * own, `"katex"`, so the renderer accepted it, found no `extendParser` and no `nodeRenderers`, and
+ * did nothing: no error, no warning, markdown still rendering, only the maths and the diagrams
+ * missing. A product can ship like that and nobody notices until someone asks why an equation is
+ * plain text. Misconfiguration should be loud, so this throws.
+ */
+export function assertPlugins(plugins: readonly unknown[] | undefined, label = "plugins"): void {
+  if (!plugins) return
+  plugins.forEach((plugin, index) => {
+    const at = `${label}[${index}]`
+    if (typeof plugin === "function") {
+      // `Function.prototype.name` is what makes this diagnosable: the factory is called katex, so
+      // the fix can be spelled out exactly rather than described.
+      const called = plugin.name ? `${plugin.name}()` : "the factory"
+      throw new TypeError(`${at} is a factory function, not a plugin. Call it: ${called}`)
+    }
+    if (plugin === null || typeof plugin !== "object") {
+      throw new TypeError(`${at} is ${plugin === null ? "null" : typeof plugin}, not a plugin object`)
+    }
+    const { name } = plugin as { name?: unknown }
+    if (typeof name !== "string" || name.length === 0) {
+      throw new TypeError(`${at} has no \`name\`. A plugin needs one: its stylesheet and its debug events are keyed by it`)
+    }
+  })
+}
+
 /** Merge every plugin's `nodeRenderers` into a single map (later plugins win). */
 export function collectNodeRenderers(plugins: AIGuiPlugin[] = [], debugOptions: CollectNodeRendererOptions = {}): Record<string, NodeRenderer> {
+  assertPlugins(plugins)
   const map: Record<string, NodeRenderer> = {}
   const target = debugOptions.debugTarget
   const debug = target ? undefined : debugOptions.debug === true ? new DebugEmitter("renderer", debugOptions) : undefined

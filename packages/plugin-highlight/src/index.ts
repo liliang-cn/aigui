@@ -31,6 +31,9 @@ const PROMPT: MessageBundle = {
  * This plugin can only colour a block whose language it was told, and a model left to itself opens
  * a bare ``` about half the time — so the highlighter a host installed does nothing for the answer
  * it was installed for. The loaded grammars are listed so the model prefers one of them.
+ * You rarely want this directly: `buildSystemPrompt({ registry, plugins, locale })` from
+ * `@ai-gui/core` collects the card specs and every enabled plugin's spec in one call, in the
+ * product's language. Reach for this only to inspect or override one plugin's rules.
  */
 export function highlightPromptSpec(locale?: string, langs: string[] = []): string {
   const spec = translate(PROMPT, locale, "spec")

@@ -165,13 +165,27 @@ function mathBlock(state: BlockState, start: number, end: number, silent: boolea
 }
 
 /**
- * KaTeX stylesheet import hint — consumers must load KaTeX's CSS for correct layout.
+ * The `@import` statement naming KaTeX's stylesheet — **not** the stylesheet itself.
  *
- * This is a bare specifier, which only a bundler can resolve, so unlike other plugins' `css` it
- * cannot be injected into a `<style>` at runtime and the renderers skip it. Import the stylesheet
- * instead: `import "@ai-gui/plugin-katex/style.css"`.
+ * It is a bare specifier, which only a bundler can resolve. Put it in a `<style>` element and the
+ * browser looks for `/katex/dist/katex.min.css` on your own origin, gets a 404, and every formula
+ * renders as a heap of overlapping spans — which is exactly what the plugin's `css` field would
+ * otherwise cause, so the renderers skip a value like this on purpose.
+ *
+ * What you almost certainly want instead:
+ * - with a bundler: `import "@ai-gui/plugin-katex/style.css"`
+ * - without one: `katex({ css: katexInlineCss({ fontBase }) })` from `@ai-gui/plugin-katex/inline-css`
  */
-export const katexCss = '@import "katex/dist/katex.min.css";'
+export const katexCssImport = '@import "katex/dist/katex.min.css";'
+
+/**
+ * @deprecated Renamed to {@link katexCssImport}, because the old name read as "here is KaTeX's
+ * CSS" and it is not — it is an `@import` a `<style>` element cannot resolve. Injecting it by hand
+ * is what leaves formulas rendering as overlapping spans. Use
+ * `import "@ai-gui/plugin-katex/style.css"`, or `katexInlineCss()` from
+ * `@ai-gui/plugin-katex/inline-css` if you have no build step.
+ */
+export const katexCss = katexCssImport
 
 const PROMPT: MessageBundle = {
   en: {
@@ -199,6 +213,9 @@ const PROMPT: MessageBundle = {
  * text, and a product that installed this plugin renders nothing it could not have rendered
  * without it. `chemistry` adds the mhchem notation, which is only worth asking for when the plugin
  * was built with that extension loaded.
+ * You rarely want this directly: `buildSystemPrompt({ registry, plugins, locale })` from
+ * `@ai-gui/core` collects the card specs and every enabled plugin's spec in one call, in the
+ * product's language. Reach for this only to inspect or override one plugin's rules.
  */
 export function katexPromptSpec(locale?: string, options: { chemistry?: boolean } = {}): string {
   const spec = translate(PROMPT, locale, "spec")
@@ -240,7 +257,7 @@ export function katex(options: KatexOptions = {}): AIGuiPlugin {
   }
   return {
     name: "katex",
-    css: options.css ?? katexCss,
+    css: options.css ?? katexCssImport,
     promptSpec: (locale) => katexPromptSpec(locale, { chemistry: options.chemistry }),
     extendParser: (md) => {
       md.inline.ruler.after("escape", "math_inline", mathInline as never)

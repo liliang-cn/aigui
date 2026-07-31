@@ -123,6 +123,12 @@ export interface AIGuiPlugin {
   /**
    * LLM-facing guidance describing this plugin's fence syntax.
    *
+   * A host does not read this field itself: `buildSystemPrompt({ registry, plugins, locale })`
+   * collects the card specs and every enabled plugin's spec in one call, already in the product's
+   * language. Assembling it by hand — reading each plugin's spec, joining them, writing the
+   * localized wording again — reinvents that badly, and a plugin added later is then missing from
+   * the prompt while its renderer is installed.
+   *
    * Receives the locale asked of `buildSystemPrompt`, so the rules can be written in the language
    * the product answers in — a Chinese persona followed by English rules reads as a contradiction
    * to the model. Plugins that only ship English simply ignore the argument.
