@@ -148,7 +148,19 @@ export function createRenderer(el: HTMLElement, options: CreateRendererOptions =
   if (onNodeClick) el.addEventListener("click", handleClick)
   if (!Array.isArray(loading)) {
     void loading.then(
-      (plugins) => setPlugins(plugins),
+      (plugins) => {
+        try {
+          setPlugins(plugins)
+        } catch (error) {
+          // A loader that resolved to factories is the same misconfiguration as `plugins: [katex]`,
+          // and it deserves the same noise — but there is nobody left to throw at: this runs a
+          // microtask after the call that set it up returned. Left alone it becomes an unhandled
+          // rejection, which is the quiet failure this check exists to prevent, so it is reported
+          // on both channels a host can actually be watching.
+          renderer.emitDebug("plugins-load-failed", { error })
+          console.error(error)
+        }
+      },
       // A chunk that fails to load — offline, a bad deploy — leaves the answer as plain markdown
       // rather than taking the page down with it.
       (error) => renderer.emitDebug("plugins-load-failed", { error }),

@@ -159,13 +159,26 @@ describe("a factory passed instead of a plugin", () => {
     expect(el.querySelector("[data-widget]")?.textContent).toBe("hello")
     r.destroy()
   })
-  it("rejects what a loader resolved to, on the same path the loader uses", async () => {
+  it("reports a loader that resolved to factories instead of leaving a stray rejection", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {})
+    const events: Array<{ type: string; data: Record<string, unknown> }> = []
     const el = document.createElement("div")
-    const resolved = [widgetFactory] as never
-    const r = createRenderer(el, { plugins: () => Promise.resolve(resolved) })
-    // The loader's continuation is `setPlugins`, so a resolved list of factories fails there — as a
-    // rejected promise rather than synchronously, since it arrives a microtask later.
-    await expect(Promise.resolve(resolved).then((p) => r.setPlugins(p))).rejects.toThrow("Call it: widgetFactory()")
+    // Nobody is waiting on this call by the time the import resolves, so throwing would only
+    // produce an unhandled rejection — the quiet failure the check exists to prevent.
+    const r = createRenderer(el, {
+      plugins: () => Promise.resolve([widgetFactory] as never),
+      debug: true,
+      onDebugEvent: (event) => events.push(event as never),
+    })
+    r.setText("```widget\nhello\n```")
+    await flush()
+
+    expect(events.map((event) => event.type)).toContain("plugins-load-failed")
+    expect(consoleError).toHaveBeenCalledOnce()
+    expect(String(consoleError.mock.calls[0][0])).toContain("Call it: widgetFactory()")
+    // And the answer is still readable rather than half torn down.
+    expect(el.querySelector("pre")?.textContent).toContain("hello")
+    consoleError.mockRestore()
     r.destroy()
   })
 })

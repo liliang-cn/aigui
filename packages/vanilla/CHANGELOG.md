@@ -4,6 +4,10 @@
 
 ### Minor Changes
 
+- A plugin loader that resolves to factories is reported through the debug channel and
+  `console.error` rather than thrown. By the time the import lands there is no caller left to
+  throw at, and an unhandled rejection is the quiet failure this check exists to prevent.
+
 - 5e15f72: Reject a plugin factory passed instead of a plugin, instead of silently rendering nothing.
 
   `plugins: [katex]` instead of `plugins: [katex()]` is the easiest mistake to make against this API
