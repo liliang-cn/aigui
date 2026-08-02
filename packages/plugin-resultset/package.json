@@ -1,12 +1,15 @@
 {
-  "name": "@ai-gui/anthropic",
+  "name": "@ai-gui/plugin-resultset",
   "version": "0.23.1",
-  "description": "Anthropic model stream adapter for AIGUI.",
+  "description": "Host-owned result tables for AIGUI: the numbers in an answer come from the query, not from the model retyping them.",
   "keywords": [
-    "anthropic",
-    "claude",
     "llm",
-    "streaming",
+    "ai",
+    "sql",
+    "table",
+    "provenance",
+    "markdown",
+    "plugin",
     "aigui"
   ],
   "license": "MIT",
@@ -14,7 +17,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/liliang-cn/aigui.git",
-    "directory": "packages/anthropic"
+    "directory": "packages/plugin-resultset"
   },
   "homepage": "https://github.com/liliang-cn/aigui#readme",
   "bugs": "https://github.com/liliang-cn/aigui/issues",
@@ -41,14 +44,15 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "build": "tsdown",
-    "test": "pnpm --dir ../.. exec vitest run --project anthropic",
+    "test": "pnpm --dir ../.. exec vitest run --project plugin-evidence",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
