@@ -1,0 +1,13 @@
+{
+  "solid": "cube",
+  "label": "ABCD-A1B1C1D1",
+  "edge": 2,
+  "points": [
+    { "id": "E", "center": "ABCD" },
+    { "id": "F", "center": "A1B1C1D1" }
+  ],
+  "segments": [
+    { "from": "E", "to": "F", "style": "dashed", "note": "内切球直径 (高h=2R)" }
+  ],
+  "caption": "正方体及其内切球切点示意图（E、F 为上下底面的切点）"
+}

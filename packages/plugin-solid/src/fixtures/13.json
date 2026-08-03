@@ -1,0 +1,13 @@
+{
+  "solid": "cylinder",
+  "label": "O1-O",
+  "radius": 1,
+  "height": 3,
+  "segments": [
+    { "from": "O1", "to": "O", "style": "dashed", "note": "轴" }
+  ],
+  "highlight": [
+    { "line": ["O1", "O"] }
+  ],
+  "caption": "底面半径为 1、高为 3 的圆柱及其轴 O1O"
+}

@@ -12,6 +12,7 @@ const alias = {
   "@ai-gui/plugin-artifact": fileURLToPath(new URL("./packages/plugin-artifact/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-ui": fileURLToPath(new URL("./packages/plugin-ui/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-molecule": fileURLToPath(new URL("./packages/plugin-molecule/src/index.ts", import.meta.url)),
+  "@ai-gui/plugin-solid": fileURLToPath(new URL("./packages/plugin-solid/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-physics": fileURLToPath(new URL("./packages/plugin-physics/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-figure": fileURLToPath(new URL("./packages/plugin-figure/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-progress": fileURLToPath(new URL("./packages/plugin-progress/src/index.ts", import.meta.url)),
@@ -104,6 +105,10 @@ export default defineWorkspace([
   {
     resolve: { alias },
     test: { name: "plugin-molecule", root: "packages/plugin-molecule", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "plugin-solid", root: "packages/plugin-solid", coverage },
   },
   {
     resolve: { alias },

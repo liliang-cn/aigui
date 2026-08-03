@@ -1,0 +1,18 @@
+{
+  "solid": "cube",
+  "label": "ABCD-A1B1C1D1",
+  "edge": 2,
+  "points": [
+    { "id": "M", "on": "A1C1", "at": 0.5 },
+    { "id": "O", "center": "ABCD" }
+  ],
+  "segments": [
+    { "from": "B", "to": "M", "style": "solid", "note": "BM" },
+    { "from": "M", "to": "O", "style": "dashed", "note": "MO ⊥ 平面 ABCD" },
+    { "from": "B", "to": "O", "style": "dashed", "note": "投影 BO" }
+  ],
+  "highlight": [
+    { "angle": { "at": "B", "rays": ["M", "O"] } }
+  ],
+  "caption": "BM 与底面 ABCD 所成的角为 ∠MBO"
+}

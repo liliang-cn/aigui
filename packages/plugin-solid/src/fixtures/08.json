@@ -1,0 +1,12 @@
+{
+  "solid": "pyramid",
+  "label": "P-ABC",
+  "base": 3,
+  "edge": 2,
+  "height": 3,
+  "apexOver": "A",
+  "segments": [
+    { "from": "P", "to": "A", "style": "solid", "note": "高" }
+  ],
+  "caption": "三棱锥 P-ABC 中，PA ⊥ 平面 ABC"
+}

@@ -12,6 +12,7 @@ import { ui } from "@ai-gui/plugin-ui"
 import { mermaid } from "@ai-gui/plugin-mermaid"
 import { molecule } from "@ai-gui/plugin-molecule"
 import { map } from "@ai-gui/plugin-map"
+import { solid } from "@ai-gui/plugin-solid"
 import { AIRenderer as ReactAIRenderer, type AIRendererHandle as ReactHandle } from "@ai-gui/react"
 import { AIRenderer as VueAIRenderer } from "@ai-gui/vue"
 import { createRenderer, type VanillaRenderer } from "@ai-gui/vanilla"
@@ -52,6 +53,12 @@ flowchart LR
 
 \`\`\`molecule
 {"version":1,"format":"smiles","source":"CCO","view":"2d","atomLabels":"standard","highlight":{"atoms":[2]}}
+\`\`\`
+
+## Solid geometry
+
+\`\`\`solid
+{"solid":"cube","label":"ABCD-A1B1C1D1","edge":2,"points":[{"id":"M","on":"A1C1","at":0.5}],"segments":[{"from":"B","to":"M","style":"solid","note":"BM"}],"section":{"through":["A","B1","D1"]},"highlight":[{"plane":["A","B1","D1"]}],"caption":"平面 AB1D1 截正方体，M 为 A1C1 的中点"}
 \`\`\`
 
 ## Geography route
@@ -175,7 +182,7 @@ function mount(kind: PlaygroundAdapter): void {
   timeline = []
   adapterBadge.textContent = kind.toUpperCase()
   const registry = createRegistry(kind)
-  const plugins: AIGuiPlugin[] = [citation(), ui({ registry, actionRuntime }), mermaid({ theme: "neutral" }), molecule(), map(), artifact({ store: artifactStore })]
+  const plugins: AIGuiPlugin[] = [citation(), ui({ registry, actionRuntime }), mermaid({ theme: "neutral" }), molecule(), map(), solid(), artifact({ store: artifactStore })]
   const mounted = kind === "react" ? mountReact(registry, plugins) : kind === "vue" ? mountVue(registry, plugins) : mountVanilla(registry, plugins)
   handle = mounted.handle
   cleanupRenderer = mounted.cleanup

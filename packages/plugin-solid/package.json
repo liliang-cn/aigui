@@ -1,0 +1,51 @@
+{
+  "name": "@ai-gui/plugin-solid",
+  "version": "0.23.1",
+  "description": "Solid-geometry teaching figures for AIGUI — cubes, prisms, pyramids, cones and their sections, described the way a textbook names them.",
+  "keywords": [
+    "llm",
+    "ai",
+    "geometry",
+    "solid-geometry",
+    "3d",
+    "teaching",
+    "math",
+    "plugin",
+    "aigui"
+  ],
+  "license": "MIT",
+  "author": "Liang Li <ll_faw@hotmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liliang-cn/aigui.git",
+    "directory": "packages/plugin-solid"
+  },
+  "homepage": "https://github.com/liliang-cn/aigui#readme",
+  "bugs": "https://github.com/liliang-cn/aigui/issues",
+  "type": "module",
+  "sideEffects": false,
+  "engines": { "node": ">=18" },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "tsdown",
+    "test": "pnpm --dir ../.. exec vitest run --project plugin-solid",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-gui/core": "workspace:*",
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.185.3"
+  }
+}

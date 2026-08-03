@@ -1,0 +1,12 @@
+{
+  "solid": "cube",
+  "label": "ABCD-A1B1C1D1",
+  "edge": 2,
+  "section": {
+    "through": ["A", "B1", "D1"]
+  },
+  "highlight": [
+    { "plane": ["A", "B1", "D1"] }
+  ],
+  "caption": "平面 AB1D1 截正方体所得的截面"
+}

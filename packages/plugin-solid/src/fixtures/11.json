@@ -1,0 +1,10 @@
+{
+  "solid": "prism",
+  "label": "ABC-A1B1C1",
+  "base": 3,
+  "edge": 2,
+  "height": 3,
+  "section": { "through": ["A1", "B", "C"] },
+  "highlight": [{ "plane": ["A1", "B", "C"] }],
+  "caption": "三棱柱 ABC-A1B1C1 与平面 A1BC"
+}

@@ -1,0 +1,19 @@
+{
+  "solid": "pyramid",
+  "label": "P-ABC",
+  "base": 3,
+  "edge": 2,
+  "height": 3,
+  "points": [
+    { "id": "M", "on": "PB", "at": 0.5 },
+    { "id": "N", "on": "PC", "at": 0.5 }
+  ],
+  "segments": [
+    { "from": "M", "to": "N", "style": "solid", "note": "中位线 MN" }
+  ],
+  "highlight": [
+    { "line": ["M", "N"] },
+    { "plane": ["A", "B", "C"] }
+  ],
+  "caption": "三棱锥 P-ABC 中，中位线 MN 与底面 ABC 的位置关系"
+}

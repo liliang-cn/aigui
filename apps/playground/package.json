@@ -18,6 +18,7 @@
     "@ai-gui/plugin-mermaid": "workspace:*",
     "@ai-gui/plugin-molecule": "workspace:*",
     "@ai-gui/plugin-map": "workspace:*",
+    "@ai-gui/plugin-solid": "workspace:*",
     "@ai-gui/react": "workspace:*",
     "@ai-gui/vanilla": "workspace:*",
     "@ai-gui/vue": "workspace:*",

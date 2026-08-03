@@ -19,6 +19,7 @@
       "@ai-gui/plugin-artifact",
       "@ai-gui/plugin-ui",
       "@ai-gui/plugin-molecule",
+      "@ai-gui/plugin-solid",
       "@ai-gui/plugin-physics",
       "@ai-gui/plugin-figure",
       "@ai-gui/plugin-progress",

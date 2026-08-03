@@ -1,0 +1,21 @@
+{
+  "solid": "pyramid",
+  "label": "P-ABCD",
+  "base": 4,
+  "edge": 2,
+  "height": 3,
+  "points": [
+    { "id": "O", "center": "ABCD" },
+    { "id": "E", "on": "AB", "at": 0.5 }
+  ],
+  "segments": [
+    { "from": "P", "to": "O", "style": "dashed", "note": "高" },
+    { "from": "P", "to": "E", "style": "solid", "note": "斜高" },
+    { "from": "O", "to": "E", "style": "dashed" }
+  ],
+  "highlight": [
+    { "line": ["P", "O"] },
+    { "line": ["P", "E"] }
+  ],
+  "caption": "正四棱锥 P-ABCD 的高 PO 与斜高 PE"
+}

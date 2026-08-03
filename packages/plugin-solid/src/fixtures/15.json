@@ -1,0 +1,7 @@
+{
+  "solid": "cube",
+  "label": "ABCD-A1B1C1D1",
+  "edge": 2,
+  "show": ["views"],
+  "caption": "正方体 ABCD-A1B1C1D1 及其三视图"
+}

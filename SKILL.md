@@ -41,6 +41,7 @@ Write normal markdown. Add fenced blocks **only** for card/block types listed in
 | Diagram | ` ```mermaid ` |
 | Molecule | ` ```molecule ` + strict SMILES/Molfile JSON |
 | Map | ` ```map ` + strict inline GeoJSON/markers/routes JSON |
+| Solid geometry | ` ```solid ` + the solid, its named points, and the conditions on them — never coordinates, never a stated result |
 | Sources | ` ```sources {"sources":[{"id":"...","title":"...","url":"https://..."}]} ` |
 | Artifact create | ` ```artifact-create ` + strict JSON document definition |
 | Artifact update | ` ```artifact-update ` + `operationId`, `id`, exact `baseRevision`, and full replacement content |

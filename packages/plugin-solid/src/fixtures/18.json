@@ -1,0 +1,17 @@
+{
+  "solid": "cube",
+  "label": "ABCD-A1B1C1D1",
+  "edge": 2,
+  "points": [
+    { "id": "P", "on": "AB", "at": 0.5 }
+  ],
+  "segments": [
+    { "from": "P", "to": "C1", "style": "solid", "note": "PC1" },
+    { "from": "A", "to": "C1", "style": "dashed", "note": "起点距离 AC1" },
+    { "from": "B", "to": "C1", "style": "dashed", "note": "终点距离 BC1" }
+  ],
+  "highlight": [
+    { "line": ["P", "C1"] }
+  ],
+  "caption": "动点 P 在棱 AB 上运动时到顶点 C1 的距离"
+}

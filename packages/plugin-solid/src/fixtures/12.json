@@ -1,0 +1,20 @@
+{
+  "solid": "cone",
+  "label": "P-O",
+  "radius": 2,
+  "height": 4,
+  "points": [
+    { "id": "A", "onCircle": "base", "angle": 0 },
+    { "id": "B", "onCircle": "base", "angle": 180 }
+  ],
+  "segments": [
+    { "from": "A", "to": "B", "style": "solid", "note": "底面直径" },
+    { "from": "P", "to": "A", "style": "solid", "note": "母线" },
+    { "from": "P", "to": "B", "style": "solid", "note": "母线" },
+    { "from": "P", "to": "O", "style": "dashed", "note": "高" }
+  ],
+  "highlight": [
+    { "plane": ["P", "A", "B"] }
+  ],
+  "caption": "底面半径 2、高 4 的圆锥及其轴截面 PAB"
+}

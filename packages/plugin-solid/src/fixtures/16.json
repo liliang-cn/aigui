@@ -1,0 +1,17 @@
+{
+  "solid": "cube",
+  "label": "ABCD-A1B1C1D1",
+  "edge": 2,
+  "points": [
+    { "id": "M", "on": "BB1", "at": 0.5 }
+  ],
+  "segments": [
+    { "from": "A", "to": "M", "style": "solid" },
+    { "from": "M", "to": "C1", "style": "solid" }
+  ],
+  "highlight": [
+    { "line": ["A", "M"] },
+    { "line": ["M", "C1"] }
+  ],
+  "caption": "蚂蚁沿表面从 A 到 C1 的最短路径（经过棱 BB1 的中点 M）"
+}

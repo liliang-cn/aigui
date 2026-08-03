@@ -1,0 +1,14 @@
+{
+  "solid": "cube",
+  "label": "ABCD-A1B1C1D1",
+  "edge": 2,
+  "segments": [
+    { "from": "A", "to": "C", "style": "solid", "note": "AC" },
+    { "from": "B1", "to": "D1", "style": "solid", "note": "B1D1" }
+  ],
+  "highlight": [
+    { "line": ["A", "C"] },
+    { "line": ["B1", "D1"] }
+  ],
+  "caption": "正方体中的异面直线 AC 与 B1D1"
+}

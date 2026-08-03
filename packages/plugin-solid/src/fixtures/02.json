@@ -1,0 +1,14 @@
+{
+  "solid": "cube",
+  "label": "ABCD-A1B1C1D1",
+  "edge": 2,
+  "points": [
+    { "id": "E", "on": "AB", "at": 0.5 },
+    { "id": "F", "on": "BC", "at": 0.5 }
+  ],
+  "section": { "through": ["D1", "E", "F"] },
+  "highlight": [
+    { "plane": ["D1", "E", "F"] }
+  ],
+  "caption": "平面 D1EF 截正方体的截面"
+}

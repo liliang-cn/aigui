@@ -1,0 +1,12 @@
+{
+  "solid": "cuboid",
+  "label": "ABCD-A1B1C1D1",
+  "size": [4, 3, 2],
+  "segments": [
+    { "from": "A", "to": "C1", "style": "solid", "note": "体对角线 AC1" }
+  ],
+  "highlight": [
+    { "line": ["A", "C1"] }
+  ],
+  "caption": "长宽高分别为 4、3、2 的长方体及其体对角线 AC1"
+}
