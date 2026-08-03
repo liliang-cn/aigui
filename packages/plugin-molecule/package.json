@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-molecule",
-  "version": "0.23.1",
+  "version": "0.24.0",
   "description": "Safe 2D and 3D molecular structure rendering plugin for AIGUI.",
   "keywords": [
     "llm",

@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-solid",
-  "version": "0.23.1",
+  "version": "0.24.0",
   "description": "Solid-geometry teaching figures for AIGUI — cubes, prisms, pyramids, cones and their sections, described the way a textbook names them.",
   "keywords": [
     "llm",
@@ -24,18 +24,33 @@
   "bugs": "https://github.com/liliang-cn/aigui/issues",
   "type": "module",
   "sideEffects": false,
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
-  "publishConfig": { "access": "public" },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsdown",
     "test": "pnpm --dir ../.. exec vitest run --project plugin-solid",

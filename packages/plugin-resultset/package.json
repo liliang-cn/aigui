@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-resultset",
-  "version": "0.23.1",
+  "version": "0.24.0",
   "description": "Host-owned result tables for AIGUI: the numbers in an answer come from the query, not from the model retyping them.",
   "keywords": [
     "llm",
