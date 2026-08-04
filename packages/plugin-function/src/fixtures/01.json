@@ -1,0 +1,9 @@
+{
+  "plot": [
+    { "id": "f", "expr": "x^2 - 2*x", "domain": [-2, 4], "label": "y = x² - 2x" }
+  ],
+  "marks": [
+    { "point": { "on": "f", "at": 1, "label": "顶点" } }
+  ],
+  "caption": "y = x² - 2x 在 [-2, 4] 上的图像及顶点"
+}

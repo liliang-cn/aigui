@@ -1,0 +1,12 @@
+{
+  "plot": [
+    { "id": "f", "expr": "x", "domain": [-2, 2] },
+    { "id": "g", "expr": "-x", "domain": [-2, 2] }
+  ],
+  "view": { "x": [-2, 2], "y": [-2, 2] },
+  "marks": [
+    { "point": { "on": "f", "at": 1, "label": "z = 1 + i" } },
+    { "point": { "on": "g", "at": 1, "label": "z̄ = 1 - i" } }
+  ],
+  "caption": "复平面上的复数 z = 1 + i 及其共轭复数 z̄ = 1 - i（关于实轴对称）"
+}

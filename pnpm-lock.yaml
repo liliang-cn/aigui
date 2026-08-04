@@ -177,6 +177,12 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/plugin-function:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/plugin-highlight:
     dependencies:
       '@ai-gui/core':

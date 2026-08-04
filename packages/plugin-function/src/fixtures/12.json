@@ -1,0 +1,13 @@
+{
+  "plot": [
+    { "id": "f", "expr": "(x - 1)/(x + 2)", "domain": [-8, 6], "label": "y = (x - 1)/(x + 2)" }
+  ],
+  "view": { "x": [-8, 6], "y": [-5, 5] },
+  "marks": [
+    { "asymptote": { "x": -2 } },
+    { "asymptote": { "y": 1 } },
+    { "point": { "on": "f", "at": 1, "label": "(1, 0)" } },
+    { "point": { "on": "f", "at": 0, "label": "(0, -0.5)" } }
+  ],
+  "caption": "f(x) = (x - 1)/(x + 2) 的图像及其两条渐近线"
+}

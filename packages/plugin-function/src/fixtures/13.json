@@ -1,0 +1,10 @@
+{
+  "plot": [
+    { "id": "f", "expr": "abs(x-1)", "domain": [-2, 4], "label": "y = |x - 1|" }
+  ],
+  "view": { "x": [-2, 4], "y": [-1, 4] },
+  "marks": [
+    { "point": { "on": "f", "at": 1, "label": "(1, 0)" } }
+  ],
+  "caption": "y = |x - 1| 的函数图像"
+}

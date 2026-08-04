@@ -1,0 +1,10 @@
+{
+  "plot": [
+    { "id": "f", "expr": "x^3 - 3*x", "domain": [-2.3, 2.3], "label": "y = x³ - 3x" }
+  ],
+  "marks": [
+    { "point": { "on": "f", "at": -1, "label": "极大值点 (-1, 2)" } },
+    { "point": { "on": "f", "at": 1, "label": "极小值点 (1, -2)" } }
+  ],
+  "caption": "y = x³ - 3x 的图像及极值点"
+}

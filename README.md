@@ -35,7 +35,7 @@ pnpm add @ai-gui/core @ai-gui/vue
 pnpm add @ai-gui/core @ai-gui/vanilla
 
 # plugins (optional)
-pnpm add @ai-gui/plugin-solid @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact
+pnpm add @ai-gui/plugin-solid @ai-gui/plugin-function @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact
 
 # plugin authoring helpers (optional)
 pnpm add @ai-gui/plugin-sdk
@@ -175,6 +175,7 @@ await r.feed(res.body!)
 | `@ai-gui/plugin-molecule` | `molecule(options?)` | Strict ` ```molecule ` blocks for SMILES/Molfile 2D and Molfile 3D structures |
 | `@ai-gui/plugin-map` | `map(options?)` | Strict ` ```map ` blocks for inline GeoJSON, markers, routes, bounded navigation, and host-controlled basemaps |
 | `@ai-gui/plugin-solid` | `solid(options?)` | ` ```solid ` blocks for solid-geometry teaching figures — solids, named points, sections, and marked lines and angles |
+| `@ai-gui/plugin-function` | `fn(options?)` | ` ```function ` blocks for function and calculus figures — curves, tangents, areas, Riemann sums, computed from an expression |
 
 Pass plugins to any adapter:
 
@@ -260,6 +261,8 @@ Forms use the same `ActionRuntime` in every adapter: `const plugins = [form({ ac
 `artifact()` lets the model create and revise persistent generated documents through complete-gated JSON commands. Every update requires the exact current `baseRevision`; `operationId` receipts make stream replay idempotent. The workspace previews `text`, `code`, `markdown`, and `json`, supports copy/download, and never executes generated HTML, JavaScript, components, actions, or network requests. `ArtifactStore.snapshot()` and `restore()` support application-owned persistence.
 
 `molecule()` validates chemistry with OpenChemLib, renders safe 2D SVG, and can lazily mount 3Dmol for local Molfiles containing genuine 3D coordinates. SMILES is 2D-only in v1. The model cannot supply URLs, remote structures, scripts, shaders, callbacks, or network operations.
+
+`fn()` draws a curve from its expression, not from points the model sampled: it takes `y = f(x)` and an interval, and the tangent's slope, the shaded area, the Riemann rectangles and the derivative are all computed here. A model plotting through `chart` has to sample the function itself, which puts its arithmetic into the picture where a wrong point is indistinguishable from a right one. Expressions go through a fixed grammar with no `eval`, and a definition carrying sampled points is refused.
 
 `solid()` draws the figure a solid-geometry question needs, from the conditions rather than from an answer. The model names the solid the way a textbook does (`正方体 ABCD-A1B1C1D1`) and says which three points a cutting plane passes through; the section polygon is computed here. That division is the point: a model asked how many sides a section has sometimes says five when it is six, and the drawing would be wrong in a way a student cannot see. Vertex coordinates, unknown fields, and references to points that were never defined are all refused rather than drawn around. Three.js loads only when a figure is actually drawn.
 
@@ -398,6 +401,7 @@ The fence conventions it may use (only for **registered / enabled** block types)
 - Math: `$…$` inline, `$$…$$` block.
 - Diagrams: ` ```mermaid `.
 - Solid-geometry figures: ` ```solid ` with the solid, its named points, and the conditions on them — never coordinates or a stated result.
+- Function and calculus figures: ` ```function ` with the expression and the interval — never sampled points, never a computed slope or area.
 
 Card buttons are **declarative**: the model emits an `action` name plus `params`; your app performs the real request. See [AGENTS.md](./AGENTS.md) for the exact syntax and examples.
 
@@ -429,6 +433,7 @@ LLM stream ──▶ @ai-gui/core (headless)
 | [`@ai-gui/vanilla`](./packages/vanilla/README.md) | Vanilla-DOM adapter: `createRenderer(el, options)`. |
 | [`@ai-gui/plugin-katex`](./packages/plugin-katex/README.md) | KaTeX math (`$…$`, `$$…$$`). |
 | [`@ai-gui/plugin-solid`](./packages/plugin-solid/README.md) | Solid-geometry teaching figures (` ```solid `). |
+| [`@ai-gui/plugin-function`](./packages/plugin-function/README.md) | Function and calculus figures (` ```function `). |
 | [`@ai-gui/plugin-highlight`](./packages/plugin-highlight/README.md) | Shiki syntax highlighting for code blocks. |
 | [`@ai-gui/plugin-mermaid`](./packages/plugin-mermaid/README.md) | Mermaid diagrams. |
 | [`@ai-gui/plugin-primitives`](./packages/plugin-primitives/README.md) | Primitive UI blocks: list / table / key-value / layout. |

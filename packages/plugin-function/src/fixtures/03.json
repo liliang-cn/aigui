@@ -1,0 +1,10 @@
+{
+  "plot": [
+    { "id": "f", "expr": "x^2", "domain": [-1, 3], "label": "y = x²" }
+  ],
+  "marks": [
+    { "tangent": { "of": "f", "at": 1 } },
+    { "point": { "on": "f", "at": 1, "label": "P(1, 1)" } }
+  ],
+  "caption": "f(x) = x² 在 x = 1 处的切线 y = 2x - 1"
+}

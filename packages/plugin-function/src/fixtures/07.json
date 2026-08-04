@@ -1,0 +1,9 @@
+{
+  "plot": [
+    { "id": "f", "expr": "x^2", "domain": [0, 1], "label": "y = x²" }
+  ],
+  "marks": [
+    { "riemann": { "of": "f", "from": 0, "to": 1, "n": 8, "rule": "left" } }
+  ],
+  "caption": "用 8 个左端点矩形近似 ∫₀¹ x² dx（矩形面积和小于实际定积分）"
+}

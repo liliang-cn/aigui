@@ -1,0 +1,11 @@
+{
+  "plot": [
+    { "id": "f", "expr": "sqrt(x)", "domain": [0, 9], "label": "y = √x" }
+  ],
+  "view": { "x": [-1, 9], "y": [-1, 4] },
+  "marks": [
+    { "tangent": { "of": "f", "at": 4 } },
+    { "point": { "on": "f", "at": 4, "label": "P(4, 2)" } }
+  ],
+  "caption": "y = √x 及其在 x = 4 处的切线"
+}

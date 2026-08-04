@@ -1,0 +1,9 @@
+{
+  "plot": [
+    { "id": "f", "expr": "cos(x)", "domain": [0, "2*pi"], "label": "y = cos x" }
+  ],
+  "marks": [
+    { "derivative": { "of": "f", "label": "y' = -sin x" } }
+  ],
+  "caption": "y = cos x 及其导函数在 [0, 2π] 上的图像"
+}

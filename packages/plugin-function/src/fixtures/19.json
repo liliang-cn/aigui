@@ -1,0 +1,29 @@
+{
+  "plot": [
+    { "id": "f", "expr": "1/x", "domain": [1, 20], "label": "y = 1/x" }
+  ],
+  "view": { "x": [0, 21], "y": [0, 1.1] },
+  "marks": [
+    { "point": { "on": "f", "at": 1, "label": "a₁" } },
+    { "point": { "on": "f", "at": 2 } },
+    { "point": { "on": "f", "at": 3 } },
+    { "point": { "on": "f", "at": 4 } },
+    { "point": { "on": "f", "at": 5 } },
+    { "point": { "on": "f", "at": 6 } },
+    { "point": { "on": "f", "at": 7 } },
+    { "point": { "on": "f", "at": 8 } },
+    { "point": { "on": "f", "at": 9 } },
+    { "point": { "on": "f", "at": 10 } },
+    { "point": { "on": "f", "at": 11 } },
+    { "point": { "on": "f", "at": 12 } },
+    { "point": { "on": "f", "at": 13 } },
+    { "point": { "on": "f", "at": 14 } },
+    { "point": { "on": "f", "at": 15 } },
+    { "point": { "on": "f", "at": 16 } },
+    { "point": { "on": "f", "at": 17 } },
+    { "point": { "on": "f", "at": 18 } },
+    { "point": { "on": "f", "at": 19 } },
+    { "point": { "on": "f", "at": 20, "label": "a₂₀" } }
+  ],
+  "caption": "数列 aₙ = 1/n 前 20 项在 y = 1/x 曲线上的散点图"
+}

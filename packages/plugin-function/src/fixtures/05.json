@@ -1,0 +1,12 @@
+{
+  "plot": [
+    { "id": "f1", "expr": "1/x", "domain": [-6, -0.2], "label": "y = 1/x" },
+    { "id": "f2", "expr": "1/x", "domain": [0.2, 6] }
+  ],
+  "view": { "x": [-6, 6], "y": [-6, 6] },
+  "marks": [
+    { "asymptote": { "x": 0 } },
+    { "asymptote": { "y": 0 } }
+  ],
+  "caption": "反比例函数 y = 1/x 及其渐近线 (x = 0 与 y = 0)"
+}

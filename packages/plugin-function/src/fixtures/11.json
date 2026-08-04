@@ -1,0 +1,13 @@
+{
+  "plot": [
+    { "id": "f", "expr": "x^3", "domain": [-2, 2], "label": "y = x³" },
+    { "id": "g", "expr": "x", "domain": [-2, 2], "label": "y = x" }
+  ],
+  "view": { "x": [-2, 2], "y": [-3, 3] },
+  "marks": [
+    { "point": { "on": "f", "at": -1, "label": "(-1, -1)" } },
+    { "point": { "on": "f", "at": 0, "label": "(0, 0)" } },
+    { "point": { "on": "f", "at": 1, "label": "(1, 1)" } }
+  ],
+  "caption": "y = x³ 与 y = x 在 [-2, 2] 上的图像及交点"
+}

@@ -1,0 +1,8 @@
+{
+  "plot": [
+    { "id": "upper", "expr": "sqrt(1 - x^2)", "domain": [-1, 1], "label": "y = √(1 - x²)" },
+    { "id": "lower", "expr": "-sqrt(1 - x^2)", "domain": [-1, 1], "label": "y = -√(1 - x²)" }
+  ],
+  "view": { "x": [-1.5, 1.5], "y": [-1.5, 1.5] },
+  "caption": "单位圆 x² + y² = 1"
+}

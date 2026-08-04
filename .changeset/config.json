@@ -20,6 +20,7 @@
       "@ai-gui/plugin-ui",
       "@ai-gui/plugin-molecule",
       "@ai-gui/plugin-solid",
+      "@ai-gui/plugin-function",
       "@ai-gui/plugin-resultset",
       "@ai-gui/plugin-physics",
       "@ai-gui/plugin-figure",

@@ -1,0 +1,14 @@
+{
+  "plot": [
+    { "id": "f", "expr": "1 + cos(x)", "domain": [0, "2*pi"], "label": "r = 1 + cos θ" }
+  ],
+  "view": { "x": [0, 6.5], "y": [-0.5, 2.5] },
+  "marks": [
+    { "point": { "on": "f", "at": 0, "label": "θ=0, r=2" } },
+    { "point": { "on": "f", "at": "pi/2", "label": "θ=π/2, r=1" } },
+    { "point": { "on": "f", "at": "pi", "label": "θ=π, r=0" } },
+    { "point": { "on": "f", "at": "3*pi/2", "label": "θ=3π/2, r=1" } },
+    { "point": { "on": "f", "at": "2*pi", "label": "θ=2π, r=2" } }
+  ],
+  "caption": "心形线极径 r 随极角 θ 变化的函数图像"
+}

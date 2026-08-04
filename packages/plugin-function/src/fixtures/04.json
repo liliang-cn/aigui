@@ -1,0 +1,14 @@
+{
+  "plot": [
+    { "id": "f", "expr": "sin(x)", "domain": [0, "2*pi"], "label": "y = sin x" }
+  ],
+  "view": { "x": [-0.5, 7], "y": [-1.5, 1.5] },
+  "marks": [
+    { "point": { "on": "f", "at": 0, "label": "(0, 0)" } },
+    { "point": { "on": "f", "at": "pi/2", "label": "(π/2, 1)" } },
+    { "point": { "on": "f", "at": "pi", "label": "(π, 0)" } },
+    { "point": { "on": "f", "at": "3*pi/2", "label": "(3π/2, -1)" } },
+    { "point": { "on": "f", "at": "2*pi", "label": "(2π, 0)" } }
+  ],
+  "caption": "y = sin x 在 [0, 2π] 上的图像及关键五点"
+}

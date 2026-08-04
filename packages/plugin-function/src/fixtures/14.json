@@ -1,0 +1,13 @@
+{
+  "plot": [
+    { "id": "f", "expr": "x^2", "domain": [-0.5, 2.5], "label": "y = x²" },
+    { "id": "g", "expr": "2*x", "domain": [-0.5, 2.5], "label": "y = 2x" }
+  ],
+  "view": { "x": [-0.5, 2.5], "y": [-0.5, 4.5] },
+  "marks": [
+    { "area": { "between": ["f", "g"], "from": 0, "to": 2 } },
+    { "point": { "on": "f", "at": 0, "label": "(0, 0)" } },
+    { "point": { "on": "f", "at": 2, "label": "(2, 4)" } }
+  ],
+  "caption": "y = x² 与 y = 2x 围成的封闭区域"
+}

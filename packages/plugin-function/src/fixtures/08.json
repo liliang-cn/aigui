@@ -1,0 +1,8 @@
+{
+  "plot": [
+    { "id": "f", "expr": "exp(x)", "domain": [-3, 2.2], "label": "y = eˣ" },
+    { "id": "g", "expr": "ln(x)", "domain": [0.05, 5], "label": "y = ln x" }
+  ],
+  "view": { "x": [-3, 5], "y": [-3, 5] },
+  "caption": "y = eˣ 与 y = ln x 在同一坐标系中的图像（关于 y = x 对称）"
+}

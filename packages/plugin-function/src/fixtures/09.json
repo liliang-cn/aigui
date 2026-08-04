@@ -1,0 +1,7 @@
+{
+  "plot": [
+    { "id": "f", "expr": "x*sin(x)", "domain": [-10, 10], "label": "f(x) = x·sin x" }
+  ],
+  "view": { "x": [-10, 10], "y": [-10, 10] },
+  "caption": "f(x) = x·sin x 在 [-10, 10] 上的图像"
+}
