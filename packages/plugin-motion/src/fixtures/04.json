@@ -1,0 +1,7 @@
+{
+  "motion": "projectile",
+  "speed": 30,
+  "angle": 90,
+  "show": ["trajectory", "strobe", "vectors"],
+  "caption": "以 30 m/s 竖直向上抛出的运动轨迹"
+}

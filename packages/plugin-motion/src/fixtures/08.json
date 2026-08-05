@@ -1,0 +1,8 @@
+{
+  "motion": "uniform-acceleration",
+  "speed": 20,
+  "acceleration": -4,
+  "duration": 5,
+  "show": ["strobe", "vectors"],
+  "caption": "汽车以 20 m/s 初速、-4 m/s² 刹车减速至停止"
+}

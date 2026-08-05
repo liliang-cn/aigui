@@ -1,0 +1,6 @@
+{
+  "motion": "free-fall",
+  "height": 80,
+  "show": ["strobe", "vectors"],
+  "caption": "从 80 m 高处自由落体"
+}

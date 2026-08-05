@@ -1,0 +1,8 @@
+{
+  "motion": "uniform-acceleration",
+  "speed": 10,
+  "acceleration": 2,
+  "duration": 8,
+  "show": ["strobe", "vectors"],
+  "caption": "初速度 10 m/s、加速度 2 m/s² 行驶 8 s 的匀变速直线运动"
+}

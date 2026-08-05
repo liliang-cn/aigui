@@ -1,0 +1,8 @@
+{
+  "motion": "projectile",
+  "speed": 15,
+  "angle": 0,
+  "height": 20,
+  "show": ["trajectory", "strobe", "vectors"],
+  "caption": "初速度 15 m/s、高度 20 m 的平抛运动"
+}

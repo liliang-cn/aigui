@@ -1,0 +1,7 @@
+{
+  "motion": "projectile",
+  "speed": 20,
+  "angle": 30,
+  "show": ["trajectory", "strobe", "vectors"],
+  "caption": "初速度 20 m/s、抛射角 30° 的斜抛运动轨迹"
+}

@@ -1,0 +1,6 @@
+{
+  "motion": "shm",
+  "amplitude": 0.2,
+  "period": 2.0,
+  "caption": "同相简正模式：两质点同向简谐运动"
+}

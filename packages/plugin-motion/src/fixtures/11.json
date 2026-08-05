@@ -1,0 +1,6 @@
+{
+  "motion": "shm",
+  "amplitude": 0.05,
+  "period": 1.5,
+  "caption": "振幅 0.05 m、周期 1.5 s 的简谐振动"
+}

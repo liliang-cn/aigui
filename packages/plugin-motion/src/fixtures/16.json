@@ -1,0 +1,7 @@
+{
+  "motion": "projectile",
+  "speed": 20,
+  "angle": 45,
+  "show": ["trajectory", "strobe"],
+  "caption": "理想斜抛运动轨迹（无空气阻力）"
+}

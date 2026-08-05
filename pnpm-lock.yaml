@@ -242,6 +242,12 @@ importers:
         specifier: ^9.24.0
         version: 9.24.0
 
+  packages/plugin-motion:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/plugin-optics:
     dependencies:
       '@ai-gui/core':

@@ -1,0 +1,6 @@
+{
+  "motion": "free-fall",
+  "height": 100,
+  "show": ["trajectory", "strobe"],
+  "caption": "从 100 米高度自由落体的基础运动"
+}

@@ -1,0 +1,9 @@
+{
+  "motion": "collision",
+  "kind": "inelastic",
+  "bodies": [
+    { "mass": 3, "speed": 4 },
+    { "mass": 2, "speed": 0 }
+  ],
+  "caption": "3 kg 小车以 4 m/s 撞击静止的 2 kg 小车并粘在一起"
+}

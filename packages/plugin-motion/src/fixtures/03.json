@@ -1,0 +1,7 @@
+{
+  "motion": "projectile",
+  "speed": 25,
+  "angle": 45,
+  "show": ["trajectory", "strobe", "vectors"],
+  "caption": "以 25 m/s、与水平成 45° 抛出"
+}

@@ -1,0 +1,9 @@
+{
+  "motion": "collision",
+  "kind": "elastic",
+  "bodies": [
+    { "mass": 1, "speed": 2 },
+    { "mass": 1, "speed": -2 }
+  ],
+  "caption": "等质量两球以等大反向速度发生一维弹性碰撞"
+}

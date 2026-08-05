@@ -1,0 +1,9 @@
+{
+  "motion": "collision",
+  "kind": "elastic",
+  "bodies": [
+    { "mass": 2, "speed": 3 },
+    { "mass": 1, "speed": -1 }
+  ],
+  "caption": "质量 2 kg (3 m/s) 与 1 kg (-1 m/s) 的小球发生弹性正碰"
+}

@@ -1,0 +1,8 @@
+{
+  "motion": "uniform-acceleration",
+  "speed": 0,
+  "acceleration": 3,
+  "duration": 6,
+  "show": ["strobe", "vectors"],
+  "caption": "初速度 0 m/s，以 3 m/s² 加速 6 秒"
+}

@@ -1,0 +1,6 @@
+{
+  "motion": "circular",
+  "radius": 2,
+  "period": 4,
+  "caption": "半径 2 m、周期 4 s 的匀速圆周运动"
+}
