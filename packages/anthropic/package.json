@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/anthropic",
-  "version": "0.24.0",
+  "version": "0.25.0",
   "description": "Anthropic model stream adapter for AIGUI.",
   "keywords": [
     "anthropic",
