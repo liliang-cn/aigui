@@ -1,5 +1,11 @@
 # @ai-gui/plugin-evidence
 
+## 0.26.0
+
+### Patch Changes
+
+- @ai-gui/core@0.26.0
+
 ## 0.25.0
 
 ### Patch Changes
