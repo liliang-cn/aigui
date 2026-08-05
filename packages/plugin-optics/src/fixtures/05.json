@@ -1,0 +1,10 @@
+{
+  "element": "convex-lens",
+  "focal": 5,
+  "object": {
+    "distance": 50,
+    "height": 5,
+    "label": "景物"
+  },
+  "caption": "照相机成像原理：物距远大于二倍焦距"
+}

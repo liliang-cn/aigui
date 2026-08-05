@@ -22,7 +22,7 @@ AIGUI renders a streaming LLM response as live UI. A headless core (`@ai-gui/cor
 | Vue | `@ai-gui/vue` | `pnpm add @ai-gui/core @ai-gui/vue` |
 | vanilla DOM | `@ai-gui/vanilla` | `pnpm add @ai-gui/core @ai-gui/vanilla` |
 
-Add any plugins you need: `@ai-gui/plugin-solid`, `@ai-gui/plugin-function`, `@ai-gui/plugin-ui`, `@ai-gui/plugin-katex`, `@ai-gui/plugin-highlight`, `@ai-gui/plugin-mermaid`, `@ai-gui/plugin-molecule`, `@ai-gui/plugin-map`, `@ai-gui/plugin-primitives`, `@ai-gui/plugin-chart`, `@ai-gui/plugin-form`, `@ai-gui/plugin-citation`, `@ai-gui/plugin-artifact`.
+Add any plugins you need: `@ai-gui/plugin-solid`, `@ai-gui/plugin-function`, `@ai-gui/plugin-optics`, `@ai-gui/plugin-ui`, `@ai-gui/plugin-katex`, `@ai-gui/plugin-highlight`, `@ai-gui/plugin-mermaid`, `@ai-gui/plugin-molecule`, `@ai-gui/plugin-map`, `@ai-gui/plugin-primitives`, `@ai-gui/plugin-chart`, `@ai-gui/plugin-form`, `@ai-gui/plugin-citation`, `@ai-gui/plugin-artifact`.
 
 ### 2. Register cards
 
@@ -100,9 +100,10 @@ import { molecule } from "@ai-gui/plugin-molecule"
 import { map } from "@ai-gui/plugin-map"
 import { solid } from "@ai-gui/plugin-solid"
 import { fn } from "@ai-gui/plugin-function"
+import { optics } from "@ai-gui/plugin-optics"
 
 const artifactStore = new ArtifactStore()
-const plugins = [ui({ registry, actionRuntime }), katex(), highlight(), mermaid(), molecule(), map(), chart({ interactive: true }), primitives(), citation(), solid(), fn(), artifact({ store: artifactStore })]
+const plugins = [ui({ registry, actionRuntime }), katex(), highlight(), mermaid(), molecule(), map(), chart({ interactive: true }), primitives(), citation(), solid(), fn(), optics(), artifact({ store: artifactStore })]
 ```
 
 Diagrams, maths and charts are the heaviest thing a page carrying them loads. To keep them out of the first load, pass a loader instead of an array — the answer renders as plain markdown until it resolves, and the renderer then reparses the text it has buffered:

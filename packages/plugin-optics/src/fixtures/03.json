@@ -1,0 +1,10 @@
+{
+  "element": "convex-lens",
+  "focal": 10,
+  "object": {
+    "distance": 20,
+    "height": 4,
+    "label": "AB"
+  },
+  "caption": "物体在二倍焦距处的凸透镜成像"
+}

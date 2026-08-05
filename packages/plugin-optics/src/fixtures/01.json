@@ -1,0 +1,6 @@
+{
+  "element": "convex-lens",
+  "focal": 10,
+  "object": { "distance": 30, "height": 4, "label": "AB" },
+  "caption": "凸透镜成像（u = 30 cm，f = 10 cm）"
+}

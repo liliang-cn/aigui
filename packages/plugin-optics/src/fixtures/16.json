@@ -1,0 +1,6 @@
+{
+  "element": "convex-lens",
+  "focal": 15,
+  "object": { "distance": 45, "height": 6, "label": "远物" },
+  "caption": "开普勒望远镜物镜成像（远物经物镜成倒立缩小实像）"
+}

@@ -1,0 +1,6 @@
+{
+  "element": "concave-mirror",
+  "focal": 15,
+  "object": { "distance": 25, "height": 3, "label": "AB" },
+  "caption": "凹面镜成像（f = 15 cm, u = 25 cm）"
+}

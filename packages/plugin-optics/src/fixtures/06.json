@@ -1,0 +1,10 @@
+{
+  "element": "convex-lens",
+  "focal": 8,
+  "object": {
+    "distance": 12,
+    "height": 3,
+    "label": "胶片"
+  },
+  "caption": "投影仪镜头成像光路图"
+}

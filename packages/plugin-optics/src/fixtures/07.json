@@ -1,0 +1,6 @@
+{
+  "element": "convex-lens",
+  "focal": 5,
+  "object": { "distance": 3, "height": 2, "label": "邮票" },
+  "caption": "放大镜（物距小于一倍焦距）成像"
+}

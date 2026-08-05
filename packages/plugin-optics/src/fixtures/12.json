@@ -1,0 +1,9 @@
+{
+  "element": "plane-mirror",
+  "object": {
+    "distance": 8,
+    "height": 5,
+    "label": "AB"
+  },
+  "caption": "物体在平面镜前 8 cm 处的成像"
+}

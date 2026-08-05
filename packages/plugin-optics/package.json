@@ -1,0 +1,63 @@
+{
+  "name": "@ai-gui/plugin-optics",
+  "version": "0.25.0",
+  "description": "Ray-optics teaching figures for AIGUI \u2014 lenses, mirrors and refraction, with the image position and the rays computed from the conditions.",
+  "keywords": [
+    "llm",
+    "ai",
+    "physics",
+    "optics",
+    "lens",
+    "mirror",
+    "refraction",
+    "teaching",
+    "plugin",
+    "aigui"
+  ],
+  "license": "MIT",
+  "author": "Liang Li <ll_faw@hotmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liliang-cn/aigui.git",
+    "directory": "packages/plugin-optics"
+  },
+  "homepage": "https://github.com/liliang-cn/aigui#readme",
+  "bugs": "https://github.com/liliang-cn/aigui/issues",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "pnpm --dir ../.. exec vitest run --project plugin-optics",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-gui/core": "workspace:*"
+  }
+}

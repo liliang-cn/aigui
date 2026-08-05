@@ -1,0 +1,10 @@
+{
+  "element": "convex-mirror",
+  "focal": -10,
+  "object": {
+    "distance": 20,
+    "height": 4,
+    "label": "AB"
+  },
+  "caption": "凸面镜成像光路图（汽车后视镜原理）"
+}

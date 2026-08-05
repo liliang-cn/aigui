@@ -1,0 +1,10 @@
+{
+  "element": "concave-lens",
+  "focal": -12,
+  "object": {
+    "distance": 18,
+    "height": 4,
+    "label": "AB"
+  },
+  "caption": "凹透镜成像（物距 18 cm，焦距 12 cm）"
+}

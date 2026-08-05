@@ -1,0 +1,6 @@
+{
+  "element": "convex-lens",
+  "focal": 10,
+  "object": { "distance": 6, "height": 3, "label": "AB" },
+  "caption": "物距小于一倍焦距时凸透镜成虚像"
+}

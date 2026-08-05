@@ -35,7 +35,7 @@ pnpm add @ai-gui/core @ai-gui/vue
 pnpm add @ai-gui/core @ai-gui/vanilla
 
 # plugins (optional)
-pnpm add @ai-gui/plugin-solid @ai-gui/plugin-function @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact
+pnpm add @ai-gui/plugin-solid @ai-gui/plugin-function @ai-gui/plugin-optics @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact
 
 # plugin authoring helpers (optional)
 pnpm add @ai-gui/plugin-sdk
@@ -176,6 +176,7 @@ await r.feed(res.body!)
 | `@ai-gui/plugin-map` | `map(options?)` | Strict ` ```map ` blocks for inline GeoJSON, markers, routes, bounded navigation, and host-controlled basemaps |
 | `@ai-gui/plugin-solid` | `solid(options?)` | ` ```solid ` blocks for solid-geometry teaching figures — solids, named points, sections, and marked lines and angles |
 | `@ai-gui/plugin-function` | `fn(options?)` | ` ```function ` blocks for function and calculus figures — curves, tangents, areas, Riemann sums, computed from an expression |
+| `@ai-gui/plugin-optics` | `optics(options?)` | ` ```optics ` blocks for ray optics — lenses, mirrors and refraction, with the image and the conclusion computed |
 
 Pass plugins to any adapter:
 
@@ -261,6 +262,8 @@ Forms use the same `ActionRuntime` in every adapter: `const plugins = [form({ ac
 `artifact()` lets the model create and revise persistent generated documents through complete-gated JSON commands. Every update requires the exact current `baseRevision`; `operationId` receipts make stream replay idempotent. The workspace previews `text`, `code`, `markdown`, and `json`, supports copy/download, and never executes generated HTML, JavaScript, components, actions, or network requests. `ArtifactStore.snapshot()` and `restore()` support application-owned persistence.
 
 `molecule()` validates chemistry with OpenChemLib, renders safe 2D SVG, and can lazily mount 3Dmol for local Molfiles containing genuine 3D coordinates. SMILES is 2D-only in v1. The model cannot supply URLs, remote structures, scripts, shaders, callbacks, or network operations.
+
+`optics()` draws a lens, mirror or refraction figure from the conditions, and writes the conclusion under it from the numbers it computed — the image position, whether it is upright or inverted, real or virtual, the refraction angle, whether total internal reflection happens. That sentence is the part a reader takes away and the part a model most often gets wrong, so it is generated rather than quoted, and cannot disagree with the rays above it.
 
 `fn()` draws a curve from its expression, not from points the model sampled: it takes `y = f(x)` and an interval, and the tangent's slope, the shaded area, the Riemann rectangles and the derivative are all computed here. A model plotting through `chart` has to sample the function itself, which puts its arithmetic into the picture where a wrong point is indistinguishable from a right one. Expressions go through a fixed grammar with no `eval`, and a definition carrying sampled points is refused.
 
@@ -402,6 +405,7 @@ The fence conventions it may use (only for **registered / enabled** block types)
 - Diagrams: ` ```mermaid `.
 - Solid-geometry figures: ` ```solid ` with the solid, its named points, and the conditions on them — never coordinates or a stated result.
 - Function and calculus figures: ` ```function ` with the expression and the interval — never sampled points, never a computed slope or area.
+- Ray-optics figures: ` ```optics ` with the element and the object — never the image position, the magnification, or whether it is real or virtual.
 
 Card buttons are **declarative**: the model emits an `action` name plus `params`; your app performs the real request. See [AGENTS.md](./AGENTS.md) for the exact syntax and examples.
 
@@ -434,6 +438,7 @@ LLM stream ──▶ @ai-gui/core (headless)
 | [`@ai-gui/plugin-katex`](./packages/plugin-katex/README.md) | KaTeX math (`$…$`, `$$…$$`). |
 | [`@ai-gui/plugin-solid`](./packages/plugin-solid/README.md) | Solid-geometry teaching figures (` ```solid `). |
 | [`@ai-gui/plugin-function`](./packages/plugin-function/README.md) | Function and calculus figures (` ```function `). |
+| [`@ai-gui/plugin-optics`](./packages/plugin-optics/README.md) | Ray-optics figures (` ```optics `). |
 | [`@ai-gui/plugin-highlight`](./packages/plugin-highlight/README.md) | Shiki syntax highlighting for code blocks. |
 | [`@ai-gui/plugin-mermaid`](./packages/plugin-mermaid/README.md) | Mermaid diagrams. |
 | [`@ai-gui/plugin-primitives`](./packages/plugin-primitives/README.md) | Primitive UI blocks: list / table / key-value / layout. |
