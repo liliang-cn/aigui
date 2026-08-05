@@ -1,5 +1,11 @@
 # @ai-gui/plugin-sdk
 
+## 0.27.0
+
+### Patch Changes
+
+- @ai-gui/core@0.27.0
+
 ## 0.26.0
 
 ### Patch Changes

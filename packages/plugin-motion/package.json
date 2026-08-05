@@ -1,7 +1,7 @@
 {
   "name": "@ai-gui/plugin-motion",
-  "version": "0.26.0",
-  "description": "Mechanics motion figures for AIGUI \u2014 projectiles, free fall, SHM, circular motion and collisions, drawn from the initial conditions.",
+  "version": "0.27.0",
+  "description": "Mechanics motion figures for AIGUI — projectiles, free fall, SHM, circular motion and collisions, drawn from the initial conditions.",
   "keywords": [
     "llm",
     "ai",

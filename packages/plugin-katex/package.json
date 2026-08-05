@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-katex",
-  "version": "0.26.0",
+  "version": "0.27.0",
   "description": "KaTeX math rendering plugin for AIGUI.",
   "keywords": [
     "llm",
