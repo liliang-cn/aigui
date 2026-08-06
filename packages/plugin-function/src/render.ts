@@ -1,4 +1,4 @@
-import { autoView, compileCurves, derivativeCurve, polylines, riemann, sample, tangent, at, type Curve } from "./plot"
+import { autoView, compileCurves, derivativeCurve, initialScope, polylines, riemann, sample, tangent, at, type Curve } from "./plot"
 import type { FunctionDefinition, FunctionOptions, Viewport } from "./types"
 
 /**
@@ -51,15 +51,21 @@ const toY = (frame: Frame, y: number): number =>
 const clamp = (value: number, low: number, high: number): number => Math.min(high, Math.max(low, value))
 
 /** Render one definition to a standalone SVG string. */
-export function renderFunctionSVG(definition: FunctionDefinition, options: FunctionOptions = {}, theme?: string): string {
+export function renderFunctionSVG(definition: FunctionDefinition, options: FunctionOptions = {}, theme?: string, scope?: Record<string, number>): string {
   const width = options.width ?? 640
   const height = options.height ?? 380
   const samples = options.samples ?? 480
   const colours = palette(theme)
 
-  const fallbackX: [number, number] = definition.view?.x ? [at(definition.view.x[0]), at(definition.view.x[1])] : [-5, 5]
-  const curves = compileCurves(definition, fallbackX)
-  const view = autoView(curves, definition, 200)
+  const names = (definition.params ?? []).map((p) => p.id)
+  const values = scope ?? initialScope(definition)
+  const fallbackX: [number, number] = definition.view?.x
+    ? [at(definition.view.x[0], 0, names, values), at(definition.view.x[1], 0, names, values)]
+    : [-5, 5]
+  const curves = compileCurves(definition, fallbackX, values)
+  // The window is fixed by the figure's own view when it has one, so a curve does not jump around
+  // as a parameter is dragged; only the curve moves.
+  const view = autoView(curves, definition, 200, values)
   const frame: Frame = { width, height, pad: { left: 44, right: 16, top: 16, bottom: 32 }, view }
   const byId = new Map(curves.map((curve) => [curve.id, curve]))
 
@@ -103,8 +109,8 @@ export function renderFunctionSVG(definition: FunctionDefinition, options: Funct
   // Areas and rectangles go under the curves, so a filled region never hides the graph bounding it.
   for (const mark of definition.marks ?? []) {
     if ("area" in mark) {
-      const from = at(mark.area.from)
-      const to = at(mark.area.to)
+      const from = at(mark.area.from, 0, names, values)
+      const to = at(mark.area.to, 0, names, values)
       const upper = mark.area.between ? byId.get(mark.area.between[0]) : byId.get(mark.area.of!)
       const lower = mark.area.between ? byId.get(mark.area.between[1]) : undefined
       if (!upper) continue
@@ -125,7 +131,7 @@ export function renderFunctionSVG(definition: FunctionDefinition, options: Funct
     } else if ("riemann" in mark) {
       const curve = byId.get(mark.riemann.of)
       if (!curve) continue
-      const { rects } = riemann(curve, at(mark.riemann.from), at(mark.riemann.to), mark.riemann.n, mark.riemann.rule ?? "left")
+      const { rects } = riemann(curve, at(mark.riemann.from, 0, names, values), at(mark.riemann.to, 0, names, values), mark.riemann.n, mark.riemann.rule ?? "left")
       for (const rect of rects) {
         const x1 = toX(frame, rect.x)
         const x2 = toX(frame, rect.x + rect.width)
@@ -165,7 +171,7 @@ export function renderFunctionSVG(definition: FunctionDefinition, options: Funct
     } else if ("tangent" in mark) {
       const curve = byId.get(mark.tangent.of)
       if (!curve) continue
-      const line = tangent(curve, at(mark.tangent.at), view)
+      const line = tangent(curve, at(mark.tangent.at, 0, names, values), view)
       if (!line) continue
       parts.push(
         `<line x1="${round(toX(frame, line.from.x))}" y1="${round(toY(frame, line.from.y))}" x2="${round(toX(frame, line.to.x))}" y2="${round(toY(frame, line.to.y))}" stroke="${colours.accent}" stroke-width="2"/>`,
@@ -177,7 +183,7 @@ export function renderFunctionSVG(definition: FunctionDefinition, options: Funct
     } else if ("point" in mark) {
       const curve = byId.get(mark.point.on)
       if (!curve) continue
-      const x = at(mark.point.at)
+      const x = at(mark.point.at, 0, names, values)
       const y = curve.fn(x)
       if (!Number.isFinite(y)) continue
       const px = round(toX(frame, x))

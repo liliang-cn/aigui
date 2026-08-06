@@ -22,8 +22,11 @@ interface Token {
   at: number
 }
 
-/** A parsed expression, ready to evaluate at any x. */
-export type CompiledExpression = (x: number) => number
+/** Values for the named parameters an expression may refer to. */
+export type Scope = Record<string, number>
+
+/** A parsed expression, ready to evaluate at any x and any set of parameter values. */
+export type CompiledExpression = (x: number, scope?: Scope) => number
 
 export class ExprError extends Error {}
 
@@ -65,7 +68,8 @@ function tokenize(source: string): Token[] {
  * plot that silently interprets one as the other is wrong in a way nobody checks. Requiring `2*x`
  * makes the model's intent explicit, and whether it complies is exactly what the probe measures.
  */
-export function parseExpression(source: string): CompiledExpression {
+export function parseExpression(source: string, parameters: readonly string[] = []): CompiledExpression {
+  const declared = new Set(parameters)
   const tokens = tokenize(source)
   let pos = 0
   const peek = (): Token | undefined => tokens[pos]
@@ -97,9 +101,12 @@ export function parseExpression(source: string): CompiledExpression {
         pos++
         const argument = additive()
         eat(")")
-        return (x) => fn(argument(x))
+        return (x, scope) => fn(argument(x, scope))
       }
       if (name === "x") return (x) => x
+      // A declared parameter reads from the scope. Undeclared names still fail, so a typo in an
+      // expression is caught at parse time rather than silently evaluating to NaN on every frame.
+      if (declared.has(name)) return (_x, scope) => scope?.[name] ?? Number.NaN
       if (Object.hasOwn(CONSTANTS, name)) { const value = CONSTANTS[name]; return () => value }
       if (Object.hasOwn(FUNCTIONS, name)) throw new ExprError(`${name} needs brackets: write ${name}(x)`)
       throw new ExprError(`unknown name ${name} — only x, pi, e and the listed functions exist`)
@@ -113,7 +120,7 @@ export function parseExpression(source: string): CompiledExpression {
       pos++
       // Right-associative, and the exponent may be signed: x^2^3 is x^(2^3) and 2^-3 is a third.
       const exponent = unary()
-      return (x) => Math.pow(base(x), exponent(x))
+      return (x, scope) => Math.pow(base(x, scope), exponent(x, scope))
     }
     return base
   }
@@ -126,7 +133,7 @@ export function parseExpression(source: string): CompiledExpression {
    */
   function unary(): CompiledExpression {
     const type = peek()?.type
-    if (type === "-") { pos++; const value = unary(); return (x) => -value(x) }
+    if (type === "-") { pos++; const value = unary(); return (x, scope) => -value(x, scope) }
     if (type === "+") { pos++; return unary() }
     return power()
   }
@@ -135,8 +142,8 @@ export function parseExpression(source: string): CompiledExpression {
     let left = unary()
     for (;;) {
       const type = peek()?.type
-      if (type === "*") { pos++; const right = unary(); const l = left; left = (x) => l(x) * right(x) }
-      else if (type === "/") { pos++; const right = unary(); const l = left; left = (x) => l(x) / right(x) }
+      if (type === "*") { pos++; const right = unary(); const l = left; left = (x, scope) => l(x, scope) * right(x, scope) }
+      else if (type === "/") { pos++; const right = unary(); const l = left; left = (x, scope) => l(x, scope) / right(x, scope) }
       // A name or number or bracket sitting where an operator belongs is implicit multiplication.
       else if (type === "name" || type === "number" || type === "(") {
         throw new ExprError(`missing operator before "${peek()?.value ?? "("}" — write 2*x, not 2x`)
@@ -149,8 +156,8 @@ export function parseExpression(source: string): CompiledExpression {
     let left = multiplicative()
     for (;;) {
       const type = peek()?.type
-      if (type === "+") { pos++; const right = multiplicative(); const l = left; left = (x) => l(x) + right(x) }
-      else if (type === "-") { pos++; const right = multiplicative(); const l = left; left = (x) => l(x) - right(x) }
+      if (type === "+") { pos++; const right = multiplicative(); const l = left; left = (x, scope) => l(x, scope) + right(x, scope) }
+      else if (type === "-") { pos++; const right = multiplicative(); const l = left; left = (x, scope) => l(x, scope) - right(x, scope) }
       else return left
     }
   }
@@ -161,11 +168,11 @@ export function parseExpression(source: string): CompiledExpression {
 }
 
 /** Whether an expression parses and produces a finite value somewhere on the interval. */
-export function isPlottable(source: string, [from, to]: [number, number] = [-5, 5]): boolean {
-  const fn = parseExpression(source)
+export function isPlottable(source: string, [from, to]: [number, number] = [-5, 5], parameters: readonly string[] = [], scope: Scope = {}): boolean {
+  const fn = parseExpression(source, parameters)
   let finite = 0
   for (let i = 0; i <= 40; i++) {
-    const value = fn(from + ((to - from) * i) / 40)
+    const value = fn(from + ((to - from) * i) / 40, scope)
     if (Number.isFinite(value)) finite++
   }
   if (finite === 0) throw new ExprError("never takes a finite value on its domain")
@@ -180,12 +187,12 @@ export function isPlottable(source: string, [from, to]: [number, number] = [-5, 
  * arithmetic that the renderer exists to do. Evaluating at NaN is what proves the expression is
  * constant: any use of x propagates NaN through every operation in the grammar.
  */
-export function evaluateConstant(source: unknown): number | undefined {
+export function evaluateConstant(source: unknown, parameters: readonly string[] = [], scope: Scope = {}): number | undefined {
   if (typeof source === "number") return Number.isFinite(source) ? source : undefined
   if (typeof source !== "string") return undefined
   let value: number
   try {
-    value = parseExpression(source)(Number.NaN)
+    value = parseExpression(source, parameters)(Number.NaN, scope)
   } catch {
     return undefined
   }
@@ -200,11 +207,11 @@ export function evaluateConstant(source: unknown): number | undefined {
  * the right line. The step is scaled to the magnitude of x — a fixed h loses all its significant
  * digits once x is large.
  */
-export function derivativeAt(fn: CompiledExpression, x: number): number {
+export function derivativeAt(fn: CompiledExpression, x: number, scope?: Scope): number {
   const h = Math.cbrt(Number.EPSILON) * Math.max(1, Math.abs(x))
-  const slope = (fn(x + h) - fn(x - h)) / (2 * h)
+  const slope = (fn(x + h, scope) - fn(x - h, scope)) / (2 * h)
   if (Number.isFinite(slope)) return slope
   // One-sided where the curve stops, so an endpoint still gets a tangent.
-  const forward = (fn(x + h) - fn(x)) / h
-  return Number.isFinite(forward) ? forward : (fn(x) - fn(x - h)) / h
+  const forward = (fn(x + h, scope) - fn(x, scope)) / h
+  return Number.isFinite(forward) ? forward : (fn(x, scope) - fn(x - h, scope)) / h
 }

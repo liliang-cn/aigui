@@ -15,6 +15,10 @@ import { translate, type MessageBundle } from "@ai-gui/core"
  * example's own mistake was copied back verbatim and once when deleting an example sent nearly half
  * the answers to the wrong shape within a single round.
  *
+ * `params` is the one field that is not about a single figure: a slider is looking rather than
+ * authoring, the same category as turning a solid around, and every frame is still the renderer
+ * computing from the model's conditions.
+ *
  * You rarely want this directly: `buildSystemPrompt({ registry, plugins, locale })` from
  * `@ai-gui/core` collects the card specs and every enabled plugin's spec in one call, in the
  * product's language.
@@ -98,6 +102,17 @@ const ZH = `函数图像（围栏代码块）：\` \`\`\`function \` 开头，�
   "plot": [{ "id": "f", "expr": "x^2", "domain": [0, 1], "label": "y = x²" }],
   "marks": [{ "riemann": { "of": "f", "from": 0, "to": 1, "n": 8, "rule": "left" } }],
   "caption": "用 8 个左端点矩形近似 ∫₀¹ x² dx"
+}
+\`\`\`
+
+参数化的一族抛物线：
+
+\`\`\`function
+{
+  "params": [{ "id": "a", "from": -3, "to": 3, "value": 1, "step": 0.1, "label": "a" }],
+  "plot": [{ "id": "f", "expr": "a*x^2", "domain": [-3, 3], "label": "y = a·x²" }],
+  "view": { "x": [-3, 3], "y": [-9, 9] },
+  "caption": "拖动 a，看开口方向和张开程度如何变化"
 }
 \`\`\`
 

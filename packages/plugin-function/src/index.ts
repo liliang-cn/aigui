@@ -1,6 +1,7 @@
 import type { AIGuiPlugin, ASTNode, NodeRenderContext, RenderOutput } from "@ai-gui/core"
 import { parseFunction } from "./parse"
 import { functionPromptSpec } from "./prompt"
+import { initialScope } from "./plot"
 import { renderFunctionSVG } from "./render"
 import type { FunctionOptions } from "./types"
 
@@ -9,7 +10,7 @@ export { parseFunction } from "./parse"
 export { renderFunctionSVG } from "./render"
 export { derivativeAt, evaluateConstant, ExprError, isPlottable, parseExpression } from "./expr"
 export type { CompiledExpression } from "./expr"
-export { autoView, compileCurves, derivativeCurve, polylines, riemann, sample, tangent } from "./plot"
+export { autoView, compileCurves, derivativeCurve, initialScope, polylines, riemann, sample, tangent } from "./plot"
 export type { Curve, Sample, TangentLine } from "./plot"
 export type {
   CurveDef,
@@ -19,12 +20,17 @@ export type {
   FunctionOptions,
   FunctionResult,
   MarkDef,
+  ParamDef,
   Viewport,
 } from "./types"
 
 const escapeHtml = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
 export const functionCss = [
+  "[data-aigui-function-params]{display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;margin-top:0.4rem}",
+  "[data-aigui-function-param]{display:flex;align-items:center;gap:0.4rem;font-size:0.8125rem}",
+  "[data-aigui-function-param] input{width:9rem}",
+  "[data-aigui-function-param] output{min-width:3.2rem;font-variant-numeric:tabular-nums;opacity:0.8}",
   "[data-aigui-function-figure]{max-width:100%;margin-block:0.75rem}",
   "[data-aigui-function-figure] svg{display:block;max-width:100%;height:auto}",
   "[data-aigui-function-caption]{margin-top:0.35rem;font-size:0.875rem;opacity:0.75;text-align:center}",
@@ -58,15 +64,74 @@ export function fn(options: FunctionOptions = {}): AIGuiPlugin {
       return { kind: "html", html: `<div data-aigui-function-error role="img" aria-label="${message}">${message}</div>`, trusted: true }
     }
     const definition = parsed.value
+    const draw = (scope?: Record<string, number>) => renderFunctionSVG(definition, options, context?.theme, scope)
     let svg: string
     try {
-      svg = renderFunctionSVG(definition, options, context?.theme)
+      svg = draw()
     } catch {
       return { kind: "html", html: '<div data-aigui-function-error role="img" aria-label="Figure could not be drawn.">Figure could not be drawn.</div>', trusted: true }
     }
     const caption = definition.caption
       ? `<div data-aigui-function-caption>${escapeHtml(definition.caption)}</div>`
       : ""
+
+    // A figure with no parameters stays a plain string, which is what keeps it server-renderable,
+    // exportable and byte-identical between runs. Only a figure that asks for a slider needs a
+    // living element, and even then every frame is `draw(values)` — a pure function of the
+    // definition and one number per parameter, so any position is reproducible from that number.
+    if (definition.params && definition.params.length > 0) {
+      const params = definition.params
+      return {
+        kind: "mount",
+        mount: (el) => {
+          el.setAttribute("data-aigui-function-figure", "")
+          const figure = document.createElement("div")
+          figure.innerHTML = svg
+          el.appendChild(figure)
+          const scope = initialScope(definition)
+          const controls = document.createElement("div")
+          controls.setAttribute("data-aigui-function-params", "")
+          const cleanups: Array<() => void> = []
+          for (const param of params) {
+            const wrap = document.createElement("label")
+            wrap.setAttribute("data-aigui-function-param", "")
+            const name = document.createElement("span")
+            name.textContent = param.label ?? param.id
+            const input = document.createElement("input")
+            input.type = "range"
+            input.min = String(param.from)
+            input.max = String(param.to)
+            input.step = String(param.step ?? (param.to - param.from) / 100)
+            input.value = String(scope[param.id])
+            const readout = document.createElement("output")
+            readout.textContent = String(Math.round(scope[param.id] * 1000) / 1000)
+            const onInput = () => {
+              scope[param.id] = Number(input.value)
+              readout.textContent = String(Math.round(scope[param.id] * 1000) / 1000)
+              try {
+                figure.innerHTML = draw(scope)
+              } catch {
+                // A value that makes the figure undrawable leaves the last good frame on screen
+                // rather than blanking it mid-drag.
+              }
+            }
+            input.addEventListener("input", onInput)
+            cleanups.push(() => input.removeEventListener("input", onInput))
+            wrap.append(name, input, readout)
+            controls.appendChild(wrap)
+          }
+          el.appendChild(controls)
+          if (definition.caption) {
+            const text = document.createElement("div")
+            text.setAttribute("data-aigui-function-caption", "")
+            text.textContent = definition.caption
+            el.appendChild(text)
+          }
+          return () => { for (const off of cleanups) off() }
+        },
+      }
+    }
+
     // Built here from the definition, not markup the model wrote: the only strings from the model
     // that reach the page are escaped labels.
     return { kind: "html", html: `<figure data-aigui-function-figure>${svg}${caption}</figure>`, trusted: true }

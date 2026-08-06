@@ -3,7 +3,7 @@ import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import { buildSystemPrompt, collectNodeRenderers, type ASTNode, type RenderOutput } from "@ai-gui/core"
-import { fn, functionPromptSpec, parseFunction } from "./index"
+import { compileCurves, fn, functionPromptSpec, initialScope, parseFunction, renderFunctionSVG } from "./index"
 
 const render = (content: string, complete = true): RenderOutput =>
   collectNodeRenderers([fn()]).function({ key: "0:0", type: "function", content, complete } as ASTNode) as RenderOutput
@@ -122,5 +122,67 @@ describe("the model's own figures", () => {
       expect(output.html).toContain("<svg")
       expect(output.html).not.toContain("data-aigui-function-error")
     }
+  })
+})
+
+describe("parameters", () => {
+  const PARABOLA = JSON.stringify({
+    params: [{ id: "a", from: -3, to: 3, value: 1, step: 0.1, label: "a" }],
+    plot: [{ id: "f", expr: "a*x^2", domain: [-3, 3], label: "y = a·x²" }],
+    view: { x: [-3, 3], y: [-9, 9] },
+    caption: "拖动 a 看开口如何变化",
+  })
+
+  it("evaluates an expression against the parameter's starting value", () => {
+    const result = parseFunction(PARABOLA)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      const [curve] = compileCurves(result.value, [-3, 3], initialScope(result.value))
+      expect(curve.fn(2)).toBeCloseTo(4)
+    }
+  })
+  it("redraws for another value without re-parsing", () => {
+    const result = parseFunction(PARABOLA)
+    if (!result.ok) throw new Error(result.error.message)
+    const [curve] = compileCurves(result.value, [-3, 3], { a: -2 })
+    expect(curve.fn(2)).toBeCloseTo(-8)
+  })
+  it("mounts a slider instead of a string, but only when a parameter is declared", () => {
+    // Everything else stays a plain string, which is what keeps it server-renderable and exportable.
+    expect(render(PARABOLA).kind).toBe("mount")
+    expect(render(JSON.stringify({ plot: [{ id: "f", expr: "x^2" }] })).kind).toBe("html")
+  })
+  it("keeps every frame a pure function of the value", () => {
+    const result = parseFunction(PARABOLA)
+    if (!result.ok) throw new Error(result.error.message)
+    const first = renderFunctionSVG(result.value, {}, undefined, { a: 2 })
+    const second = renderFunctionSVG(result.value, {}, undefined, { a: 2 })
+    expect(first).toBe(second)
+    expect(first).not.toBe(renderFunctionSVG(result.value, {}, undefined, { a: -2 }))
+  })
+  it("lets an interval and a mark refer to a parameter too", () => {
+    const result = parseFunction(JSON.stringify({
+      params: [{ id: "b", from: 1, to: 4, value: 2 }],
+      plot: [{ id: "f", expr: "x^2", domain: [0, "b"] }],
+      marks: [{ tangent: { of: "f", at: "b" } }],
+    }))
+    expect(result.ok).toBe(true)
+  })
+  it("catches a typo in an expression at parse time rather than every frame", () => {
+    // `c` was never declared, so this fails once here instead of evaluating to NaN forever.
+    expect(reason({ params: [{ id: "a", from: 0, to: 1 }], plot: [{ id: "f", expr: "c*x" }] })).toContain("unknown name c")
+  })
+  it("refuses a parameter that would shadow x or a constant", () => {
+    expect(reason({ params: [{ id: "x", from: 0, to: 1 }], plot: [{ id: "f", expr: "x" }] })).toContain("not x or e")
+    expect(reason({ params: [{ id: "e", from: 0, to: 1 }], plot: [{ id: "f", expr: "x" }] })).toContain("not x or e")
+  })
+  it("refuses an empty or inverted range, and a starting value outside it", () => {
+    expect(reason({ params: [{ id: "a", from: 3, to: 1 }], plot: [{ id: "f", expr: "a*x" }] })).toContain("from < to")
+    expect(reason({ params: [{ id: "a", from: 0, to: 1, value: 5 }], plot: [{ id: "f", expr: "a*x" }] })).toContain("must lie in")
+  })
+  it("starts in the middle of the range when no value is given", () => {
+    const result = parseFunction(JSON.stringify({ params: [{ id: "a", from: -4, to: 2 }], plot: [{ id: "f", expr: "a*x" }] }))
+    if (!result.ok) throw new Error(result.error.message)
+    expect(initialScope(result.value)).toEqual({ a: -1 })
   })
 })

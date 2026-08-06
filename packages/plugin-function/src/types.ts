@@ -16,7 +16,25 @@ export type MarkDef =
   | { asymptote: { x?: number; y?: number } }
   | { derivative: { of: string; label?: string } }
 
+/**
+ * A named quantity the reader can vary.
+ *
+ * A slider is looking, not authoring — the same category as turning a solid around. Every frame is
+ * still `render(definition, value)`, so the figure remains a pure function of its definition plus
+ * one number, and a screenshot at any value is reproducible from that value.
+ */
+export interface ParamDef {
+  id: string
+  from: number
+  to: number
+  /** Where the slider starts. Defaults to the middle of the range. */
+  value?: number
+  step?: number
+  label?: string
+}
+
 export interface FunctionDefinition {
+  params?: ParamDef[]
   plot: CurveDef[]
   view?: { x?: [Endpoint, Endpoint]; y?: [Endpoint, Endpoint] }
   marks?: MarkDef[]

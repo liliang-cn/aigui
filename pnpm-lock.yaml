@@ -44,6 +44,9 @@ importers:
       '@ai-gui/plugin-citation':
         specifier: workspace:*
         version: link:../../packages/plugin-citation
+      '@ai-gui/plugin-function':
+        specifier: workspace:*
+        version: link:../../packages/plugin-function
       '@ai-gui/plugin-map':
         specifier: workspace:*
         version: link:../../packages/plugin-map

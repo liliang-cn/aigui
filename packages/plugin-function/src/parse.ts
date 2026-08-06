@@ -1,20 +1,29 @@
 import { evaluateConstant, ExprError, isPlottable } from "./expr"
 import { at } from "./plot"
-import type { CurveDef, FunctionDefinition, FunctionResult, MarkDef } from "./types"
+import type { CurveDef, FunctionDefinition, FunctionResult, MarkDef, ParamDef } from "./types"
 
-const TOP = new Set(["plot", "view", "marks", "caption"])
+const TOP = new Set(["params", "plot", "view", "marks", "caption"])
 const CURVE = new Set(["id", "expr", "domain", "label"])
 const RULES = new Set(["left", "right", "mid"])
 const ID = /^[A-Za-z][A-Za-z0-9_']*$/
 
 const bad = (message: string): FunctionResult<never> => ({ ok: false, error: { code: "invalid-definition", message } })
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v)
-const endpoint = (v: unknown): number | undefined => evaluateConstant(v)
-const span = (v: unknown): [number, number] | undefined => {
-  if (!Array.isArray(v) || v.length !== 2) return undefined
-  const from = endpoint(v[0])
-  const to = endpoint(v[1])
-  return from === undefined || to === undefined ? undefined : [from, to]
+/**
+ * Endpoints are read against the parameters declared in the same figure, so `"domain": [-1, "a"]`
+ * works. Both helpers are built per call rather than held at module scope: a parser keeping mutable
+ * state between invocations is one nested or concurrent call away from reading another figure's
+ * parameters.
+ */
+function readers(names: readonly string[], sample: Record<string, number>) {
+  const endpoint = (v: unknown): number | undefined => evaluateConstant(v, names, sample)
+  const span = (v: unknown): [number, number] | undefined => {
+    if (!Array.isArray(v) || v.length !== 2) return undefined
+    const from = endpoint(v[0])
+    const to = endpoint(v[1])
+    return from === undefined || to === undefined ? undefined : [from, to]
+  }
+  return { endpoint, span }
 }
 
 /**
@@ -49,6 +58,35 @@ export function parseFunction(
   }
   for (const key of Object.keys(raw)) if (!TOP.has(key)) return bad(`${key} is not a field of a figure definition`)
 
+  const params: ParamDef[] = []
+  const names: string[] = []
+  const sample: Record<string, number> = {}
+  if (raw.params !== undefined) {
+    if (!Array.isArray(raw.params)) return bad("params must be an array")
+    if (raw.params.length > 4) return bad("params has more than 4 entries")
+    for (const [index, entry] of raw.params.entries()) {
+      if (!isRecord(entry)) return bad(`params[${index}] must be an object`)
+      for (const key of Object.keys(entry)) {
+        if (!["id", "from", "to", "value", "step", "label"].includes(key)) return bad(`params[${index}] has no field ${key}`)
+      }
+      const { id, from, to } = entry
+      if (typeof id !== "string" || !/^[a-z][a-z0-9]?$/i.test(id) || id === "x" || id === "e") {
+        return bad(`params[${index}].id must be a short name, and not x or e`)
+      }
+      if (names.includes(id)) return bad(`params[${index}].id repeats ${id}`)
+      if (typeof from !== "number" || typeof to !== "number" || !(from < to)) return bad(`params[${index}] needs from < to`)
+      const value = entry.value === undefined ? (from + to) / 2 : entry.value
+      if (typeof value !== "number" || value < from || value > to) return bad(`params[${index}].value must lie in [from, to]`)
+      if (entry.step !== undefined && (typeof entry.step !== "number" || entry.step <= 0)) return bad(`params[${index}].step must be positive`)
+      if (entry.label !== undefined && typeof entry.label !== "string") return bad(`params[${index}].label must be a string`)
+      names.push(id)
+      sample[id] = value
+      params.push({ id, from, to, value, step: entry.step as number | undefined, label: entry.label as string | undefined })
+    }
+  }
+
+  const { endpoint, span } = readers(names, sample)
+
   if (!Array.isArray(raw.plot) || raw.plot.length === 0) return bad("plot must be a non-empty array")
   if (raw.plot.length > maxCurves) return bad(`plot has more than ${maxCurves} curves`)
 
@@ -71,7 +109,7 @@ export function parseFunction(
       if (domain[0] >= domain[1]) return bad(`plot[${index}].domain must run from smaller to larger`)
     }
     try {
-      isPlottable(expr, domain ?? span((raw.view as Record<string, unknown> | undefined)?.x) ?? [-5, 5])
+      isPlottable(expr, domain ?? span((raw.view as Record<string, unknown> | undefined)?.x) ?? [-5, 5], names, sample)
     } catch (error) {
       return bad(`plot[${index}].expr ${JSON.stringify(expr)}: ${error instanceof ExprError ? error.message : "cannot be evaluated"}`)
     }
@@ -79,6 +117,7 @@ export function parseFunction(
   }
 
   const definition: FunctionDefinition = { plot }
+  if (params.length > 0) definition.params = params
 
   if (raw.view !== undefined) {
     if (!isRecord(raw.view)) return bad("view must be an object")

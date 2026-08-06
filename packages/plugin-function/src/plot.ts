@@ -1,4 +1,4 @@
-import { derivativeAt, evaluateConstant, parseExpression, type CompiledExpression } from "./expr"
+import { derivativeAt, evaluateConstant, parseExpression, type CompiledExpression, type Scope } from "./expr"
 import type { CurveDef, FunctionDefinition, MarkDef, Viewport } from "./types"
 
 export interface Curve {
@@ -11,16 +11,30 @@ export interface Curve {
 /** One sampled point, or a gap where the function has no finite value. */
 export type Sample = { x: number; y: number } | null
 
-export const at = (value: unknown, fallback = 0): number => evaluateConstant(value) ?? fallback
+export const at = (value: unknown, fallback = 0, names: readonly string[] = [], scope: Scope = {}): number =>
+  evaluateConstant(value, names, scope) ?? fallback
 
 /** Compile the curves a definition declares, in order. */
-export function compileCurves(definition: FunctionDefinition, fallbackX: [number, number]): Curve[] {
-  return definition.plot.map((curve: CurveDef) => ({
-    id: curve.id,
-    label: curve.label,
-    fn: parseExpression(curve.expr),
-    domain: curve.domain ? [at(curve.domain[0]), at(curve.domain[1])] : fallbackX,
-  }))
+export function compileCurves(definition: FunctionDefinition, fallbackX: [number, number], scope: Scope = {}): Curve[] {
+  const names = (definition.params ?? []).map((p) => p.id)
+  return definition.plot.map((curve: CurveDef) => {
+    const compiled = parseExpression(curve.expr, names)
+    return {
+      id: curve.id,
+      label: curve.label,
+      // Bound to the parameter values of this frame, so everything downstream — sampling, the
+      // tangent's slope, the area — works on one consistent set of numbers.
+      fn: (x: number) => compiled(x, scope),
+      domain: curve.domain ? [at(curve.domain[0], 0, names, scope), at(curve.domain[1], 0, names, scope)] : fallbackX,
+    }
+  })
+}
+
+/** The parameter values a figure starts at. */
+export function initialScope(definition: FunctionDefinition): Scope {
+  const scope: Scope = {}
+  for (const param of definition.params ?? []) scope[param.id] = param.value ?? (param.from + param.to) / 2
+  return scope
 }
 
 /** Evaluate a curve across its domain, leaving a gap wherever it has no finite value. */
@@ -73,13 +87,14 @@ export function polylines(samples: Sample[], view: Viewport): Array<Array<{ x: n
  * near the edge of the domain is enough to make a naive min/max flatten every curve on the figure
  * into a horizontal line at zero.
  */
-export function autoView(curves: Curve[], definition: FunctionDefinition, count: number): Viewport {
+export function autoView(curves: Curve[], definition: FunctionDefinition, count: number, scope: Scope = {}): Viewport {
+  const names = (definition.params ?? []).map((p) => p.id)
   const xs = curves.flatMap((curve) => curve.domain)
   const x: [number, number] = definition.view?.x
-    ? [at(definition.view.x[0]), at(definition.view.x[1])]
+    ? [at(definition.view.x[0], 0, names, scope), at(definition.view.x[1], 0, names, scope)]
     : [Math.min(...xs), Math.max(...xs)]
 
-  if (definition.view?.y) return { x, y: [at(definition.view.y[0]), at(definition.view.y[1])] }
+  if (definition.view?.y) return { x, y: [at(definition.view.y[0], 0, names, scope), at(definition.view.y[1], 0, names, scope)] }
 
   const values = curves
     .flatMap((curve) => sample(curve, count))
