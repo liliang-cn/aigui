@@ -35,7 +35,7 @@ pnpm add @ai-gui/core @ai-gui/vue
 pnpm add @ai-gui/core @ai-gui/vanilla
 
 # plugins (optional)
-pnpm add @ai-gui/plugin-solid @ai-gui/plugin-function @ai-gui/plugin-optics @ai-gui/plugin-motion @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact
+pnpm add @ai-gui/plugin-solid @ai-gui/plugin-function @ai-gui/plugin-optics @ai-gui/plugin-motion @ai-gui/plugin-quote @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact
 
 # plugin authoring helpers (optional)
 pnpm add @ai-gui/plugin-sdk
@@ -178,6 +178,7 @@ await r.feed(res.body!)
 | `@ai-gui/plugin-function` | `fn(options?)` | ` ```function ` blocks for function and calculus figures — curves, tangents, areas, Riemann sums, computed from an expression |
 | `@ai-gui/plugin-optics` | `optics(options?)` | ` ```optics ` blocks for ray optics — lenses, mirrors and refraction, with the image and the conclusion computed |
 | `@ai-gui/plugin-motion` | `motion(options?)` | ` ```motion ` blocks for mechanics — projectiles, collisions and oscillation, drawn stroboscopically from the initial conditions |
+| `@ai-gui/plugin-quote` | `quote(options?)` | ` ```quote ` blocks for candlestick charts — the host supplies the prices, the renderer computes every indicator |
 
 Pass plugins to any adapter:
 
@@ -263,6 +264,8 @@ Forms use the same `ActionRuntime` in every adapter: `const plugins = [form({ ac
 `artifact()` lets the model create and revise persistent generated documents through complete-gated JSON commands. Every update requires the exact current `baseRevision`; `operationId` receipts make stream replay idempotent. The workspace previews `text`, `code`, `markdown`, and `json`, supports copy/download, and never executes generated HTML, JavaScript, components, actions, or network requests. `ArtifactStore.snapshot()` and `restore()` support application-owned persistence.
 
 `molecule()` validates chemistry with OpenChemLib, renders safe 2D SVG, and can lazily mount 3Dmol for local Molfiles containing genuine 3D coordinates. SMILES is 2D-only in v1. The model cannot supply URLs, remote structures, scripts, shaders, callbacks, or network operations.
+
+`quote()` is the one figure plugin that runs the other way round: a price follows from nothing, so the model relays bars it actually has rather than deriving them, and the protocol makes relaying the only thing it can do. A bar whose high is below its close is refused as impossible; indicators are named rather than valued so a hand-computed average cannot reach the chart; and there is no field for a view on the market, because a view rendered as a mark reads as something the data supports.
 
 `motion()` draws mechanics stroboscopically — equal time intervals, so the spacing between marks is what shows the acceleration, which is how a textbook draws motion and what makes the figure a pure function of its definition. Range, flight time and the velocities after a collision are computed, never quoted.
 
@@ -410,6 +413,7 @@ The fence conventions it may use (only for **registered / enabled** block types)
 - Function and calculus figures: ` ```function ` with the expression and the interval — never sampled points, never a computed slope or area.
 - Ray-optics figures: ` ```optics ` with the element and the object — never the image position, the magnification, or whether it is real or virtual.
 - Motion figures: ` ```motion ` with the initial conditions — never the range, the flight time, or the velocities after a collision.
+- Price charts: ` ```quote ` with bars you actually have — never prices from memory, never indicator values, never a buy or sell signal.
 
 Card buttons are **declarative**: the model emits an `action` name plus `params`; your app performs the real request. See [AGENTS.md](./AGENTS.md) for the exact syntax and examples.
 
@@ -444,6 +448,7 @@ LLM stream ──▶ @ai-gui/core (headless)
 | [`@ai-gui/plugin-function`](./packages/plugin-function/README.md) | Function and calculus figures (` ```function `). |
 | [`@ai-gui/plugin-optics`](./packages/plugin-optics/README.md) | Ray-optics figures (` ```optics `). |
 | [`@ai-gui/plugin-motion`](./packages/plugin-motion/README.md) | Mechanics motion figures (` ```motion `). |
+| [`@ai-gui/plugin-quote`](./packages/plugin-quote/README.md) | Candlestick charts with computed indicators (` ```quote `). |
 | [`@ai-gui/plugin-highlight`](./packages/plugin-highlight/README.md) | Shiki syntax highlighting for code blocks. |
 | [`@ai-gui/plugin-mermaid`](./packages/plugin-mermaid/README.md) | Mermaid diagrams. |
 | [`@ai-gui/plugin-primitives`](./packages/plugin-primitives/README.md) | Primitive UI blocks: list / table / key-value / layout. |

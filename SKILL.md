@@ -45,6 +45,7 @@ Write normal markdown. Add fenced blocks **only** for card/block types listed in
 | Function / calculus | ` ```function ` + the expression and the interval — never sampled points, never a computed slope or area |
 | Ray optics | ` ```optics ` + the element and the object — never the image position or whether it is real or virtual |
 | Motion | ` ```motion ` + the initial conditions — never the range, the flight time, or the velocities after a collision |
+| Price chart | ` ```quote ` + bars you actually have — never prices from memory, never indicator values, never a signal |
 | Sources | ` ```sources {"sources":[{"id":"...","title":"...","url":"https://..."}]} ` |
 | Artifact create | ` ```artifact-create ` + strict JSON document definition |
 | Artifact update | ` ```artifact-update ` + `operationId`, `id`, exact `baseRevision`, and full replacement content |

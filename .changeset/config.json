@@ -23,6 +23,7 @@
       "@ai-gui/plugin-function",
       "@ai-gui/plugin-optics",
       "@ai-gui/plugin-motion",
+      "@ai-gui/plugin-quote",
       "@ai-gui/plugin-resultset",
       "@ai-gui/plugin-physics",
       "@ai-gui/plugin-figure",

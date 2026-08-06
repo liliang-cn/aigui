@@ -272,6 +272,12 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/plugin-quote:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+
   packages/plugin-resultset:
     dependencies:
       '@ai-gui/core':
