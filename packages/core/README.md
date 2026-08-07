@@ -108,6 +108,39 @@ const runtime = createActionRuntime({ registry: actions, cardStore })
 
 `CardStore` supports initialize-if-absent registration, immutable records, recursive object merge, replace, atomic patch batches, revision checks, subscriptions, delete/clear, and snapshot/restore. Action patch results use optimistic mutation epochs, so an older Action cannot overwrite a Card changed, deleted, recreated, or restored after that Action started.
 
+## One stream, many channels
+
+`Renderer` is a single-writer append-only buffer: `push` concatenates, and markdown block boundaries do not survive two sources interleaving into them. So anything arriving *alongside* the answer — progress, a background job, a tool that finished late — goes on its own channel and updates a Card by id, in any order, as many times as it likes.
+
+```ts
+import { CardStore, Renderer, StreamRouter, cardChannel } from "@ai-gui/core"
+
+const store = new CardStore({ registry })
+const renderer = new Renderer({ plugins, onPatch })
+
+await new StreamRouter()
+  .channel("content", renderer)                 // text deltas → the answer
+  .on("cards", cardChannel(store, { onError })) // card messages → the store
+  .on("usage", (u) => setTokens(u))             // anything else → your callback
+  .feed(response.body)
+```
+
+The wire accepts either form, mixed freely in one stream:
+
+```
+{"ch":"content","delta":"Working"}
+{"ch":"cards","data":{"op":"register","id":"job-7","type":"task","data":{"pct":0}}}
+{"ch":"cards","data":{"op":"merge","cardId":"job-7","data":{"pct":60}}}
+event: usage
+data: {"in":120}
+```
+
+`cardChannel` accepts `register`, `merge`, `replace` and `batch`. Not `delete`: a card the reader is looking at should not vanish because a late frame said so — call `store.delete` from your own handler where you can decide.
+
+Send `revision` on a patch when a late frame overwriting newer state would be wrong; the store rejects the stale one. Without it, last write wins.
+
+Every failure is reported through `onError` rather than thrown, because the handler runs inside one long `feed` await — a throw there would not just drop the card, it would kill the content channel and stop the answer mid-sentence. Leave `onError` unset and failures go to `console.error`; a silently swallowed one is indistinguishable from a card the model never sent.
+
 ## Exports
 
 - `Renderer` — `push(chunk)`, `feed(AsyncIterable | ReadableStream)`, `reset()`, `setPlugins(plugins)`; constructor `{ registry?, plugins?, sanitize?, rawHtml?, onPatch?(patches, nodes) }`.
@@ -115,6 +148,7 @@ const runtime = createActionRuntime({ registry: actions, cardStore })
   - `rawHtml: false` escapes raw HTML the model wrote instead of interpreting it — a stray `<code>` in prose otherwise swallows the rest of the line.
   - Emphasis is parsed CJK-friendly, one deliberate deviation from CommonMark. CommonMark will not let `**` close when it follows punctuation and precedes a character that is neither whitespace nor punctuation, so `**严格单调（单射）**的函数` renders its asterisks literally. ASCII is unaffected: `a * b * c` and `snake_case_word` parse exactly as before.
 - `StreamRouter` — demultiplex one stream into named channels: `.channel(name, sink)`, `.on(name, cb)`, `.feed(source)`.
+- `cardChannel(store, { onError? })` — a `StreamRouter` handler that applies `register` / `merge` / `replace` / `batch` messages to a `CardStore`, reporting failures instead of throwing into the feed.
 - `CardRegistry` — `register(def)`, `parse(type, rawJson)`, `getRender(type)`, `toPromptSpec()`, `toJSONSchema()`.
 - `CardStore` — `register`, `get`, `list`, `subscribe`, `apply`, `applyAll`, `delete`, `clear`, `snapshot`, and `restore` for Cards with stable IDs.
 - `ActionRegistry`, `ActionRuntime`, `createActionRuntime`, `getActionKey`, `getIdleActionState` — validated application-owned action execution and observable lifecycle state.

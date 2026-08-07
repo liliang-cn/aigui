@@ -433,7 +433,7 @@ LLM stream ──▶ @ai-gui/core (headless)
 - **Core** parses the stream into an `ASTNode[]` and emits `Patch[]` as it grows; markdown is repaired in-memory while it streams.
 - **Plugins** claim node types via `nodeRenderers` and return a framework-neutral `RenderOutput`: `html`, a structured `element`, a `card`, or a `mount` (a live DOM element for interactive widgets like charts). Renderers may be sync or async.
 - **Adapters** turn AST + patches into their framework's output and host `mount` outputs with a proper cleanup lifecycle.
-- **StreamRouter** (core) can demultiplex one transport stream into multiple named channels when you need more than one sink.
+- **StreamRouter** (core) demultiplexes one transport stream into named channels. The answer's text goes to the `Renderer`, which is a single-writer append-only buffer; anything arriving alongside it — progress, a background job, a late tool result — goes on its own channel and updates a Card by id, in any order. `cardChannel(store)` wires that second half in one line.
 
 ## Packages
 

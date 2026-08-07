@@ -36,6 +36,8 @@ export type {
   CardStoreListener,
   CardStoreOptions,
 } from "./card-store"
+export { cardChannel } from "./card-channel"
+export type { CardChannelOptions, CardMessage } from "./card-channel"
 export { validateJSONSchema } from "./json-schema"
 export type { JSONSchemaValidationResult } from "./json-schema"
 export {
