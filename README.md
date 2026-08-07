@@ -11,14 +11,15 @@ AIGUI turns a raw model stream into a live, structured UI. Text and markdown ren
 - **Framework-agnostic core** — one headless engine, adapters for React / Vue / vanilla.
 - **App-defined cards** — the LLM only fills data into fenced `card:<type>` blocks; your app owns the schema, the render component, and the real API calls behind buttons.
 - **Declarative generated UI** — one bounded `ui` tree composes layout, data, forms, registered actions, local bindings, and host-owned card components without generated code.
-- **Pluggable blocks** — KaTeX math, Mermaid/UML diagrams, molecular structures, interactive maps, ECharts charts, primitive UI, and secure source lists.
+- **Pluggable blocks** — KaTeX math, Mermaid/UML diagrams, molecular structures, interactive maps, ECharts charts, primitive UI, secure source lists, and teaching figures across six subjects.
+- **One stream, many channels** — the answer's text is a single-writer buffer, so progress, background jobs and late tool results ride their own channel and update a Card by id, in any order and as often as they like. `cardChannel(store)` wires it in one line.
 - **Prompt assembly** — `buildSystemPrompt` produces the system-prompt guidance (card specs + each plugin's prompt spec) so the model knows exactly what it may emit. Pass `locale` to get those rules in the product's language: `buildSystemPrompt({ registry, plugins, locale: "zh-CN" })`.
 - **Deferrable plugins** — pass a loader instead of an array (`plugins={() => import("@ai-gui/plugin-mermaid").then(m => [m.mermaid()])}`); the answer streams as plain markdown and the renderer reparses what it buffered once the chunk lands, with no replay in the host.
 - **Clicks mapped to the model's output** — `onNodeClick(node, event)` reports which parsed block a click landed in, so a path in inline code or a citation can be actionable without reading the DOM.
 - **Safe by default** — the core sanitizes all HTML output, and `rawHtml={false}` escapes the tags a model writes in prose instead of interpreting them.
 - **Observable when requested** — opt-in debug events and `@ai-gui/devtools` provide a bounded, redacted runtime timeline and deterministic stream simulator.
 - **Revisioned artifacts** — models can create and update persistent text, code, Markdown, and JSON documents without executing generated code.
-- **Tiny surface, well tested** — 150+ tests, built with [tsdown](https://github.com/rolldown/tsdown).
+- **Tiny surface, well tested** — 1360+ tests, built with [tsdown](https://github.com/rolldown/tsdown).
 
 ## Install
 
@@ -35,7 +36,7 @@ pnpm add @ai-gui/core @ai-gui/vue
 pnpm add @ai-gui/core @ai-gui/vanilla
 
 # plugins (optional)
-pnpm add @ai-gui/plugin-solid @ai-gui/plugin-function @ai-gui/plugin-optics @ai-gui/plugin-motion @ai-gui/plugin-quote @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact
+pnpm add @ai-gui/plugin-solid @ai-gui/plugin-function @ai-gui/plugin-optics @ai-gui/plugin-motion @ai-gui/plugin-physics @ai-gui/plugin-quote @ai-gui/plugin-figure @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact @ai-gui/plugin-progress @ai-gui/plugin-flashcard @ai-gui/plugin-evidence @ai-gui/plugin-resultset
 
 # plugin authoring helpers (optional)
 pnpm add @ai-gui/plugin-sdk
@@ -178,7 +179,13 @@ await r.feed(res.body!)
 | `@ai-gui/plugin-function` | `fn(options?)` | ` ```function ` blocks for function and calculus figures — curves, tangents, areas, Riemann sums, computed from an expression |
 | `@ai-gui/plugin-optics` | `optics(options?)` | ` ```optics ` blocks for ray optics — lenses, mirrors and refraction, with the image and the conclusion computed |
 | `@ai-gui/plugin-motion` | `motion(options?)` | ` ```motion ` blocks for mechanics — projectiles, collisions and oscillation, drawn stroboscopically from the initial conditions |
+| `@ai-gui/plugin-physics` | `physics(options?)` | ` ```physics ` blocks for force and vector diagrams — bodies, surfaces, labelled arrows and angles, drawn not simulated |
 | `@ai-gui/plugin-quote` | `quote(options?)` | ` ```quote ` blocks for candlestick charts — the host supplies the prices, the renderer computes every indicator |
+| `@ai-gui/plugin-figure` | `figure(options?)` | ` ```figure ` blocks for labelled figures — regions with leader-line callouts naming each part |
+| `@ai-gui/plugin-progress` | `progress(options?)` | ` ```progress ` blocks for a long turn — several steps per request, each updated in place by id |
+| `@ai-gui/plugin-flashcard` | `flashcards({ actionRuntime, labels? })` | ` ```flashcards ` decks — one card at a time, answer hidden, self-graded through a registered action |
+| `@ai-gui/plugin-evidence` | `evidence(options?)` | ` ```evidence ` blocks the **host** appends: which queries produced the numbers |
+| `@ai-gui/plugin-resultset` | `resultset(options?)` | ` ```resultset ` tables the **host** appends: the numbers come from the query, not from the model retyping them |
 
 Pass plugins to any adapter:
 
@@ -277,6 +284,16 @@ Forms use the same `ActionRuntime` in every adapter: `const plugins = [form({ ac
 
 `map()` renders inline GeoJSON, markers, and routes with bounded Leaflet navigation. It is vector-only and network-free by default. Optional raster basemaps are configured exclusively by the host with an exact origin allowlist; tile URLs, tokens, remote GeoJSON, geocoding, HTML popups, and style expressions are not part of the model protocol. Use ECharts for statistical maps and `plugin-map` for map navigation, routes, feature inspection, and geography teaching.
 
+`physics()` draws force and vector diagrams — a body, the forces on it as labelled arrows, their angles, one force resolved into components. It is a drawing, not a simulation, and deliberately so: a rigid-body engine gives a teacher no way to label an intermediate quantity, stop at three seconds, or show a force that is in equilibrium and therefore never moves anything.
+
+`figure()` draws the diagram whose point is what the parts are *called* — a cell with its organelles named, a leaf's layers, apparatus with the parts a method refers to — as regions with leader-line callouts. Use `mermaid` for boxes joined by arrows and `chart` for data.
+
+`progress()` reports a long turn as several steps, each updated in place. A host-level "thinking…" is one line for the whole turn and cannot say which of four things is happening, which have finished, or that the third failed. Because a stream is append-only, an update arrives as another block: emitting a step again with the same `id` supersedes the earlier one, so restating the whole list does not duplicate rows.
+
+`flashcards({ actionRuntime })` shows one card at a time with the answer hidden and a self-grade. A word shown beside its meaning is a word being read, and reading a word you have already read teaches nothing. Grades dispatch through the runtime's registry, which is the only allowlist.
+
+`evidence()` and `resultset()` are the two blocks the **host** writes, not the model. A model that can invent a number can invent the query said to have produced it, so provenance written by the model is not provenance — it is more of the same claim. The application appends these fences from what it actually executed: `resultset` for the rows behind the numbers, `evidence` for the queries behind the rows.
+
 Plugin authors can use `@ai-gui/plugin-sdk` for the existing core authoring types plus small, test-runner-neutral helpers such as `definePlugin`, `createTestNode`, `renderPluginNode`, and `mountOutputForTest`.
 
 ## Model streams
@@ -368,6 +385,41 @@ const actionRuntime = createActionRuntime({ registry: actions, cardStore })
 
 Card components receive `{ data, state, onAction }`. Store patches update the matching Card without reparsing Markdown or remounting the component. Supported patch operations are recursive object `merge`, full `replace`, and atomic batches. `cardStore.snapshot()` / `restore()` round-trip Card data and revisions; transient Action state is restored as idle. Cards without an `id` keep the existing stateless behavior.
 
+## One stream, many channels
+
+`Renderer` is a single-writer append-only buffer: `push` concatenates, and markdown block boundaries do not survive two sources interleaving into them. So anything arriving *alongside* the answer — progress, a background job, a tool that finished late, a second model — goes on its own channel and updates a Card by id instead, in any order and as many times as it likes.
+
+```ts
+import { CardStore, Renderer, StreamRouter, cardChannel } from "@ai-gui/core"
+
+const store = new CardStore({ registry })
+const renderer = new Renderer({ plugins, onPatch })
+
+await new StreamRouter()
+  .channel("content", renderer)                 // text deltas → the answer
+  .on("cards", cardChannel(store, { onError })) // card messages → the store
+  .on("usage", (u) => setTokens(u))             // anything else → your callback
+  .feed(response.body)
+```
+
+Both wire formats work, mixed freely in one stream. A `data:` line with no `ch` and no `event:` goes to `content`, so an ordinary SSE endpoint needs no server change to start with:
+
+```
+{"ch":"content","delta":"Working"}
+{"ch":"cards","data":{"op":"register","id":"job-7","type":"task","data":{"pct":0}}}
+{"ch":"cards","data":{"op":"merge","cardId":"job-7","data":{"pct":60}}}
+event: usage
+data: {"in":120}
+```
+
+`cardChannel` accepts `register`, `merge`, `replace` and `batch`. Not `delete`: a card the reader is looking at should not vanish because a late frame said so — call `store.delete` from your own handler, where you can decide.
+
+Send `revision` on a patch when a late frame overwriting newer state would be wrong; the store rejects the stale one. Without it, last write wins.
+
+Every failure is reported through `onError` rather than thrown, because the handler runs inside one long `feed` await — a throw there would not just drop the card, it would kill the content channel and stop the answer mid-sentence. Leave `onError` unset and failures go to `console.error`; a silently swallowed one is indistinguishable from a card the model never sent.
+
+For progress the model itself is reporting, `plugin-progress` is the simpler path: it is written in the answer, so it needs no second channel at all.
+
 ## DevTools and stream simulation
 
 Enable debug instrumentation on the runtime objects you want to inspect, then attach them to one timeline:
@@ -413,7 +465,13 @@ The fence conventions it may use (only for **registered / enabled** block types)
 - Function and calculus figures: ` ```function ` with the expression and the interval — never sampled points, never a computed slope or area.
 - Ray-optics figures: ` ```optics ` with the element and the object — never the image position, the magnification, or whether it is real or virtual.
 - Motion figures: ` ```motion ` with the initial conditions — never the range, the flight time, or the velocities after a collision.
+- Force diagrams: ` ```physics ` with the bodies, the forces on them and their angles.
 - Price charts: ` ```quote ` with bars you actually have — never prices from memory, never indicator values, never a buy or sell signal.
+- Labelled figures: ` ```figure ` with the regions and what each part is called.
+- Progress on a long turn: ` ```progress ` with one step per thing being done; re-emit a step with the same `id` to update it.
+- Flashcards: ` ```flashcards ` with the questions and answers to revise from.
+
+`evidence` and `resultset` are **not** in that list. Those two fences are appended by the application from what it actually ran, so a model emitting one is claiming provenance it does not have.
 
 Card buttons are **declarative**: the model emits an `action` name plus `params`; your app performs the real request. See [AGENTS.md](./AGENTS.md) for the exact syntax and examples.
 
@@ -448,7 +506,14 @@ LLM stream ──▶ @ai-gui/core (headless)
 | [`@ai-gui/plugin-function`](./packages/plugin-function/README.md) | Function and calculus figures (` ```function `). |
 | [`@ai-gui/plugin-optics`](./packages/plugin-optics/README.md) | Ray-optics figures (` ```optics `). |
 | [`@ai-gui/plugin-motion`](./packages/plugin-motion/README.md) | Mechanics motion figures (` ```motion `). |
+| [`@ai-gui/plugin-physics`](./packages/plugin-physics/README.md) | Force and vector diagrams (` ```physics `). |
 | [`@ai-gui/plugin-quote`](./packages/plugin-quote/README.md) | Candlestick charts with computed indicators (` ```quote `). |
+| [`@ai-gui/plugin-figure`](./packages/plugin-figure/README.md) | Labelled figures with leader-line callouts (` ```figure `). |
+| [`@ai-gui/plugin-progress`](./packages/plugin-progress/README.md) | Live progress steps for a long turn (` ```progress `). |
+| [`@ai-gui/plugin-flashcard`](./packages/plugin-flashcard/README.md) | Self-graded flashcard decks (` ```flashcards `). |
+| [`@ai-gui/plugin-ui`](./packages/plugin-ui/README.md) | Bounded declarative generated interfaces (` ```ui `). |
+| [`@ai-gui/plugin-evidence`](./packages/plugin-evidence/README.md) | Host-written query provenance (` ```evidence `). |
+| [`@ai-gui/plugin-resultset`](./packages/plugin-resultset/README.md) | Host-written result tables (` ```resultset `). |
 | [`@ai-gui/plugin-highlight`](./packages/plugin-highlight/README.md) | Shiki syntax highlighting for code blocks. |
 | [`@ai-gui/plugin-mermaid`](./packages/plugin-mermaid/README.md) | Mermaid diagrams. |
 | [`@ai-gui/plugin-primitives`](./packages/plugin-primitives/README.md) | Primitive UI blocks: list / table / key-value / layout. |
@@ -466,7 +531,7 @@ LLM stream ──▶ @ai-gui/core (headless)
 
 ## Testing & build
 
-150+ tests across the packages; each package is built with [tsdown](https://github.com/rolldown/tsdown).
+1360+ tests across the packages; each package is built with [tsdown](https://github.com/rolldown/tsdown).
 
 ```sh
 pnpm test    # run the suite

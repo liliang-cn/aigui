@@ -22,7 +22,7 @@ AIGUI renders a streaming LLM response as live UI. A headless core (`@ai-gui/cor
 | Vue | `@ai-gui/vue` | `pnpm add @ai-gui/core @ai-gui/vue` |
 | vanilla DOM | `@ai-gui/vanilla` | `pnpm add @ai-gui/core @ai-gui/vanilla` |
 
-Add any plugins you need: `@ai-gui/plugin-solid`, `@ai-gui/plugin-function`, `@ai-gui/plugin-optics`, `@ai-gui/plugin-motion`, `@ai-gui/plugin-quote`, `@ai-gui/plugin-ui`, `@ai-gui/plugin-katex`, `@ai-gui/plugin-highlight`, `@ai-gui/plugin-mermaid`, `@ai-gui/plugin-molecule`, `@ai-gui/plugin-map`, `@ai-gui/plugin-primitives`, `@ai-gui/plugin-chart`, `@ai-gui/plugin-form`, `@ai-gui/plugin-citation`, `@ai-gui/plugin-artifact`.
+Add any plugins you need: `@ai-gui/plugin-solid`, `@ai-gui/plugin-function`, `@ai-gui/plugin-optics`, `@ai-gui/plugin-motion`, `@ai-gui/plugin-physics`, `@ai-gui/plugin-quote`, `@ai-gui/plugin-figure`, `@ai-gui/plugin-progress`, `@ai-gui/plugin-flashcard`, `@ai-gui/plugin-ui`, `@ai-gui/plugin-katex`, `@ai-gui/plugin-highlight`, `@ai-gui/plugin-mermaid`, `@ai-gui/plugin-molecule`, `@ai-gui/plugin-map`, `@ai-gui/plugin-primitives`, `@ai-gui/plugin-chart`, `@ai-gui/plugin-form`, `@ai-gui/plugin-citation`, `@ai-gui/plugin-artifact`, plus `@ai-gui/plugin-evidence` and `@ai-gui/plugin-resultset` for the two fences the host writes rather than the model.
 
 ### 2. Register cards
 
@@ -102,10 +102,13 @@ import { solid } from "@ai-gui/plugin-solid"
 import { fn } from "@ai-gui/plugin-function"
 import { optics } from "@ai-gui/plugin-optics"
 import { motion } from "@ai-gui/plugin-motion"
+import { physics } from "@ai-gui/plugin-physics"
 import { quote } from "@ai-gui/plugin-quote"
+import { figure } from "@ai-gui/plugin-figure"
+import { progress } from "@ai-gui/plugin-progress"
 
 const artifactStore = new ArtifactStore()
-const plugins = [ui({ registry, actionRuntime }), katex(), highlight(), mermaid(), molecule(), map(), chart({ interactive: true }), primitives(), citation(), solid(), fn(), optics(), motion(), quote(), artifact({ store: artifactStore })]
+const plugins = [ui({ registry, actionRuntime }), katex(), highlight(), mermaid(), molecule(), map(), chart({ interactive: true }), primitives(), citation(), solid(), fn(), optics(), motion(), physics(), quote(), figure(), progress(), artifact({ store: artifactStore })]
 ```
 
 Diagrams, maths and charts are the heaviest thing a page carrying them loads. To keep them out of the first load, pass a loader instead of an array — the answer renders as plain markdown until it resolves, and the renderer then reparses the text it has buffered:
@@ -141,6 +144,24 @@ await ref.current.feed(res.body)     // renders progressively as tokens arrive
 ```
 
 Streaming behavior you get for free: markdown renders progressively with in-memory repair of half-typed syntax; blocks (cards, charts, math, mermaid) show a loading skeleton while they stream and then render complete. Charts/3D are complete-gated (skeleton → full), never partial-drawn.
+
+### 8. Optional — data arriving alongside the answer
+
+The renderer's buffer has a single writer: markdown block boundaries do not survive two sources interleaving into them. If your transport also carries progress, a background job or a late tool result, put it on its own channel and let it update a Card by id, in any order and as often as it likes.
+
+```ts
+import { CardStore, StreamRouter, cardChannel } from "@ai-gui/core"
+
+await new StreamRouter()
+  .channel("content", renderer)                 // text deltas → the answer
+  .on("cards", cardChannel(store, { onError })) // card messages → the store
+  .on("usage", (u) => setTokens(u))             // anything else → your callback
+  .feed(res.body)
+```
+
+The wire takes `{"ch":"cards","data":{"op":"merge","cardId":"job-7","data":{...}}}` envelopes or standard SSE `event:` frames, mixed freely. A plain `data:` line with neither goes to `content`, so an ordinary SSE endpoint works unchanged. `cardChannel` handles `register`, `merge`, `replace` and `batch` — not `delete` — and reports failures through `onError` instead of throwing, because a throw inside `feed` would kill the content channel and truncate the answer.
+
+For progress the *model* is reporting, `plugin-progress` is simpler: it is written in the answer and needs no second channel.
 
 ---
 
@@ -240,6 +261,26 @@ Update it using the exact current revision:
     ```
 
 Artifact commands are declarative. Never claim a command succeeded. Do not emit HTML execution, scripts, components, actions, network requests, filesystem paths, or package installation instructions as executable artifact behavior. Code artifacts are inert source previews.
+
+### Teaching figures, progress, and decks
+
+These fences share one rule: **state the conditions, not the results.** The renderer computes anything derivable — a section polygon, a tangent's slope, an image distance, a range, an indicator — so your arithmetic never reaches the picture, where a wrong number is indistinguishable from a right one. Each plugin's exact fields arrive in your system prompt via `buildSystemPrompt`.
+
+| Block | Say | Never say |
+| --- | --- | --- |
+| ` ```solid ` | the solid, its named points, the conditions on them | coordinates, or how many sides a section has |
+| ` ```function ` | the expression and the interval | sampled points, a computed slope or area |
+| ` ```optics ` | the element and the object | the image position, magnification, real or virtual |
+| ` ```motion ` | the initial conditions | the range, flight time, post-collision velocities |
+| ` ```physics ` | the bodies, the forces, their angles | a resultant you worked out |
+| ` ```quote ` | bars you actually have | prices from memory, indicator values, a buy/sell signal |
+| ` ```figure ` | the regions and what each part is called | — |
+| ` ```progress ` | one step per thing being done | a step still `running` once it has finished |
+| ` ```flashcards ` | the questions and answers | — |
+
+` ```progress ` supersedes by `id`: re-emitting a step with the same `id` replaces it, so restating the whole list is fine and does not duplicate rows.
+
+**` ```evidence ` and ` ```resultset ` are not yours to write.** The application appends those from what it actually executed. A model that can invent a number can invent the query said to have produced it, so emitting one is claiming provenance you do not have.
 
 ### The one rule
 

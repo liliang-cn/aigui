@@ -45,7 +45,11 @@ Write normal markdown. Add fenced blocks **only** for card/block types listed in
 | Function / calculus | ` ```function ` + the expression and the interval — never sampled points, never a computed slope or area |
 | Ray optics | ` ```optics ` + the element and the object — never the image position or whether it is real or virtual |
 | Motion | ` ```motion ` + the initial conditions — never the range, the flight time, or the velocities after a collision |
+| Force diagram | ` ```physics ` + the bodies, the forces on them and their angles |
 | Price chart | ` ```quote ` + bars you actually have — never prices from memory, never indicator values, never a signal |
+| Labelled figure | ` ```figure ` + the regions and what each part is called |
+| Progress | ` ```progress ` + one step per thing being done; re-emit the same `id` to update it |
+| Flashcards | ` ```flashcards ` + the questions and answers to revise from |
 | Sources | ` ```sources {"sources":[{"id":"...","title":"...","url":"https://..."}]} ` |
 | Artifact create | ` ```artifact-create ` + strict JSON document definition |
 | Artifact update | ` ```artifact-update ` + `operationId`, `id`, exact `baseRevision`, and full replacement content |
@@ -68,5 +72,6 @@ Card example:
 - **Artifacts are inert documents** — code/HTML are previewed as source, never executed; every update must use the current revision and a unique operation ID.
 - **Molecules use local chemistry data only** — SMILES is 2D-only in v1; 3D requires a local Molfile with real 3D coordinates. No URLs or network operations.
 - **Maps are host-networked** — the model may emit only inline geographic data. Basemaps, tile providers, tokens, and network policy belong exclusively to the host.
+- **`evidence` and `resultset` are the host's, not yours** — those fences are appended by the application from what it actually executed. A model that can invent a number can invent the query said to have produced it, so emitting one is claiming provenance you do not have.
 
 See [AGENTS.md](./AGENTS.md) for full examples.
