@@ -1,5 +1,12 @@
 # @ai-gui/vue
 
+## 0.29.0
+
+### Patch Changes
+
+- Updated dependencies [893cb1e]
+  - @ai-gui/core@0.29.0
+
 ## 0.28.0
 
 ### Patch Changes
