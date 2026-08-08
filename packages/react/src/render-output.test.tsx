@@ -3,7 +3,7 @@ import { render, act } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 import type { ASTNode, AIGuiPlugin } from "@ai-gui/core"
 import { renderNode } from "./render-node"
-import { AsyncOutput } from "./render-output"
+import { AsyncOutput, renderOutput } from "./render-output"
 
 const syncPlugin: AIGuiPlugin = { name: "s", nodeRenderers: { widget: () => ({ kind: "element", tag: "span", props: { className: "w" }, children: [] }) } }
 const htmlPlugin: AIGuiPlugin = { name: "h", nodeRenderers: { box: () => ({ kind: "html", html: "<i>boxed</i>" }) } }
@@ -123,5 +123,27 @@ describe("react plugin rendering", () => {
     await act(async () => { resolve({ kind: "html", html: "late" }); await promise })
     expect(error).not.toHaveBeenCalled()
     error.mockRestore()
+  })
+})
+
+describe("HTML boolean attributes", () => {
+  it("renders `open: \"\"` as an open <details>", () => {
+    // React drops falsy props, and "" is falsy — so a `<details open="">` from a
+    // plugin rendered collapsed, with nothing thrown and nothing warned. That is
+    // exactly how `evidence({ defaultOpen: true })` looked like a no-op.
+    const { container } = render(
+      <>{renderOutput({ kind: "element", tag: "details", props: { open: "" }, children: [] })}</>,
+    )
+    expect(container.querySelector("details")?.hasAttribute("open")).toBe(true)
+  })
+
+  it("leaves a data attribute's empty string alone", () => {
+    // Only presence attributes get the treatment: `data-x=""` is a real, distinct
+    // value, and turning it into `data-x="true"` would change what a CSS selector
+    // like [data-x=""] matches.
+    const { container } = render(
+      <>{renderOutput({ kind: "element", tag: "div", props: { "data-aigui-evidence": "" }, children: [] })}</>,
+    )
+    expect(container.querySelector("div")?.getAttribute("data-aigui-evidence")).toBe("")
   })
 })

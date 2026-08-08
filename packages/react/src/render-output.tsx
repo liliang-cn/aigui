@@ -3,6 +3,34 @@ import { createPortal } from "react-dom"
 import { sanitizeRenderedHtml, type MountCardSlotRequest, type MountedCardSlot, type RendererOptions, type RenderMountContext, type RenderOutput, type SanitizeHtmlOptions } from "@ai-gui/core"
 import type { CardComponent, RenderContext } from "./render-node"
 
+/**
+ * HTML boolean attributes reach us as `""` — attribute-*presence* semantics, which
+ * is what the DOM and the vanilla adapter want.
+ *
+ * React reads props as *values*, and an empty string is falsy, so it drops the
+ * attribute entirely: `open: ""` renders a `<details>` that is closed. Nothing
+ * throws, nothing warns — the block is simply collapsed, and `defaultOpen` looks
+ * like an option that does nothing.
+ *
+ * Normalising here rather than in each plugin is the point of an adapter: the
+ * neutral RenderOutput should not have to know React's quirks.
+ */
+const PRESENCE_ATTRS = new Set([
+  "open", "checked", "disabled", "selected", "multiple", "required", "hidden",
+  "controls", "loop", "muted", "reversed", "async", "defer", "inert", "default",
+])
+
+function toReactProps(props: Record<string, unknown>): Record<string, unknown> {
+  let out: Record<string, unknown> | undefined
+  for (const key of Object.keys(props)) {
+    if (props[key] === "" && PRESENCE_ATTRS.has(key)) {
+      out ??= { ...props }
+      out[key] = true
+    }
+  }
+  return out ?? props
+}
+
 /** Translate a framework-neutral RenderOutput into React nodes. */
 export function renderOutput(out: RenderOutput, key?: string, sanitize?: RendererOptions["sanitize"], context?: RenderContext): ReactNode {
   switch (out.kind) {
@@ -11,7 +39,7 @@ export function renderOutput(out: RenderOutput, key?: string, sanitize?: Rendere
     case "element":
       return createElement(
         out.tag,
-        { key, ...out.props },
+        { key, ...toReactProps(out.props as Record<string, unknown>) },
         (out.children ?? []).map((c, i) => renderOutput(c, String(i), sanitize, context)),
       )
     case "card":
