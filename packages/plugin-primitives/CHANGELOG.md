@@ -1,5 +1,11 @@
 # @ai-gui/plugin-primitives
 
+## 0.29.1
+
+### Patch Changes
+
+- @ai-gui/core@0.29.1
+
 ## 0.29.0
 
 ### Patch Changes
