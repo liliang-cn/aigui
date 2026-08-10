@@ -20,7 +20,19 @@ const PRESENCE_ATTRS = new Set([
   "controls", "loop", "muted", "reversed", "async", "defer", "inert", "default",
 ])
 
-function toReactProps(props: Record<string, unknown>): Record<string, unknown> {
+function toReactProps(props: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  // `props` is optional in RenderOutput, and plugins use that: `element("ol",
+  // undefined, ...)` is the ordinary way to write an element that carries no
+  // attributes. The previous spread — `{ key, ...out.props }` — swallowed
+  // `undefined` silently, so nothing here had to think about it.
+  //
+  // `Object.keys(undefined)` throws. And the throw is **invisible**: the
+  // renderer catches it and falls back to plain text, so a fence whose plugin
+  // emits one bare element stops being parsed and shows up as its raw JSON.
+  // No console error, no warning — just the source of a table where the table
+  // should be. That is how this shipped in 0.29.1 and how it was found: by
+  // driving the browser, not by reading the diff.
+  if (props == null) return props ?? undefined
   let out: Record<string, unknown> | undefined
   for (const key of Object.keys(props)) {
     if (props[key] === "" && PRESENCE_ATTRS.has(key)) {

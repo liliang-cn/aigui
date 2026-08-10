@@ -137,6 +137,36 @@ describe("HTML boolean attributes", () => {
     expect(container.querySelector("details")?.hasAttribute("open")).toBe(true)
   })
 
+  it("renders an element that carries no props at all", () => {
+    // `element("ol", undefined, …)` is the ordinary way a plugin writes an element
+    // with no attributes, and the spread this replaced swallowed `undefined`
+    // quietly. `Object.keys(undefined)` throws — and the throw is invisible: the
+    // renderer catches it and falls back to plain text, so a fence stops being
+    // parsed and its raw JSON shows up where the table should be. No console
+    // error, no warning. 0.29.1 shipped that way.
+    expect(() =>
+      render(<>{renderOutput({ kind: "element", tag: "ol", children: [] })}</>),
+    ).not.toThrow()
+
+    const { container } = render(
+      <>
+        {renderOutput({
+          kind: "element",
+          tag: "details",
+          props: { open: "" },
+          children: [
+            { kind: "element", tag: "summary", children: [] },
+            { kind: "element", tag: "ol", children: [] },
+          ],
+        })}
+      </>,
+    )
+    // The whole tree renders: the bare children *and* the boolean attribute.
+    expect(container.querySelector("details")?.hasAttribute("open")).toBe(true)
+    expect(container.querySelector("details > summary")).not.toBeNull()
+    expect(container.querySelector("details > ol")).not.toBeNull()
+  })
+
   it("leaves a data attribute's empty string alone", () => {
     // Only presence attributes get the treatment: `data-x=""` is a real, distinct
     // value, and turning it into `data-x="true"` would change what a CSS selector
