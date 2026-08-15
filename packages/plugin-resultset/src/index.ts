@@ -10,10 +10,22 @@ const DEFINITION_KEYS = new Set(["id", "columns", "rows", "label", "truncated", 
 /** A cell as the database returned it. */
 export type Cell = string | number | boolean | null
 
+/**
+ * A column: its header, optionally with a declared alignment.
+ *
+ * Alignment exists because hosts often format numbers before serializing —
+ * `"9,308,286.52"`, `"23.2%"`, `"(no data)"` are strings, so the renderer's
+ * own number detection (`td[data-num]`) never fires and a column of figures
+ * lands left-aligned, where it cannot be compared vertically. Declaring
+ * `align: "right"` keeps the honesty of host-side formatting without losing
+ * the one thing a numeric column is for.
+ */
+export type Column = string | { name: string; align?: "left" | "right" }
+
 export interface ResultsetDefinition {
   /** Stable name the prose refers to, e.g. `[[result:by_region]]`. */
   id?: string
-  columns: string[]
+  columns: Column[]
   rows: Cell[][]
   /** Heading, e.g. the question this answers. */
   label?: string
@@ -28,6 +40,14 @@ export interface ResultsetOptions {
   maxRows?: number
   /** Show the id beside the heading, so prose references are traceable. Default false. */
   showId?: boolean
+  /**
+   * Show the meta line (`N rows · source`) under the table. Default true.
+   * Hosts that already state the row count and source elsewhere (e.g. in an
+   * evidence block) hide it rather than saying the same thing twice.
+   */
+  meta?: boolean
+  /** Locale for renderer-authored strings (meta line, invalid notice). Default "en". */
+  locale?: string
 }
 
 export type ResultsetParseResult =
@@ -66,13 +86,15 @@ export function resultsetPromptSpec(): string {
 export function resultset(options: ResultsetOptions = {}): AIGuiPlugin {
   const maxRows = clampRowCap(options.maxRows)
   const showId = options.showId === true
+  const meta = options.meta !== false
+  const zh = (options.locale ?? "en").toLowerCase().startsWith("zh")
   const render = (node: ASTNode): RenderOutput => {
     // Complete-gated: a table that grows a row at a time reads, mid-stream, as
     // a table that is already finished. A reader who looks away sees four rows
     // where there were nine, and nothing tells them so.
     if (node.complete !== true) return loadingOutput()
     const parsed = parseResultsetDefinition(node.content ?? "")
-    return parsed.valid ? renderResultset(parsed.data, maxRows, showId) : invalidOutput()
+    return parsed.valid ? renderResultset(parsed.data, maxRows, showId, meta, zh) : invalidOutput(zh)
   }
   return {
     name: "resultset",
@@ -98,15 +120,25 @@ export function parseResultsetDefinition(source: string): ResultsetParseResult {
     if (!DEFINITION_KEYS.has(key)) issues.push(`unexpected key "${key}"`)
   }
 
-  const columns: string[] = []
+  const columns: Column[] = []
   if (!Array.isArray(raw.columns)) {
     issues.push("columns must be an array")
   } else {
     if (raw.columns.length === 0) issues.push("columns must not be empty")
     if (raw.columns.length > MAX_COLUMNS) issues.push(`columns must hold at most ${MAX_COLUMNS} entries`)
     for (const [i, c] of raw.columns.slice(0, MAX_COLUMNS).entries()) {
-      const name = readString(c, MAX_LABEL_LENGTH, `columns[${i}]`, issues, false)
-      if (name !== undefined) columns.push(name)
+      if (isPlainObject(c)) {
+        const name = readString(c.name, MAX_LABEL_LENGTH, `columns[${i}].name`, issues, false)
+        if (name === undefined) continue
+        if (c.align !== undefined && c.align !== "left" && c.align !== "right") {
+          issues.push(`columns[${i}].align must be "left" or "right"`)
+          continue
+        }
+        columns.push(c.align === undefined ? name : { name, align: c.align })
+      } else {
+        const name = readString(c, MAX_LABEL_LENGTH, `columns[${i}]`, issues, false)
+        if (name !== undefined) columns.push(name)
+      }
     }
   }
 
@@ -151,38 +183,65 @@ export function serializeResultsetFence(definition: ResultsetDefinition): string
 
 // ── rendering ────────────────────────────────────────────────────────────────
 
-function renderResultset(d: ResultsetDefinition, maxRows: number, showId: boolean): RenderOutput {
+function renderResultset(
+  d: ResultsetDefinition,
+  maxRows: number,
+  showId: boolean,
+  meta: boolean,
+  zh: boolean,
+): RenderOutput {
   const shown = d.rows.slice(0, maxRows)
   const hidden = d.rows.length - shown.length
+  const aligns = d.columns.map((c) => (typeof c === "object" ? c.align : undefined))
 
   const children: RenderOutput[] = []
   const heading = captionOf(d, showId)
   if (heading !== undefined) children.push(element("caption", undefined, [text(heading)]))
   children.push(
     element("thead", undefined, [
-      element("tr", undefined, d.columns.map((c) => element("th", { scope: "col" }, [text(c)]))),
+      element(
+        "tr",
+        undefined,
+        d.columns.map((c, j) =>
+          element("th", withAlign({ scope: "col" }, aligns[j]), [text(nameOf(c))]),
+        ),
+      ),
     ]),
   )
   children.push(
     element(
       "tbody",
       undefined,
-      shown.map((row) => element("tr", undefined, row.map((cell) => cellElement(cell)))),
+      shown.map((row) => element("tr", undefined, row.map((cell, j) => cellElement(cell, aligns[j])))),
     ),
   )
 
-  const parts: string[] = []
-  parts.push(`${d.rows.length} ${d.rows.length === 1 ? "row" : "rows"}`)
-  if (hidden > 0) parts.push(`${hidden} not shown`)
-  // Truncation is stated. A table silently cut to its first page is a wrong
-  // answer that looks complete.
-  if (d.truncated === true) parts.push("more rows exist than were returned")
-  if (d.source !== undefined) parts.push(d.source)
+  const kids = [element("table", undefined, children)]
+  if (meta) {
+    const parts: string[] = []
+    parts.push(zh ? `${d.rows.length} 行` : `${d.rows.length} ${d.rows.length === 1 ? "row" : "rows"}`)
+    if (hidden > 0) parts.push(zh ? `未显示 ${hidden} 行` : `${hidden} not shown`)
+    // Truncation is stated. A table silently cut to its first page is a wrong
+    // answer that looks complete.
+    if (d.truncated === true) parts.push(zh ? "还有更多行没有返回" : "more rows exist than were returned")
+    if (d.source !== undefined) parts.push(d.source)
+    kids.push(element("div", { "data-aigui-resultset-meta": "" }, [text(parts.join(" · "))]))
+  }
+  return element("div", { "data-aigui-resultset": "" }, kids)
+}
 
-  return element("div", { "data-aigui-resultset": "" }, [
-    element("table", undefined, children),
-    element("div", { "data-aigui-resultset-meta": "" }, [text(parts.join(" · "))]),
-  ])
+function nameOf(c: Column): string {
+  return typeof c === "object" ? c.name : c
+}
+
+function withAlign(
+  props: Record<string, unknown>,
+  align: "left" | "right" | undefined,
+): Record<string, unknown> {
+  // A declared right column gets `data-num` — the same hook the stylesheet
+  // already uses for detected numbers, so declaration and detection cannot
+  // drift into two different alignments.
+  return align === "right" ? { ...props, "data-num": "" } : props
 }
 
 function captionOf(d: ResultsetDefinition, showId: boolean): string | undefined {
@@ -190,11 +249,11 @@ function captionOf(d: ResultsetDefinition, showId: boolean): string | undefined 
   return showId ? d.id : undefined
 }
 
-function cellElement(cell: Cell): RenderOutput {
-  if (cell === null) return element("td", { "data-null": "" }, [text("null")])
+function cellElement(cell: Cell, align?: "left" | "right"): RenderOutput {
+  if (cell === null) return element("td", withAlign({ "data-null": "" }, align), [text("null")])
   if (typeof cell === "number") return element("td", { "data-num": "" }, [text(formatNumber(cell))])
-  if (typeof cell === "boolean") return element("td", undefined, [text(cell ? "true" : "false")])
-  return element("td", undefined, [text(cell)])
+  if (typeof cell === "boolean") return element("td", withAlign({}, align), [text(cell ? "true" : "false")])
+  return element("td", withAlign({}, align), [text(cell)])
 }
 
 /**
@@ -217,8 +276,10 @@ function loadingOutput(): RenderOutput {
   return element("div", { "data-aigui-resultset-loading": "" }, [])
 }
 
-function invalidOutput(): RenderOutput {
-  return element("div", { "data-aigui-resultset-invalid": "" }, [text("Result table unavailable")])
+function invalidOutput(zh: boolean): RenderOutput {
+  return element("div", { "data-aigui-resultset-invalid": "" }, [
+    text(zh ? "结果表不可用" : "Result table unavailable"),
+  ])
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────

@@ -13,7 +13,7 @@ describe("collectPluginStyles", () => {
 
   it("keeps blocks inside their column on a narrow screen", () => {
     // The whole point of the base sheet: nothing a model emits may widen the page.
-    expect(baseCss).toContain("[data-aigui-renderer] table{display:block")
+    expect(baseCss).toContain("[data-aigui-renderer] table:where(")
     expect(baseCss).toContain("overflow-x:auto")
     expect(baseCss).toContain("max-width:100%")
   })

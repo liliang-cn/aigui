@@ -105,7 +105,13 @@ use([
 ])
 
 export interface ChartOptions {
-  width?: number
+  /**
+   * Fixed pixel width, or `"container"` to size to the mount element and follow
+   * it on resize. `"container"` implies a live instance (`interactive`): a
+   * static SSR SVG is rendered before any element exists to measure, so there
+   * is nothing honest to size it against.
+   */
+  width?: number | "container"
   height?: number
   /**
    * When true, complete options render a LIVE ECharts instance via the `mount`
@@ -162,10 +168,27 @@ export function chartPromptSpec(locale?: string): string {
  * to a framework-neutral SVG string via ECharts SSR. Sync, never throws.
  */
 export function chart(opts: ChartOptions = {}): AIGuiPlugin {
-  const width = opts.width ?? 600
+  const fluid = opts.width === "container"
+  const width = typeof opts.width === "number" ? opts.width : 600
   const height = opts.height ?? 400
   const gl = opts.gl ?? false
-  const interactive = gl || (opts.interactive ?? false)
+  const interactive = gl || fluid || (opts.interactive ?? false)
+
+  /** Width to init with right now, and an observer that keeps following. */
+  const size = (el: HTMLElement): number => {
+    const w = Math.floor(el.clientWidth || el.getBoundingClientRect().width)
+    return w > 0 ? w : width
+  }
+  const follow = (el: HTMLElement, inst: ECharts): (() => void) | undefined => {
+    if (!fluid || typeof ResizeObserver === "undefined") return undefined
+    const ro = new ResizeObserver(() => {
+      const w = size(el)
+      // Resizing to 0 (display:none, mid-layout) blanks the chart permanently.
+      if (w > 0) inst.resize({ width: w })
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }
   const render = (node: ASTNode, context?: NodeRenderContext): RenderOutput => {
     // ECharts picks its palette from a registered theme name, and "dark" is one it ships with.
     // Without the host's scheme a chart keeps its light plot area on a dark page.
@@ -184,12 +207,14 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
           // `echarts-gl` (WebGL) has no static SSR form and its import is async,
           // so init inside the resolved promise. `.catch` swallows failures in
           // WebGL-less environments (e.g. headless/jsdom) so no unhandled rejection.
+          let unfollow: (() => void) | undefined
           loadGl()
             .then(() => {
               if (disposed) return
               // NOTE: no `renderer:"svg"` — WebGL requires the canvas renderer.
-              inst = init(el, chartTheme, { width, height })
+              inst = init(el, chartTheme, { width: fluid ? size(el) : width, height })
               inst.setOption(opt)
+              unfollow = follow(el, inst)
             })
             .catch(() => {
               inst?.dispose()
@@ -197,6 +222,7 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
             })
           return () => {
             disposed = true
+            unfollow?.()
             inst?.dispose()
           }
         },
@@ -207,14 +233,18 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
       return {
         kind: "mount",
         mount: (el: HTMLElement) => {
-          const inst = init(el, chartTheme, { renderer: "svg", width, height })
+          const inst = init(el, chartTheme, { renderer: "svg", width: fluid ? size(el) : width, height })
           try {
             inst.setOption(opt)
           } catch {
             inst.dispose()
             return
           }
-          return () => inst.dispose()
+          const unfollow = follow(el, inst)
+          return () => {
+            unfollow?.()
+            inst.dispose()
+          }
         },
       }
     }

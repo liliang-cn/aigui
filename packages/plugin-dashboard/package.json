@@ -1,15 +1,15 @@
 {
-  "name": "@ai-gui/plugin-katex",
+  "name": "@ai-gui/plugin-dashboard",
   "version": "0.30.0",
-  "description": "KaTeX math rendering plugin for AIGUI.",
+  "description": "BI dashboard plugin for AIGUI — a grid of panels, each a table + ECharts chart + provenance, with per-panel refusals. The host writes every number; the model only proposes the layout.",
   "keywords": [
     "llm",
     "ai",
-    "streaming",
-    "markdown",
-    "katex",
-    "math",
-    "latex",
+    "bi",
+    "dashboard",
+    "echarts",
+    "resultset",
+    "provenance",
     "plugin",
     "aigui"
   ],
@@ -18,7 +18,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/liliang-cn/aigui.git",
-    "directory": "packages/plugin-katex"
+    "directory": "packages/plugin-dashboard"
   },
   "homepage": "https://github.com/liliang-cn/aigui#readme",
   "bugs": "https://github.com/liliang-cn/aigui/issues",
@@ -40,40 +40,24 @@
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
       }
-    },
-    "./style.css": "./style.css",
-    "./inline-css": {
-      "import": {
-        "types": "./dist/inline-css.d.ts",
-        "default": "./dist/inline-css.js"
-      },
-      "require": {
-        "types": "./dist/inline-css.d.cts",
-        "default": "./dist/inline-css.cjs"
-      }
     }
   },
   "files": [
     "dist",
-    "style.css",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "CHANGELOG.md"
   ],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "build": "tsdown",
-    "test": "pnpm --dir ../.. exec vitest run --project plugin-katex",
-    "typecheck": "tsc --noEmit",
-    "generate:css": "node scripts/generate-css.mjs"
+    "test": "pnpm --dir ../.. exec vitest run --project plugin-dashboard",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-gui/core": "workspace:*",
-    "katex": "^0.16.11"
-  },
-  "devDependencies": {
-    "@types/katex": "^0.16.7",
-    "@types/markdown-it": "^14.1.2"
+    "echarts": "^5.5.1"
   }
 }

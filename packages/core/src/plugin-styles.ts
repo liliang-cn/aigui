@@ -16,7 +16,13 @@ export const baseCss = [
   "[data-aigui-renderer] code{overflow-wrap:anywhere}",
   "[data-aigui-renderer] pre code{overflow-wrap:normal}",
   // Tables scroll horizontally in place. `display:block` is what makes overflow apply to a table.
-  "[data-aigui-renderer] table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse}",
+  //
+  // Scoped with `:where(...)` so the exclusion adds no specificity: a plugin that wraps its own
+  // table in a scrolling container (resultset, dashboard) declares `width:100%` on the table, and
+  // `display:block` at equal specificity silently wins the cascade — the shell stays full-width
+  // while the rows shrink-wrap to a sliver. That fight was real: hosts had to override this rule
+  // by hand before the exclusion existed.
+  "[data-aigui-renderer] table:where(:not([data-aigui-resultset] *):not([data-aigui-dashboard] *)){display:block;max-width:100%;overflow-x:auto;border-collapse:collapse}",
   // A URL with no spaces is the usual culprit for a page that scrolls sideways.
   "[data-aigui-renderer] p,[data-aigui-renderer] li,[data-aigui-renderer] h1,[data-aigui-renderer] h2,[data-aigui-renderer] h3{overflow-wrap:break-word}",
   "[data-aigui-renderer] a{overflow-wrap:anywhere}",

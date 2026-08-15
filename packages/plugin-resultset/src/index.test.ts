@@ -110,3 +110,43 @@ describe("host ownership", () => {
     if (parsed.valid) expect(parsed.data.rows).toEqual([[3564]])
   })
 })
+
+describe("declared alignment and locale", () => {
+  it("a declared right column carries data-num even when cells are host-formatted strings", () => {
+    // Hosts format before serializing ("9,308,286.52", "23.2%") — detection
+    // can't fire on strings, so the declaration must carry the alignment.
+    const out = html(render(JSON.stringify({
+      columns: ["store", { name: "revenue", align: "right" }],
+      rows: [["East", "9,308,286.52"]],
+    })))
+    expect(out).toContain('{"data-num":""},"children":[{"kind":"html","html":"9,308,286.52"}]')
+    expect(out).toContain('"data-num":""},"children":[{"kind":"html","html":"revenue"}]')
+  })
+
+  it("refuses an alignment that is neither left nor right", () => {
+    const out = html(render(JSON.stringify({
+      columns: [{ name: "x", align: "center" }],
+      rows: [["1"]],
+    })))
+    expect(out).toContain("resultset-invalid")
+  })
+
+  it("meta:false drops the meta line — hosts that state rows/source elsewhere should not say it twice", () => {
+    const plugin = resultset({ meta: false })
+    const out = html(plugin.nodeRenderers!.resultset(
+      { type: "resultset", content: JSON.stringify({ columns: ["a"], rows: [["1"]] }), complete: true } as never,
+      undefined as never,
+    ))
+    expect(out).not.toContain("resultset-meta")
+  })
+
+  it("zh-CN meta speaks Chinese — the screen this ships on is projected to a Chinese customer", () => {
+    const plugin = resultset({ locale: "zh-CN" })
+    const out = html(plugin.nodeRenderers!.resultset(
+      { type: "resultset", content: JSON.stringify({ columns: ["a"], rows: [["1"]], truncated: true }), complete: true } as never,
+      undefined as never,
+    ))
+    expect(out).toContain("1 行")
+    expect(out).toContain("还有更多行没有返回")
+  })
+})

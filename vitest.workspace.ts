@@ -8,6 +8,7 @@ const alias = {
   "@ai-gui/plugin-sdk": fileURLToPath(new URL("./packages/plugin-sdk/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-citation": fileURLToPath(new URL("./packages/plugin-citation/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-resultset": fileURLToPath(new URL("./packages/plugin-resultset/src/index.ts", import.meta.url)),
+  "@ai-gui/plugin-dashboard": fileURLToPath(new URL("./packages/plugin-dashboard/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-evidence": fileURLToPath(new URL("./packages/plugin-evidence/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-artifact": fileURLToPath(new URL("./packages/plugin-artifact/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-ui": fileURLToPath(new URL("./packages/plugin-ui/src/index.ts", import.meta.url)),
@@ -77,6 +78,10 @@ export default defineWorkspace([
   {
     resolve: { alias },
     test: { name: "plugin-chart", root: "packages/plugin-chart", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "plugin-dashboard", root: "packages/plugin-dashboard", coverage },
   },
   {
     resolve: { alias },

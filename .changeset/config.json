@@ -34,7 +34,8 @@
       "@ai-gui/openai",
       "@ai-gui/anthropic",
       "@ai-gui/vercel-ai",
-      "@ai-gui/devtools"
+      "@ai-gui/devtools",
+      "@ai-gui/plugin-dashboard"
     ]
   ],
   "linked": [],
