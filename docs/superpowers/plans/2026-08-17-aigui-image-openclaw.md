@@ -1878,7 +1878,7 @@ git commit -m "docs(image): package README and root README entry"
 
 - [ ] **Step 1: Create the package manifest**
 
-`packages/openclaw/package.json`. `openclaw.extensions` is how OpenClaw finds the runtime entry — it must point at built JavaScript, not TypeScript source.
+`packages/openclaw/package.json`. `openclaw.extensions` is how OpenClaw finds the runtime entry. It must point at built JavaScript rather than TypeScript source, and it must be an **array** — a bare string is rejected at install time with `package.json openclaw.extensions must be an array`, which only shows up when the gateway actually installs the plugin.
 
 ```json
 {
@@ -1906,7 +1906,7 @@ git commit -m "docs(image): package README and root README entry"
       "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
     }
   },
-  "openclaw": { "extensions": "./dist/index.js" },
+  "openclaw": { "extensions": ["./dist/index.js"] },
   "files": ["dist", "openclaw.plugin.json", "README.md", "LICENSE"],
   "publishConfig": { "access": "public" },
   "scripts": {

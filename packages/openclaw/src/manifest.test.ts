@@ -13,6 +13,25 @@ const manifest = JSON.parse(
   configSchema: { properties: Record<string, unknown>; additionalProperties: boolean }
 }
 
+const pkg = JSON.parse(
+  readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"),
+) as { openclaw: { extensions: unknown }; files: string[] }
+
+describe("package.json", () => {
+  /**
+   * `openclaw plugins install` rejects a bare string with "openclaw.extensions must be an array",
+   * and nothing before the gateway install says so — not the build, not publint, not a typecheck.
+   */
+  it("declares the runtime entrypoint as an array", () => {
+    expect(Array.isArray(pkg.openclaw.extensions)).toBe(true)
+    expect(pkg.openclaw.extensions).toEqual(["./dist/index.js"])
+  })
+
+  it("ships the manifest, or OpenClaw cannot validate config without loading code", () => {
+    expect(pkg.files).toContain("openclaw.plugin.json")
+  })
+})
+
 describe("openclaw.plugin.json", () => {
   it("declares the id the code uses", () => {
     expect(manifest.id).toBe(PLUGIN_ID)

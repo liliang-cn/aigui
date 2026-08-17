@@ -40,7 +40,9 @@
     }
   },
   "openclaw": {
-    "extensions": "./dist/index.js"
+    "extensions": [
+      "./dist/index.js"
+    ]
   },
   "files": [
     "dist",
