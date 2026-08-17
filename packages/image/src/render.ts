@@ -20,7 +20,10 @@ interface RenderPage {
   setViewportSize(size: { width: number; height: number }): Promise<void>
   setContent(html: string): Promise<void>
   addScriptTag(options: { path: string }): Promise<void>
-  evaluate(fn: (arg: { source: string; width: number }) => unknown, arg: { source: string; width: number }): Promise<unknown>
+  evaluate(
+    fn: (arg: { source: string; width: number; theme?: string }) => unknown,
+    arg: { source: string; width: number; theme?: string },
+  ): Promise<unknown>
   locator(selector: string): { screenshot(options: { path: string }): Promise<unknown> }
 }
 
@@ -104,10 +107,10 @@ export async function renderMarkdownToImages(
               (window as unknown as {
                 __aiguiRenderBlock: (
                   source: string,
-                  options: { width: number },
+                  options: { width: number; theme?: string },
                 ) => Promise<{ width: number; height: number; failed: boolean }>
-              }).__aiguiRenderBlock(arg.source, { width: arg.width }),
-            { source, width },
+              }).__aiguiRenderBlock(arg.source, { width: arg.width, theme: arg.theme }),
+            { source, width, theme: options.theme },
           ) as Promise<{ width: number; height: number; failed: boolean }>,
           timeoutMs,
           `rendering ${selection.kind}`,

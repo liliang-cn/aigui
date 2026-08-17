@@ -3145,3 +3145,13 @@ If the hook never fires, check the resolved config location: this plan reads plu
 git add -A
 git commit -m "fix(openclaw): corrections from the live gateway smoke test"
 ```
+
+## Task 18: Final-review fixes
+
+A whole-branch review after all seventeen tasks found three seams between modules that per-task review could not see. All three were fixed TDD, with a failing test proving each reproduction before the fix.
+
+**Theme never reached the renderer.** `options.theme` reached `pageHtml` (which colours the page background) but was never forwarded into `createRenderer`, so `plugin-chart`/`plugin-mermaid`/`plugin-dashboard` all fell back to light — light-coloured charts on a dark page, worse than either theme alone. `page/entry.ts`'s `__aiguiRenderBlock` and `render.ts`'s `page.evaluate` call now carry `theme` through to `createRenderer`. Verified against a real Chromium: the dark chart's bars, gridlines and axis labels ("Sales", weekday names, 0-25 scale) are clearly legible light-lavender text against the dark navy/near-black background, not near-black-on-dark.
+
+**Two concurrent renders could orphan a Chromium.** `acquirePage` checked `if (!browser)` and awaited the launcher, so two calls arriving together both saw no browser and both launched — the second assignment silently overwrote the first, leaking a Chromium process nothing could close. Fixed by caching the in-flight launch promise (`launching`) rather than the resolved handle, so a second concurrent caller awaits the same launch. `closeBrowser`/`__resetBrowserForTests` clear `launching` too. The reproduction test genuinely failed before the fix (2 launches instead of 1).
+
+**The tool trusted a model-supplied width/theme.** `config.ts` clamps every operator-supplied value, but `tool.ts` forwarded the model's `params.width`/`params.theme` straight through to `pageHtml`, which interpolates width unescaped into a `<style>` block `setContent` parses as a document — the JSON Schema's `integer` constraint is enforced by a tool-calling layer this package doesn't own, not by this code. `tool.ts` now clamps width to `[200, 2000]` (or `undefined` if not a finite number) and normalizes theme to `"dark"` only on an exact match, else `"light"`.

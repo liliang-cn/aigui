@@ -32,8 +32,11 @@ export function createRenderTool(deps: HookDeps) {
       try {
         const result = await deps.render(params.markdown, {
           outDir: deps.outDir,
-          theme: params.theme,
-          width: params.width,
+          theme: params.theme === "dark" ? "dark" : "light",
+          width:
+            typeof params.width === "number" && Number.isFinite(params.width)
+              ? Math.min(2000, Math.max(200, Math.round(params.width)))
+              : undefined,
         })
         if (result.images.length === 0) {
           return { content: [{ type: "text", text: "No renderable block found in that markdown; nothing was drawn." }] }

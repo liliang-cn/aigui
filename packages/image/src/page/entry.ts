@@ -5,7 +5,7 @@ declare global {
   interface Window {
     __aiguiRenderBlock: (
       source: string,
-      options?: { width?: number; quietMs?: number },
+      options?: { width?: number; theme?: string; quietMs?: number },
     ) => Promise<{ width: number; height: number; failed: boolean }>
   }
 }
@@ -57,7 +57,7 @@ function frame(): Promise<void> {
 window.__aiguiRenderBlock = async (source, options = {}) => {
   const root = document.getElementById("root") as HTMLElement
   root.replaceChildren()
-  const renderer = createRenderer(root, { plugins: imagePlugins(options.width) })
+  const renderer = createRenderer(root, { plugins: imagePlugins(options.width), theme: options.theme })
   renderer.push(source)
   await quiescent(root, options.quietMs ?? 150)
   await document.fonts.ready

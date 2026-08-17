@@ -118,4 +118,14 @@ describe("renderMarkdownToImages", () => {
     expect(typeof page.evaluate.mock.calls[0][0]).toBe("function")
     expect(page.evaluate.mock.calls[0][1]).toMatchObject({ source: expect.stringContaining("```chart") })
   })
+
+  // Charts, diagrams and dashboards read `context.theme`. A dark page with light charts on it is
+  // worse than either theme chosen outright, and only an end-to-end assertion catches the gap.
+  it("passes the configured theme into the page, not just the page background", async () => {
+    const page = fakePage()
+    const acquire = vi.fn(async () => ({ page, release: vi.fn(async () => {}) }))
+    await renderMarkdownToImages(CHART, { outDir, acquire, theme: "dark" })
+    expect(page.evaluate.mock.calls[0][1]).toMatchObject({ theme: "dark" })
+    expect(page.setContent.mock.calls[0][0]).toContain("background:#161616")
+  })
 })

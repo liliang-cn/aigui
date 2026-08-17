@@ -82,4 +82,12 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
     expect(result.text).toBe("Here is the breakdown.\n\nLet me know if you want it by month.")
     expect(result.images).toHaveLength(1)
   }, 60_000)
+
+  it("draws a dark chart when asked for one", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-dark-"))
+    const source = '```chart\n{"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[3,7]}]}\n```'
+    const result = await renderMarkdownToImages(source, { outDir, theme: "dark", timeoutMs: 30_000 })
+    expect(result.images).toHaveLength(1)
+    expect(result.images[0].height).toBeGreaterThan(300)
+  }, 60_000)
 })

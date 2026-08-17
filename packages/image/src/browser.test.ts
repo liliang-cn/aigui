@@ -105,6 +105,19 @@ describe("acquirePage", () => {
     expect(launch).toHaveBeenCalledTimes(2)
   })
 
+  it("launches once when two renders arrive together", async () => {
+    const { launch } = fakeLauncher()
+    const slow = vi.fn(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      return launch()
+    })
+    const [a, b] = await Promise.all([acquirePage({ launcher: slow }), acquirePage({ launcher: slow })])
+    await a.release()
+    await b.release()
+    // Two conversations replying at once must not orphan a Chromium that nothing can close.
+    expect(slow).toHaveBeenCalledTimes(1)
+  })
+
   it("does not leak a lease when the page cannot be created", async () => {
     const launch = vi.fn(async () => ({
       close: async () => {},

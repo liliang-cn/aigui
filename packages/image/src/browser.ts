@@ -41,6 +41,7 @@ const defaultLauncher: Launcher = async () => {
 }
 
 let browser: BrowserLike | undefined
+let launching: Promise<BrowserLike> | undefined
 let leases = 0
 let idleTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -76,9 +77,15 @@ export async function acquirePage(options: AcquireOptions = {}): Promise<PageLea
   cancelIdle()
   if (!browser) {
     try {
-      browser = await launcher()
+      // The promise, not the handle. Checking a resolved handle across an await lets two
+      // concurrent callers both launch, and the loser's Chromium is orphaned with nothing
+      // holding a reference to close it.
+      launching ??= launcher()
+      browser = await launching
     } catch (error) {
       throw new BrowserUnavailableError(error)
+    } finally {
+      launching = undefined
     }
   }
   let page: PageLike
@@ -108,6 +115,7 @@ export async function closeBrowser(): Promise<void> {
   cancelIdle()
   const current = browser
   browser = undefined
+  launching = undefined
   await current?.close().catch(() => {})
 }
 
