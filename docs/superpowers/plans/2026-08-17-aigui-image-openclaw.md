@@ -453,7 +453,12 @@ export function imagePlugins(width: number = DEFAULT_WIDTH): AIGuiPlugin[] {
   return [
     chart({ interactive: false, width: inner, height: Math.round(inner * 0.625) }),
     mermaid(),
-    katex(),
+    // KaTeX's default `css` is `@import "katex/dist/katex.min.css"`, and a bare npm specifier
+    // resolves to nothing inside `page.setContent`. The import fails silently and every formula
+    // renders as flat unstyled text — `\frac{a}{b}` comes out as "ba". The real stylesheet is
+    // inlined by `page/html.ts`, which can read files; this module cannot, because the browser
+    // bundle imports it too.
+    katex({ css: "" }),
     dashboard(),
   ]
 }
@@ -685,13 +690,71 @@ This is the code that runs inside Chromium. It renders **one block at a time** i
 - Create: `packages/image/src/page/entry.ts`
 - Create: `packages/image/src/page/html.ts`
 
-- [ ] **Step 1: Write the page HTML template**
+- [ ] **Step 1: Inline KaTeX's stylesheet and its fonts**
+
+`packages/image/src/page/fonts.ts`. Node-side only — `plugins.ts` must stay importable by the browser bundle, so this cannot live there.
+
+```ts
+import { readdirSync, readFileSync } from "node:fs"
+import { createRequire } from "node:module"
+import { dirname, join } from "node:path"
+import { katexInlineCss } from "@ai-gui/plugin-katex/inline-css"
+
+const PLACEHOLDER = "AIGUI_KATEX_FONTS/"
+
+/**
+ * KaTeX's stylesheet with its fonts inlined as data URIs.
+ *
+ * Two problems get solved together. The plugin's default `css` is an `@import` of a bare npm
+ * specifier, which resolves to nothing inside `page.setContent` — without the real stylesheet a
+ * formula renders as flat text, so `\frac{a}{b}` arrives as "ba". And `katexInlineCss({ fontBase })`
+ * alone is not enough either: Chromium refuses `file://` subresources from an `about:blank`
+ * document, so all twenty faces fail and the maths falls back to a serif. That fallback is
+ * legible, but it has no blackboard bold or script faces — `\mathbb{R}` degrades to a bold R.
+ *
+ * Data URIs need no origin and no network, so the fonts simply work. 296 kB of woff2 becomes
+ * roughly 368 kB of CSS, read once and kept for the life of the process.
+ */
+let cached: string | undefined
+
+export function katexCss(): string {
+  if (cached !== undefined) return cached
+  const require_ = createRequire(import.meta.url)
+  const fontDir = join(dirname(require_.resolve("katex/package.json")), "dist", "fonts")
+  const inlined = new Map<string, string>()
+  for (const file of readdirSync(fontDir)) {
+    if (!file.endsWith(".woff2")) continue
+    inlined.set(file, `data:font/woff2;base64,${readFileSync(join(fontDir, file)).toString("base64")}`)
+  }
+  let css = katexInlineCss({ fontBase: PLACEHOLDER })
+  css = css.replace(new RegExp(`url\\(${PLACEHOLDER}([^)]+?)\\.woff2\\)`, "g"), (whole, name: string) => {
+    const uri = inlined.get(`${name}.woff2`)
+    return uri ? `url(${uri})` : whole
+  })
+  // Drop the woff/ttf fallbacks; they would 404 behind a woff2 that already loaded.
+  css = css.replace(
+    new RegExp(`,\\s*url\\(${PLACEHOLDER}[^)]+?\\.(?:woff|ttf)\\)\\s*format\\("(?:woff|truetype)"\\)`, "g"),
+    "",
+  )
+  cached = css
+  return cached
+}
+```
+
+`katex` has to be a direct dependency for `require_.resolve` to find its fonts. Add it to `packages/image/package.json`:
+
+```json
+    "katex": "^0.16.9",
+```
+
+- [ ] **Step 2: Write the page HTML template**
 
 `packages/image/src/page/html.ts`:
 
 ```ts
 import { baseCss, collectPluginStyles } from "@ai-gui/core"
 import { imagePlugins } from "../plugins"
+import { katexCss } from "./fonts"
 
 const THEMES = {
   light: { bg: "#ffffff", fg: "#1a1a1a" },
@@ -723,6 +786,7 @@ html,body{margin:0;padding:0;background:${theme.bg};color:${theme.fg}}
 body{font-family:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Noto Sans SC",system-ui,sans-serif;font-size:16px;line-height:1.6}
 #root{display:inline-block;padding:16px;box-sizing:border-box;max-width:${options.width ?? 720}px}
 ${baseCss}
+${katexCss()}
 ${pluginCss}
 </style></head><body><div id="root"></div></body></html>`
 }
@@ -1537,11 +1601,29 @@ describe("pageHtml", () => {
   it("gives the renderer the root the screenshot targets", () => {
     expect(pageHtml()).toContain('<div id="root"></div>')
   })
+
+  /**
+   * These two caught a bug that every other assertion missed: KaTeX's default stylesheet is an
+   * `@import` of a bare npm specifier, which resolves to nothing in a `setContent` page. Formulas
+   * rendered as flat text — `\frac{a}{b}` came out as "ba" — at a plausible size, so only looking
+   * at the picture revealed it.
+   */
+  it("carries KaTeX's real stylesheet, not an unresolvable @import", () => {
+    const html = pageHtml()
+    expect(html).toContain(".katex")
+    expect(html).not.toContain('@import "katex')
+  })
+
+  it("inlines the KaTeX fonts, so no request has to succeed for maths to look right", () => {
+    const html = pageHtml()
+    expect(html).toContain("data:font/woff2;base64,")
+    expect(html).not.toContain("cdn.jsdelivr.net")
+  })
 })
 ```
 
 Run: `pnpm exec vitest run --project image html`
-Expected: PASS, 7 tests.
+Expected: PASS, 9 tests.
 
 - [ ] **Step 2: Write the end-to-end test**
 
@@ -1570,9 +1652,10 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
   const cases: Array<[string, string, number]> = [
     ["chart", '```chart\n{"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[3,7]}]}\n```', 300],
     ["mermaid", "```mermaid\ngraph TD;\nA-->B;\nB-->C;\n```", 120],
-    // A fraction measures about 29px plus the root's 32px of padding. An empty root is 32px, so
-    // the threshold has to sit between the two — measured in a real browser, not guessed.
-    ["math", "$$\n\\frac{a}{b} = c\n$$", 45],
+    // Measured, not guessed: a properly typeset fraction plus the root's 32px padding comes to
+    // ~99px. Unstyled — the KaTeX-CSS bug — it collapsed to 29px, and an empty root is 32px. 80
+    // sits above both failure modes and comfortably below the real thing.
+    ["math", "$$\n\\frac{a}{b} = c\n$$", 80],
     ["table", "| 城市 | 温度 |\n| --- | --- |\n| 东京 | 24 |\n| 上海 | 31 |", 80],
   ]
 
@@ -1604,6 +1687,16 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
     }
   }, 120_000)
 
+  it("typesets symbols a fallback font does not have", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-symbols-"))
+    const source = "$$\n\\sum_{i=1}^{n} \\sqrt{\\frac{x_i}{\\alpha}} \\in \\mathbb{R}\n$$"
+    const result = await renderMarkdownToImages(source, { outDir, timeoutMs: 30_000 })
+    expect(result.images).toHaveLength(1)
+    // Blackboard bold and the big operators only exist in KaTeX's own faces. If the fonts failed
+    // to load this still renders, just wrong — so lean on the height a real radical forces.
+    expect(result.images[0].height).toBeGreaterThan(90)
+  }, 60_000)
+
   it("renders CJK text without tofu", async () => {
     const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-cjk-"))
     const result = await renderMarkdownToImages("| 项目 | 数值 |\n| --- | --- |\n| 营业额 | 一万 |", {
@@ -1632,7 +1725,7 @@ pnpm --filter @ai-gui/image build
 AIGUI_IMAGE_E2E=1 pnpm exec vitest run --project image render.e2e
 ```
 
-Expected: PASS, 7 tests.
+Expected: PASS, 8 tests.
 
 - [ ] **Step 4: Actually look at the pictures**
 
