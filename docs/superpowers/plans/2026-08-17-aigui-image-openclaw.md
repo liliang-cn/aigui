@@ -1799,6 +1799,8 @@ On Linux the container also needs CJK faces, or Chinese renders as tofu in the d
 apt-get install -y fonts-noto-cjk
 ```
 
+Maths needs nothing: KaTeX's stylesheet and all twenty of its font faces are inlined into the page, so formulas typeset correctly with no network and no system fonts. Only CJK text depends on what the host has installed.
+
 ## Usage
 
 ```ts
@@ -1825,9 +1827,23 @@ Blocks that fail to render are left in `text` as their original source, so a bro
 - `kinds` — which families to draw. Default: all six.
 - `theme` — `"light"` (default) or `"dark"`.
 - `width` — viewport width in CSS pixels. Default 720.
+- `scale` — device pixels per CSS pixel. Default 2, which is what a phone screen wants.
 - `max` — cap on pictures per call. Default 6; the rest stay as text.
 - `timeoutMs` — per-block budget. Default 10000.
 - `idleShutdownMs` — how long the browser stays resident with nothing to do. Default 300000.
+
+## Cost when there is nothing to draw
+
+`renderMarkdownToImages` parses before it launches anything, and returns the source untouched if no block qualifies. The browser is lazy and shuts itself down after five idle minutes, so a process that renders one chart an hour does not hold a Chromium open in between.
+
+## Testing
+
+The screenshot tests need a real browser and are opt-in:
+
+```sh
+pnpm exec playwright install chromium
+AIGUI_IMAGE_E2E=1 pnpm exec vitest run --project image render.e2e
+```
 ````
 
 - [ ] **Step 2: Add it to the root README**
