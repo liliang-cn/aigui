@@ -166,30 +166,21 @@ Each file has one job. `blocks.ts` is pure string/AST work and never touches a b
 }
 ```
 
-`packages/image/tsdown.config.ts` — two builds. The library build keeps Playwright external so importing the package never pulls Chromium bindings; the page build inlines everything because the bundle is injected into a browser that can't resolve modules.
+`packages/image/tsdown.config.ts` — the library build only. Playwright stays external so importing the package never pulls Chromium bindings.
 
 ```ts
 import { defineConfig } from "tsdown"
 
-export default defineConfig([
-  {
-    entry: ["src/index.ts"],
-    format: ["esm", "cjs"],
-    dts: true,
-    clean: true,
-    external: ["playwright"],
-  },
-  {
-    entry: ["src/page/entry.ts"],
-    format: ["iife"],
-    outDir: "dist/page",
-    platform: "browser",
-    dts: false,
-    clean: false,
-    noExternal: [/.*/],
-  },
-])
+export default defineConfig({
+  entry: ["src/index.ts"],
+  format: ["esm", "cjs"],
+  dts: true,
+  clean: true,
+  external: ["playwright"],
+})
 ```
+
+The browser bundle needs a second build, but its entry file does not exist until Task 5. `turbo.json`'s `build` task is unscoped and both `.github/workflows/ci.yml:28` and `release.yml:35` run a bare `pnpm build`, so declaring an entry before the file exists makes `tsdown` fail with `Cannot find entry` and turns CI red for four tasks. The second build is added in Task 5, alongside the file it points at, which keeps every commit on this branch buildable.
 
 - [ ] **Step 3: Create the shared types**
 
@@ -759,7 +750,36 @@ window.__aiguiRenderBlock = async (source, options = {}) => {
 }
 ```
 
-- [ ] **Step 3: Build the page bundle**
+- [ ] **Step 3: Add the page build to `tsdown.config.ts`**
+
+Now that `src/page/entry.ts` exists, the second build can be declared. Replace the contents of `packages/image/tsdown.config.ts` with:
+
+```ts
+import { defineConfig } from "tsdown"
+
+export default defineConfig([
+  {
+    entry: ["src/index.ts"],
+    format: ["esm", "cjs"],
+    dts: true,
+    clean: true,
+    external: ["playwright"],
+  },
+  {
+    entry: ["src/page/entry.ts"],
+    format: ["iife"],
+    outDir: "dist/page",
+    platform: "browser",
+    dts: false,
+    clean: false,
+    noExternal: [/.*/],
+  },
+])
+```
+
+The page build inlines everything (`noExternal`) because the bundle is injected into a browser that cannot resolve modules.
+
+- [ ] **Step 4: Build the page bundle**
 
 Run: `pnpm --filter @ai-gui/image build`
 Expected: `packages/image/dist/page/entry.js` exists.
@@ -770,10 +790,10 @@ ls -la packages/image/dist/page/
 
 If `createRenderer(root, { plugins })` rejects the options object, open `packages/vanilla/src/create-renderer.ts` and pass whatever `CreateRendererOptions` actually requires — a `CardRegistry` and `CardStore` may be mandatory. Construct them here rather than making them the caller's problem.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add packages/image/src/page
+git add packages/image/src/page packages/image/tsdown.config.ts
 git commit -m "feat(image): in-page block renderer with quiescence detection"
 ```
 
