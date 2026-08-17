@@ -16,3 +16,5 @@ export {
 export { hasTrigger, selectRenderableBlocks, stripBlocks } from "./blocks"
 export type { SelectOptions } from "./blocks"
 export { BrowserUnavailableError, closeBrowser } from "./browser"
+export { renderMarkdownToImages } from "./render"
+export type { InternalRenderOptions } from "./render"

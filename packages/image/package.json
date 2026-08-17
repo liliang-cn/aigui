@@ -22,7 +22,8 @@
     ".": {
       "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
       "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
-    }
+    },
+    "./package.json": "./package.json"
   },
   "files": ["dist", "README.md", "LICENSE"],
   "publishConfig": { "access": "public" },
@@ -41,5 +42,5 @@
   },
   "peerDependencies": { "playwright": "^1.48.0" },
   "peerDependenciesMeta": { "playwright": { "optional": true } },
-  "devDependencies": { "playwright": "^1.48.0" }
+  "devDependencies": { "@types/node": "^22.0.0", "playwright": "^1.48.0" }
 }
