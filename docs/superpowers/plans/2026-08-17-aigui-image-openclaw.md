@@ -345,9 +345,22 @@ describe("hasTrigger", () => {
     expect(hasTrigger("| a | b |\n| - | - |\n| 1 | 2 |")).toBe(true)
   })
 
+  it("finds the table shape models actually write, without leading pipes", () => {
+    expect(hasTrigger("City | Temp\n-----|-----\nTokyo | 24")).toBe(true)
+    expect(hasTrigger("City | Temp\n:---:|----:\nTokyo | 24")).toBe(true)
+  })
+
+  it("finds a fence that escaped its backticks", () => {
+    expect(hasTrigger('````chart\n{"series":[]}\n````')).toBe(true)
+  })
+
   it("says no to ordinary prose and ordinary code", () => {
     expect(hasTrigger("Just a sentence about charts and tables.")).toBe(false)
     expect(hasTrigger("```ts\nconst chart = 1\n```")).toBe(false)
+  })
+
+  it("does not mistake a horizontal rule for a table", () => {
+    expect(hasTrigger("above\n\n-----\n\nbelow")).toBe(false)
   })
 })
 ```
@@ -368,18 +381,26 @@ Expected: FAIL — `Failed to resolve import "./blocks"`.
  * The point is to spend nothing on the overwhelming majority of replies, which are prose. It is
  * intentionally loose — a sentence that happens to start with a pipe costs one markdown parse,
  * and the parse is what actually decides. Nothing launches a browser on the strength of this.
+ *
+ * Loose in the right direction, though. A false positive costs a parse; a false negative silently
+ * drops a picture the reader asked for. Two shapes earned their own branch for that reason:
+ * models write tables without leading pipes at least as often as with them, and they escalate a
+ * fence to four backticks whenever the payload contains three.
  */
-const TRIGGER = /^ {0,3}(?:(?:```|~~~)[ \t]*(?:chart|mermaid|dashboard|card:)|\$\$|\|)/m
+const TRIGGER =
+  /^ {0,3}(?:(?:`{3,}|~{3,})[ \t]*(?:chart|mermaid|dashboard|card:)|\$\$|\||:?-+:?[ \t]*\|)/m
 
 export function hasTrigger(markdown: string): boolean {
   return TRIGGER.test(markdown)
 }
 ```
 
+The last branch matches a GFM delimiter row (`-----|-----`, `:---:|----:`). It is what distinguishes a pipe-less table from a horizontal rule: a rule has no pipe, so `-----` alone still returns false.
+
 - [ ] **Step 4: Run the test to confirm it passes**
 
 Run: `pnpm exec vitest run --project image blocks`
-Expected: PASS, 3 tests.
+Expected: PASS, 6 tests.
 
 - [ ] **Step 5: Export it**
 
