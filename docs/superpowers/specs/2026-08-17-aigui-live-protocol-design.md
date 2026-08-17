@@ -69,7 +69,7 @@ Every frame carries `v` (protocol version) and `t` (type).
 
 // server → client
 { "v":1, "t":"welcome", "session":"abc", "resume":true }
-{ "v":1, "t":"sync",    "cards":[ { "id":"…", "type":"…", "data":{} } ] }
+{ "v":1, "t":"sync",    "snapshot":{ "version":1, "cards":[ { "id":"…", "type":"…", "data":{}, "revision":0 } ] } }
 { "v":1, "t":"cards",   "messages":[ /* CardMessage[] */ ] }
 { "v":1, "t":"outcome", "id":"c7", "outcome":{ /* ActionOutcome */ } }
 { "v":1, "t":"error",   "code":"version", "message":"…", "fatal":true }
@@ -93,6 +93,8 @@ reconnect  backoff with jitter (1s → 30s cap), then hello → welcome → sync
 Three properties worth stating explicitly.
 
 **`sync` replaces, it does not merge.** A card the server deleted while the client was away must disappear, and a merge would leave it on screen forever.
+
+This too is reuse rather than new code. `sync` carries a `CardSnapshot` — the type `CardStore.snapshot()` already produces — and the client applies it with `CardStore.restore()`, which builds a fresh map, validates every id, type and revision, and rejects duplicates. Replace-not-merge is therefore not a rule the socket layer has to remember to follow; it is the only thing the existing method can do.
 
 **Reconnection and first connection are the same path.** This is the real return on holding full state server-side. It is not that cursor bookkeeping was avoided; it is that *there is no recovery-specific code left to rot*. Recovery bugs live in branches only a disconnect can reach — here there is no such branch, because the recovery path is the one that runs on every page load.
 
