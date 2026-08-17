@@ -1,0 +1,45 @@
+{
+  "name": "@ai-gui/image",
+  "version": "0.30.0",
+  "description": "Render AIGUI markdown blocks (charts, diagrams, math, tables, cards) to PNG in a headless browser.",
+  "keywords": ["llm", "ai", "markdown", "chart", "screenshot", "png", "headless", "aigui"],
+  "license": "MIT",
+  "author": "Liang Li <ll_faw@hotmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liliang-cn/aigui.git",
+    "directory": "packages/image"
+  },
+  "homepage": "https://github.com/liliang-cn/aigui#readme",
+  "bugs": "https://github.com/liliang-cn/aigui/issues",
+  "type": "module",
+  "sideEffects": false,
+  "engines": { "node": ">=18" },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "tsdown",
+    "test": "pnpm --dir ../.. exec vitest run --project image",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-gui/core": "workspace:*",
+    "@ai-gui/vanilla": "workspace:*",
+    "@ai-gui/plugin-chart": "workspace:*",
+    "@ai-gui/plugin-mermaid": "workspace:*",
+    "@ai-gui/plugin-katex": "workspace:*",
+    "@ai-gui/plugin-dashboard": "workspace:*"
+  },
+  "peerDependencies": { "playwright": "^1.48.0" },
+  "peerDependenciesMeta": { "playwright": { "optional": true } },
+  "devDependencies": { "playwright": "^1.48.0" }
+}

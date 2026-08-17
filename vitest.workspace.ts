@@ -27,6 +27,10 @@ const alias = {
   "@ai-gui/react": fileURLToPath(new URL("./packages/react/src/index.ts", import.meta.url)),
   "@ai-gui/vue": fileURLToPath(new URL("./packages/vue/src/index.ts", import.meta.url)),
   "@ai-gui/vanilla": fileURLToPath(new URL("./packages/vanilla/src/index.ts", import.meta.url)),
+  "@ai-gui/image": fileURLToPath(new URL("./packages/image/src/index.ts", import.meta.url)),
+  "@ai-gui/plugin-chart": fileURLToPath(new URL("./packages/plugin-chart/src/index.ts", import.meta.url)),
+  "@ai-gui/plugin-mermaid": fileURLToPath(new URL("./packages/plugin-mermaid/src/index.ts", import.meta.url)),
+  "@ai-gui/plugin-katex": fileURLToPath(new URL("./packages/plugin-katex/src/index.ts", import.meta.url)),
 }
 
 const coverage = {
@@ -174,5 +178,9 @@ export default defineWorkspace([
   {
     resolve: { alias },
     test: { name: "playground", root: "apps/playground", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "image", root: "packages/image", coverage },
   },
 ])
