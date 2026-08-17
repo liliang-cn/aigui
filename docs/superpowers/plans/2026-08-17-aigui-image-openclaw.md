@@ -1999,6 +1999,8 @@ export const PLUGIN_ID = "ai-gui"
 export const TOOL_NAME = "aigui_render"
 ```
 
+(Task 14 moves both constants into their own `constants.ts` once `tool.ts` needs to share them; the exports from this barrel stay the same.)
+
 `packages/openclaw/src/manifest.test.ts`. OpenClaw reads `openclaw.plugin.json` to validate configuration *without executing plugin code*, and it rejects a tool that the manifest does not declare. That makes the manifest and the code two sources of one truth, which is exactly the pair worth pinning together.
 
 ```ts
@@ -2555,8 +2557,36 @@ git commit -m "feat(openclaw): reply_payload_sending hook with cheap guards"
 ## Task 14: The `aigui_render` tool
 
 **Files:**
+- Create: `packages/openclaw/src/constants.ts`
+- Modify: `packages/openclaw/src/index.ts`
+- Modify: `packages/openclaw/src/manifest.test.ts`
 - Create: `packages/openclaw/src/tool.ts`
 - Create: `packages/openclaw/src/tool.test.ts`
+
+- [ ] **Step 0: Give the tool's name one home**
+
+`manifest.test.ts` pins `openclaw.plugin.json` to `TOOL_NAME`, but if `tool.ts` spells the name out separately then renaming the tool leaves the test passing while OpenClaw silently skips the registration — the precise failure that test exists to catch. The constants move to their own module so both sides can share them without `tool.ts` importing the barrel that will re-export it.
+
+`packages/openclaw/src/constants.ts`:
+
+```ts
+/** The id OpenClaw knows this plugin by. Must match `openclaw.plugin.json`. */
+export const PLUGIN_ID = "ai-gui"
+
+/** The agent tool this plugin registers. Must be declared in the manifest's `contracts.tools`. */
+export const TOOL_NAME = "aigui_render"
+```
+
+In `packages/openclaw/src/index.ts`, replace the two inline declarations with a re-export, leaving the public surface identical:
+
+```ts
+export { PLUGIN_ID, TOOL_NAME } from "./constants"
+```
+
+In `packages/openclaw/src/manifest.test.ts`, change the import to `from "./constants"`.
+
+Run: `pnpm exec vitest run --project openclaw manifest`
+Expected: PASS, 4 tests — unchanged behaviour, one source of truth.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -2623,6 +2653,7 @@ Expected: FAIL — `Failed to resolve import "./tool"`.
 `packages/openclaw/src/tool.ts`. The JSON Schema is written by hand rather than with TypeBox so the package needs no runtime dependency for one object shape.
 
 ```ts
+import { TOOL_NAME } from "./constants"
 import type { HookDeps } from "./hook"
 
 export interface ToolResult {
@@ -2639,7 +2670,7 @@ export interface ToolResult {
  */
 export function createRenderTool(deps: HookDeps) {
   return {
-    name: "aigui_render",
+    name: TOOL_NAME,
     description:
       "Render AIGUI markdown (a ```chart, ```mermaid, ```dashboard or ```card fence, $$math$$, or a table) to PNG files and return their paths. Attach the returned paths with the message tool to show them in the chat.",
     parameters: {
