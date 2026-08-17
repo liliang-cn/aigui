@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
-import { PLUGIN_ID, TOOL_NAME } from "./index"
+import { PLUGIN_ID, TOOL_NAME } from "./constants"
 
 const manifest = JSON.parse(
   readFileSync(fileURLToPath(new URL("../openclaw.plugin.json", import.meta.url)), "utf8"),
