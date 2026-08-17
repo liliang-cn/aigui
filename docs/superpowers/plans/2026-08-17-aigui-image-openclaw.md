@@ -555,6 +555,18 @@ describe("stripBlocks", () => {
   it("leaves the source untouched when nothing was selected", () => {
     expect(stripBlocks("Just prose.", [])).toBe("Just prose.")
   })
+
+  it("collapses blank lines in a CRLF message too", () => {
+    const source = `Intro.\r\n\r\n${CHART.replace(/\n/g, "\r\n")}\r\n\r\nOutro.`
+    expect(stripBlocks(source, selectRenderableBlocks(source))).toBe("Intro.\n\nOutro.")
+  })
+})
+
+describe("classify edge cases", () => {
+  it("does not turn prose about KaTeX's CSS into a picture of that prose", () => {
+    const source = 'Some text.\n\n<div>The katex-display class centres display math.</div>'
+    expect(selectRenderableBlocks(source)).toEqual([])
+  })
 })
 ```
 
@@ -594,7 +606,10 @@ function classify(node: ASTNode): RenderableKind | undefined {
   if (node.type === "card") return node.card?.complete && node.card.valid ? "card" : undefined
   if (node.type !== "html") return undefined
   const html = node.content ?? ""
-  if (html.includes("katex-display")) return "math"
+  // Match the class attribute, not the bare string. Raw HTML is enabled by default, so a model
+  // explaining KaTeX's own CSS would otherwise have its prose stripped out of the message and
+  // replaced by a picture of that prose.
+  if (/class="[^"]*\bkatex-display\b/.test(html)) return "math"
   if (/<table[\s>]/.test(html)) return "table"
   return undefined
 }
@@ -623,14 +638,15 @@ export function selectRenderableBlocks(markdown: string, options: SelectOptions 
  *
  * Back to front, because slicing from the front shifts every offset behind it and silently
  * corrupts the second cut onwards. Runs of blank lines left by the cuts collapse to one, so a
- * message that was mostly pictures does not arrive as a column of empty lines.
+ * message that was mostly pictures does not arrive as a column of empty lines. The collapse has
+ * to know about `\r\n` — matching bare `\n` leaves a stray blank line in every CRLF message.
  */
 export function stripBlocks(markdown: string, selections: BlockSelection[]): string {
   let out = markdown
   for (const selection of [...selections].sort((a, b) => b.start - a.start)) {
     out = out.slice(0, selection.start) + out.slice(selection.end)
   }
-  return out.replace(/\n{3,}/g, "\n\n").trim()
+  return out.replace(/(?:\r?\n){3,}/g, "\n\n").trim()
 }
 ```
 
