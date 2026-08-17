@@ -35,7 +35,9 @@
       "@ai-gui/anthropic",
       "@ai-gui/vercel-ai",
       "@ai-gui/devtools",
-      "@ai-gui/plugin-dashboard"
+      "@ai-gui/plugin-dashboard",
+      "@ai-gui/image",
+      "@ai-gui/openclaw"
     ]
   ],
   "linked": [],
