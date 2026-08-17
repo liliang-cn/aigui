@@ -19,7 +19,12 @@ export function imagePlugins(width: number = DEFAULT_WIDTH): AIGuiPlugin[] {
   return [
     chart({ interactive: false, width: inner, height: Math.round(inner * 0.625) }),
     mermaid(),
-    katex(),
+    // KaTeX's default `css` is `@import "katex/dist/katex.min.css"`, and a bare npm specifier
+    // resolves to nothing inside `page.setContent`. The import fails silently and every formula
+    // renders as flat unstyled text — `\frac{a}{b}` comes out as "ba". The real stylesheet is
+    // inlined by `page/html.ts`, which can read files; this module cannot, because the browser
+    // bundle imports it too.
+    katex({ css: "" }),
     dashboard(),
   ]
 }

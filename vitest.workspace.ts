@@ -30,6 +30,10 @@ const alias = {
   "@ai-gui/image": fileURLToPath(new URL("./packages/image/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-chart": fileURLToPath(new URL("./packages/plugin-chart/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-mermaid": fileURLToPath(new URL("./packages/plugin-mermaid/src/index.ts", import.meta.url)),
+  // A plain alias key matches as a prefix, so this more specific entry has to be listed before
+  // the bare "@ai-gui/plugin-katex" one below — otherwise that shorter entry wins the match first
+  // and `page/fonts.ts`'s import of the "/inline-css" subpath resolves to a nonexistent path.
+  "@ai-gui/plugin-katex/inline-css": fileURLToPath(new URL("./packages/plugin-katex/src/inline-css.ts", import.meta.url)),
   "@ai-gui/plugin-katex": fileURLToPath(new URL("./packages/plugin-katex/src/index.ts", import.meta.url)),
 }
 

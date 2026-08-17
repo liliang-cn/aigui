@@ -1,5 +1,6 @@
 import { baseCss, collectPluginStyles } from "@ai-gui/core"
 import { imagePlugins } from "../plugins"
+import { katexCss } from "./fonts"
 
 const THEMES = {
   light: { bg: "#ffffff", fg: "#1a1a1a" },
@@ -31,6 +32,7 @@ html,body{margin:0;padding:0;background:${theme.bg};color:${theme.fg}}
 body{font-family:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Noto Sans SC",system-ui,sans-serif;font-size:16px;line-height:1.6}
 #root{display:inline-block;padding:16px;box-sizing:border-box;max-width:${options.width ?? 720}px}
 ${baseCss}
+${katexCss()}
 ${pluginCss}
 </style></head><body><div id="root"></div></body></html>`
 }

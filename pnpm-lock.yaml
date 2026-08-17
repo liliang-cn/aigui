@@ -142,6 +142,9 @@ importers:
       '@ai-gui/vanilla':
         specifier: workspace:*
         version: link:../vanilla
+      katex:
+        specifier: ^0.16.9
+        version: 0.16.47
     devDependencies:
       '@types/node':
         specifier: ^22.0.0

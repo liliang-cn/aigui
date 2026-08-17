@@ -61,7 +61,8 @@
     "@ai-gui/plugin-chart": "workspace:*",
     "@ai-gui/plugin-mermaid": "workspace:*",
     "@ai-gui/plugin-katex": "workspace:*",
-    "@ai-gui/plugin-dashboard": "workspace:*"
+    "@ai-gui/plugin-dashboard": "workspace:*",
+    "katex": "^0.16.9"
   },
   "peerDependencies": {
     "playwright": "^1.48.0"

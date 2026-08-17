@@ -20,7 +20,10 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
   const cases: Array<[string, string, number]> = [
     ["chart", '```chart\n{"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[3,7]}]}\n```', 300],
     ["mermaid", "```mermaid\ngraph TD;\nA-->B;\nB-->C;\n```", 120],
-    ["math", "$$\n\\frac{a}{b} = c\n$$", 45],
+    // Measured, not guessed: a properly typeset fraction plus the root's 32px padding comes to
+    // ~99px. Unstyled — the KaTeX-CSS bug — it collapsed to 29px, and an empty root is 32px. 80
+    // sits above both failure modes and comfortably below the real thing.
+    ["math", "$$\n\\frac{a}{b} = c\n$$", 80],
     ["table", "| 城市 | 温度 |\n| --- | --- |\n| 东京 | 24 |\n| 上海 | 31 |", 80],
   ]
 
@@ -51,6 +54,16 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
       expect(result.images[0].height).toBeGreaterThan(120)
     }
   }, 120_000)
+
+  it("typesets symbols a fallback font does not have", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-symbols-"))
+    const source = "$$\n\\sum_{i=1}^{n} \\sqrt{\\frac{x_i}{\\alpha}} \\in \\mathbb{R}\n$$"
+    const result = await renderMarkdownToImages(source, { outDir, timeoutMs: 30_000 })
+    expect(result.images).toHaveLength(1)
+    // Blackboard bold and the big operators only exist in KaTeX's own faces. If the fonts failed
+    // to load this still renders, just wrong — so lean on the height a real radical forces.
+    expect(result.images[0].height).toBeGreaterThan(90)
+  }, 60_000)
 
   it("renders CJK text without tofu", async () => {
     const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-cjk-"))
