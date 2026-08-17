@@ -19,6 +19,7 @@ AIGUI turns a raw model stream into a live, structured UI. Text and markdown ren
 - **Safe by default** — the core sanitizes all HTML output, and `rawHtml={false}` escapes the tags a model writes in prose instead of interpreting them.
 - **Observable when requested** — opt-in debug events and `@ai-gui/devtools` provide a bounded, redacted runtime timeline and deterministic stream simulator.
 - **Revisioned artifacts** — models can create and update persistent text, code, Markdown, and JSON documents without executing generated code.
+- **Pictures for picture-only channels** — `@ai-gui/image` renders any block to PNG in a headless browser, and `@ai-gui/openclaw` wires that into OpenClaw so a chart reaches WeChat as a chart.
 - **Tiny surface, well tested** — 1360+ tests, built with [tsdown](https://github.com/rolldown/tsdown).
 
 ## Install
