@@ -2765,6 +2765,32 @@ describe("oversized pictures", () => {
     const result = await hook(event({ text: CHART }), {})
     expect(result?.payload?.mediaUrls).toEqual(["/tmp/a.png"])
   })
+
+  /**
+   * One picture failing to shrink must not take its siblings down. The `try`/`catch` lives inside
+   * the per-image callback for exactly this reason: hoisted outside the map, one rejection would
+   * reject the whole `Promise.all` and the reply would arrive with no pictures at all.
+   */
+  it("shrinks each picture independently, so one failure costs only itself", async () => {
+    const d = deps({
+      render: vi.fn(async () => ({
+        text: "Intro.",
+        images: [
+          { kind: "chart", path: "/tmp/a.png", width: 1, height: 1 },
+          { kind: "mermaid", path: "/tmp/b.png", width: 1, height: 1 },
+          { kind: "table", path: "/tmp/c.png", width: 1, height: 1 },
+        ],
+      })),
+      shrink: vi.fn(async (path: string) => {
+        if (path === "/tmp/b.png") throw new Error("re-encode failed")
+        if (path === "/tmp/c.png") return undefined
+        return `${path}.jpg`
+      }),
+    })
+    const hook = createReplyPayloadHook(d)
+    const result = await hook(event({ text: CHART }), {})
+    expect(result?.payload?.mediaUrls).toEqual(["/tmp/a.png.jpg", "/tmp/b.png", "/tmp/c.png"])
+  })
 })
 ```
 
@@ -2813,7 +2839,7 @@ Then replace the final line of the returned handler:
 - [ ] **Step 4: Run the tests**
 
 Run: `pnpm exec vitest run --project openclaw hook`
-Expected: PASS, 13 tests.
+Expected: PASS, 14 tests.
 
 - [ ] **Step 5: Commit**
 
