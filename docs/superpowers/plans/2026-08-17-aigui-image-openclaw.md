@@ -2943,7 +2943,37 @@ export default definePluginEntry({
 })
 ```
 
-Verify the two runtime paths against the installed SDK before trusting them — `api.runtime.media.resizeToJpeg` is documented at `docs/plugins/sdk-runtime.md:492`, but the state-directory accessor is a guess. Run `openclaw plugins inspect ai-gui --runtime --json` and, if `api.runtime.paths` does not exist, grep the SDK type definitions for the accessor that does and use it. The environment-variable fallback keeps the plugin working either way.
+Three things were checked against the installed `openclaw@2026.7.1` rather than assumed, and two of them contradicted this plan's first draft:
+
+- **State directory.** `api.runtime.paths.stateDir` does not exist. The real accessor is `api.runtime.state.resolveStateDir(env?)` (`dist/types-DaHgOqFX.d.ts:3821`), which already handles `OPENCLAW_STATE_DIR` itself. The manual fallback stays only for a runtime that lacks it.
+- **`resizeToJpeg`.** Takes a single object, not `(buffer, options)`: `{ buffer, maxSide, quality, withoutEnlargement? }` (`dist/media-services-BqLZh0ST.d.ts:80`). OpenClaw's own doc example at `docs/plugins/sdk-runtime.md:492` is stale.
+- **`definePluginEntry` is deliberately not used.** A top-level `await import` of it breaks tsdown's `cjs` output, and the helper turns out to be a pure factory — but one with a trap. Called without an explicit `configSchema`, it defaults to `emptyPluginConfigSchema`, whose `safeParse` rejects anything non-empty with `"config must be empty"` (`dist/config-schema-ByzWLagI.js:100`). Every setting an operator wrote would be refused. Omitting the field entirely is what we want: the loader skips a plugin with no runtime schema (`dist/schema-DRyO1XBt.js:3140`), and `openclaw.plugin.json` — which OpenClaw requires to carry the schema anyway (`dist/plugins-authoring-command-DORDD8cF.js:119`) — remains the single source of config truth.
+
+A regression guard for that last point, appended to `packages/openclaw/src/manifest.test.ts`:
+
+```ts
+import entry from "./index"
+
+describe("plugin entry", () => {
+  it("identifies itself with the manifest's id", () => {
+    expect((entry as { id: string }).id).toBe(manifest.id)
+  })
+
+  /**
+   * Wrapping this in `definePluginEntry` without an explicit schema would default it to
+   * `emptyPluginConfigSchema`, which rejects any non-empty config outright. The manifest is where
+   * the schema lives; a runtime schema here would only shadow it, and an empty one would break
+   * every operator setting.
+   */
+  it("carries no runtime config schema, leaving the manifest authoritative", () => {
+    expect("configSchema" in (entry as object)).toBe(false)
+  })
+
+  it("registers something", () => {
+    expect(typeof (entry as { register: unknown }).register).toBe("function")
+  })
+})
+```
 
 - [ ] **Step 2: Build and typecheck**
 
