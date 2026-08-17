@@ -741,31 +741,47 @@ declare global {
     __aiguiRenderBlock: (
       source: string,
       options?: { width?: number; quietMs?: number },
-    ) => Promise<{ width: number; height: number }>
+    ) => Promise<{ width: number; height: number; failed: boolean }>
   }
 }
 
+/** A plugin whose promise has not resolved yet. `render-node-dom.ts:52` sets this marker. */
+const PENDING = "[data-aigui-async-pending]"
+/** A plugin whose promise rejected. `render-node-dom.ts:62` sets this one. */
+const FAILED = "[data-aigui-async-error]"
+
 /**
- * Wait until the block stops changing.
+ * Wait until the block has actually finished drawing.
  *
- * AIGUI's `mount` output is called synchronously but what it starts is not: Mermaid renders
+ * AIGUI's node renderers are invoked synchronously but what they start is not: Mermaid renders
  * through an async queue and swaps its SVG in later. There is no settled signal to await, so the
- * only honest answer is to watch the subtree and declare it finished once it has been still for a
- * beat. Every mutation restarts the clock.
+ * subtree is watched and declared finished once it has been still for a beat.
+ *
+ * Quiet alone is not enough, and that distinction is the whole point. The observer is attached
+ * after `push()`, so it never sees the synchronous placeholder the renderer leaves behind — only
+ * the later swap. A Mermaid diagram that takes longer than one quiet window would therefore be
+ * declared finished while its host was still an empty `data-aigui-async-pending` div, and the
+ * screenshot would capture nothing. So a still subtree that still contains a pending marker
+ * restarts the clock instead of resolving. The Node side's hard timeout bounds the wait.
  */
 function quiescent(root: HTMLElement, quietMs: number): Promise<void> {
   return new Promise((resolve) => {
     let timer = 0
-    const observer = new MutationObserver(() => {
+    const observer = new MutationObserver(schedule)
+    function schedule(): void {
       window.clearTimeout(timer)
-      timer = window.setTimeout(done, quietMs)
-    })
-    function done(): void {
+      timer = window.setTimeout(check, quietMs)
+    }
+    function check(): void {
+      if (root.querySelector(PENDING)) {
+        schedule()
+        return
+      }
       observer.disconnect()
       resolve()
     }
     observer.observe(root, { childList: true, subtree: true, attributes: true, characterData: true })
-    timer = window.setTimeout(done, quietMs)
+    schedule()
   })
 }
 
@@ -783,7 +799,13 @@ window.__aiguiRenderBlock = async (source, options = {}) => {
   await frame()
   await frame()
   const box = root.getBoundingClientRect()
-  return { width: Math.ceil(box.width), height: Math.ceil(box.height) }
+  // A plugin that threw leaves an empty host behind. Saying so lets the caller keep the block as
+  // text rather than sending a blank picture, which is the worse of the two failures.
+  return {
+    width: Math.ceil(box.width),
+    height: Math.ceil(box.height),
+    failed: root.querySelector(FAILED) !== null,
+  }
 }
 ```
 
@@ -1105,7 +1127,7 @@ function fakePage(overrides: Record<string, unknown> = {}) {
     setViewportSize: vi.fn(async () => {}),
     setContent: vi.fn(async () => {}),
     addScriptTag: vi.fn(async () => {}),
-    evaluate: vi.fn(async () => ({ width: 400, height: 300 })),
+    evaluate: vi.fn(async () => ({ width: 400, height: 300, failed: false })),
     locator: vi.fn(() => ({ screenshot: vi.fn(async () => {}) })),
     close: vi.fn(async () => {}),
     ...overrides,
@@ -1150,13 +1172,22 @@ describe("renderMarkdownToImages", () => {
     expect(release).toHaveBeenCalled()
   })
 
+  it("leaves a block as text when its plugin threw inside the page", async () => {
+    const page = fakePage({ evaluate: vi.fn(async () => ({ width: 400, height: 300, failed: true })) })
+    const acquire = vi.fn(async () => ({ page, release: vi.fn(async () => {}) }))
+    const result = await renderMarkdownToImages(CHART, { outDir, acquire })
+    expect(result.images).toEqual([])
+    expect(result.text).toBe(CHART)
+    expect(page.locator).not.toHaveBeenCalled()
+  })
+
   it("keeps the blocks that worked when one of them fails", async () => {
     let call = 0
     const page = fakePage({
       evaluate: vi.fn(async () => {
         call++
         if (call === 2) throw new Error("mermaid exploded")
-        return { width: 400, height: 300 }
+        return { width: 400, height: 300, failed: false }
       }),
     })
     const acquire = vi.fn(async () => ({ page, release: vi.fn(async () => {}) }))
@@ -1302,10 +1333,13 @@ export async function renderMarkdownToImages(
           page.evaluate("(arg) => window.__aiguiRenderBlock(arg.source, { width: arg.width })", {
             source,
             width,
-          }) as Promise<{ width: number; height: number }>,
+          }) as Promise<{ width: number; height: number; failed: boolean }>,
           timeoutMs,
           `rendering ${selection.kind}`,
-        )) as { width: number; height: number }
+        )) as { width: number; height: number; failed: boolean }
+        // The plugin threw inside the page. Screenshotting now would attach a blank picture and
+        // drop the source that explained it; leaving the block as text is the better failure.
+        if (size.failed) throw new Error(`${selection.kind} failed to draw`)
         await withTimeout(
           page.locator("#root").screenshot({ path }) as Promise<unknown>,
           timeoutMs,
@@ -1328,7 +1362,7 @@ export async function renderMarkdownToImages(
 - [ ] **Step 4: Run the tests**
 
 Run: `pnpm exec vitest run --project image render`
-Expected: PASS, 7 tests.
+Expected: PASS, 8 tests.
 
 If `pageBundlePath()` throws during the test because `@ai-gui/image/package.json` is not an exported subpath, add `"./package.json": "./package.json"` to the `exports` map in `packages/image/package.json` and rerun.
 
