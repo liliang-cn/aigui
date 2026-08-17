@@ -1447,9 +1447,60 @@ git commit -m "feat(image): renderMarkdownToImages with per-block degradation"
 This is the only test that needs a real Chromium, so it is opt-in. Without it nothing verifies that the page bundle, the quiescence logic, and Playwright actually agree.
 
 **Files:**
+- Create: `packages/image/src/page/html.test.ts`
 - Create: `packages/image/src/render.e2e.test.ts`
 
-- [ ] **Step 1: Write the test**
+- [ ] **Step 1: Test the page template**
+
+`pageHtml` is a pure string function, so it costs nothing to pin down and it is the one part of the page that can be checked without a browser.
+
+`packages/image/src/page/html.test.ts`:
+
+```ts
+import { describe, expect, it } from "vitest"
+import { pageHtml } from "./html"
+
+describe("pageHtml", () => {
+  it("defaults to a light background", () => {
+    expect(pageHtml()).toContain("background:#ffffff")
+  })
+
+  it("switches to the dark palette on request", () => {
+    const html = pageHtml({ theme: "dark" })
+    expect(html).toContain("background:#161616")
+    expect(html).not.toContain("background:#ffffff")
+  })
+
+  it("kills animation, so nothing is captured mid-frame", () => {
+    expect(pageHtml()).toContain("animation:none!important")
+    expect(pageHtml()).toContain("transition:none!important")
+  })
+
+  it("names CJK faces, because a screenshot cannot fall back later", () => {
+    expect(pageHtml()).toContain("PingFang SC")
+    expect(pageHtml()).toContain("Noto Sans CJK SC")
+  })
+
+  it("constrains the root to the requested width", () => {
+    expect(pageHtml({ width: 500 })).toContain("max-width:500px")
+  })
+
+  it("carries the plugin stylesheets, or every picture renders unstyled", () => {
+    const html = pageHtml()
+    expect(html).toContain("data-aigui-renderer")
+    expect(html.length).toBeGreaterThan(2000)
+  })
+
+  it("gives the renderer the root the screenshot targets", () => {
+    expect(pageHtml()).toContain('<div id="root"></div>')
+  })
+})
+```
+
+Run: `pnpm exec vitest run --project image html`
+Expected: PASS, 7 tests.
+
+- [ ] **Step 2: Write the end-to-end test**
 
 `packages/image/src/render.e2e.test.ts`:
 
@@ -1468,14 +1519,19 @@ afterAll(async () => {
 })
 
 describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
-  const cases: Array<[string, string]> = [
-    ["chart", '```chart\n{"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[3,7]}]}\n```'],
-    ["mermaid", "```mermaid\ngraph TD;\nA-->B;\nB-->C;\n```"],
-    ["math", "$$\n\\frac{a}{b} = c\n$$"],
-    ["table", "| 城市 | 温度 |\n| --- | --- |\n| 东京 | 24 |\n| 上海 | 31 |"],
+  /**
+   * `minHeight` is the assertion that earns its keep. `#root` carries 16px of padding on each
+   * side, so an *empty* root still measures 32px tall — a blank render sails past any threshold
+   * below that. Each case therefore names a height only a genuinely drawn block can reach.
+   */
+  const cases: Array<[string, string, number]> = [
+    ["chart", '```chart\n{"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[3,7]}]}\n```', 300],
+    ["mermaid", "```mermaid\ngraph TD;\nA-->B;\nB-->C;\n```", 120],
+    ["math", "$$\n\\frac{a}{b} = c\n$$", 60],
+    ["table", "| 城市 | 温度 |\n| --- | --- |\n| 东京 | 24 |\n| 上海 | 31 |", 80],
   ]
 
-  it.each(cases)("draws a %s to a non-trivial PNG", async (kind, source) => {
+  it.each(cases)("draws a %s to a non-trivial PNG", async (kind, source, minHeight) => {
     const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-"))
     const result = await renderMarkdownToImages(source, { outDir, timeoutMs: 30_000 })
     expect(result.images.map((image) => image.kind)).toEqual([kind])
@@ -1484,8 +1540,24 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
     // A blank 720px PNG compresses to roughly a kilobyte. Anything real is far larger.
     expect(info.size).toBeGreaterThan(2000)
     expect(result.images[0].width).toBeGreaterThan(50)
-    expect(result.images[0].height).toBeGreaterThan(30)
+    expect(result.images[0].height).toBeGreaterThan(minHeight)
   }, 60_000)
+
+  /**
+   * Mermaid is the case that catches a regression of the quiescence race. Its plugin resolves
+   * asynchronously, so if the page ever again declares a block finished merely because the DOM
+   * went quiet, this screenshots an empty `data-aigui-async-pending` div and the height collapses
+   * to the padding. Repeated because the failure was intermittent by nature.
+   */
+  it("waits for Mermaid every time, not just when it happens to be fast", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-mermaid-"))
+    const source = "```mermaid\ngraph TD;\nA[Start]-->B[Middle];\nB-->C[End];\n```"
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const result = await renderMarkdownToImages(source, { outDir, timeoutMs: 30_000 })
+      expect(result.images).toHaveLength(1)
+      expect(result.images[0].height).toBeGreaterThan(120)
+    }
+  }, 120_000)
 
   it("renders CJK text without tofu", async () => {
     const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-cjk-"))
@@ -1496,10 +1568,18 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
     const info = await stat(result.images[0].path)
     expect(info.size).toBeGreaterThan(2000)
   }, 60_000)
+
+  it("keeps the prose and drops only the fence", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-mixed-"))
+    const source = 'Here is the breakdown.\n\n```chart\n{"series":[{"type":"pie","data":[{"value":5,"name":"A"},{"value":3,"name":"B"}]}]}\n```\n\nLet me know if you want it by month.'
+    const result = await renderMarkdownToImages(source, { outDir, timeoutMs: 30_000 })
+    expect(result.text).toBe("Here is the breakdown.\n\nLet me know if you want it by month.")
+    expect(result.images).toHaveLength(1)
+  }, 60_000)
 })
 ```
 
-- [ ] **Step 2: Install Chromium and run it**
+- [ ] **Step 3: Install Chromium and run it**
 
 ```bash
 pnpm --filter @ai-gui/image exec playwright install chromium
@@ -1507,18 +1587,44 @@ pnpm --filter @ai-gui/image build
 AIGUI_IMAGE_E2E=1 pnpm exec vitest run --project image render.e2e
 ```
 
-Expected: PASS, 5 tests. Open one of the PNGs and look at it — a passing size assertion is not the same as a correct picture.
+Expected: PASS, 7 tests.
 
-- [ ] **Step 3: Confirm the default run still skips it**
+- [ ] **Step 4: Actually look at the pictures**
 
-Run: `pnpm exec vitest run --project image`
-Expected: the e2e tests report as skipped; everything else passes.
-
-- [ ] **Step 4: Commit**
+A passing size assertion is not the same as a correct picture. Render one of each kind to a directory that survives the test run and open them:
 
 ```bash
-git add packages/image/src/render.e2e.test.ts
-git commit -m "test(image): opt-in end-to-end screenshot coverage"
+node -e '
+const { renderMarkdownToImages } = require("./packages/image/dist/index.cjs")
+const cases = {
+  chart: `\`\`\`chart\n{"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[3,7]}]}\n\`\`\``,
+  mermaid: "```mermaid\ngraph TD;\nA-->B;\nB-->C;\n```",
+  math: "$$\n\\frac{a}{b} = c\n$$",
+  table: "| 城市 | 温度 |\n| --- | --- |\n| 东京 | 24 |\n| 上海 | 31 |",
+}
+;(async () => {
+  for (const [k, v] of Object.entries(cases)) {
+    const r = await renderMarkdownToImages(v, { outDir: "/tmp/aigui-look" })
+    console.log(k, r.images[0]?.path, r.images[0]?.width + "x" + r.images[0]?.height)
+  }
+  const { closeBrowser } = require("./packages/image/dist/index.cjs")
+  await closeBrowser()
+})()
+'
+```
+
+Then read each PNG and confirm with your own eyes: the chart has bars and axis labels, the Mermaid diagram has three connected boxes with visible text, the formula is typeset rather than raw TeX, and the table's Chinese characters are real glyphs rather than boxes. Report what you actually saw. If a picture is wrong, say so — every automated assertion here can pass on a subtly broken image.
+
+- [ ] **Step 5: Confirm the default run still skips the browser tests**
+
+Run: `pnpm exec vitest run --project image`
+Expected: the e2e tests report as skipped; the `html.test.ts` tests run and pass; everything else passes.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add packages/image/src/render.e2e.test.ts packages/image/src/page/html.test.ts
+git commit -m "test(image): page template unit tests and opt-in screenshot coverage"
 ```
 
 ---
