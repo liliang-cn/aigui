@@ -958,6 +958,41 @@ describe("acquirePage", () => {
     await next.release()
     expect(launch).toHaveBeenCalledTimes(2)
   })
+
+  it("does not keep handing out pages from a browser that died", async () => {
+    let alive = false
+    const launch = vi.fn(async () => ({
+      close: async () => {},
+      newPage: async () => {
+        if (!alive) throw new Error("Target page, context or browser has been closed")
+        return { close: async () => {} }
+      },
+    }))
+    await expect(acquirePage({ launcher: launch })).rejects.toThrow("has been closed")
+    alive = true
+    const lease = await acquirePage({ launcher: launch })
+    await lease.release()
+    // A dead handle must not be cached, or every render after one crash fails forever.
+    expect(launch).toHaveBeenCalledTimes(2)
+  })
+
+  it("does not leak a lease when the page cannot be created", async () => {
+    const launch = vi.fn(async () => ({
+      close: async () => {},
+      newPage: async () => {
+        throw new Error("nope")
+      },
+    }))
+    await expect(acquirePage({ launcher: launch })).rejects.toThrow("nope")
+    // A leaked lease count would keep the idle shutdown from ever firing.
+    const { launch: healthy, closed } = fakeLauncher()
+    vi.useFakeTimers()
+    const lease = await acquirePage({ launcher: healthy, idleShutdownMs: 1000 })
+    await lease.release()
+    await vi.advanceTimersByTimeAsync(1001)
+    expect(closed.browser).toBe(1)
+    vi.useRealTimers()
+  })
 })
 ```
 
@@ -1050,7 +1085,15 @@ export async function acquirePage(options: AcquireOptions = {}): Promise<PageLea
       throw new BrowserUnavailableError(error)
     }
   }
-  const page = await browser.newPage({ deviceScaleFactor: options.deviceScaleFactor ?? DEFAULT_SCALE })
+  let page: PageLike
+  try {
+    page = await browser.newPage({ deviceScaleFactor: options.deviceScaleFactor ?? DEFAULT_SCALE })
+  } catch (error) {
+    // The cached browser is dead — a crash, or an OOM kill. Keeping the handle would fail every
+    // render from here on, so drop it and let the next call launch a fresh one.
+    browser = undefined
+    throw error
+  }
   leases++
   let released = false
   return {
@@ -1082,7 +1125,7 @@ export async function __resetBrowserForTests(): Promise<void> {
 - [ ] **Step 4: Run the tests**
 
 Run: `pnpm exec vitest run --project image browser`
-Expected: PASS, 8 tests.
+Expected: PASS, 10 tests.
 
 - [ ] **Step 5: Export**
 
