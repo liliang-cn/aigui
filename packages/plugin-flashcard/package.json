@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-flashcard",
-  "version": "0.30.0",
+  "version": "0.31.0",
   "description": "Flashcards to revise from: one card at a time, hidden answer, self-graded.",
   "keywords": [
     "llm",

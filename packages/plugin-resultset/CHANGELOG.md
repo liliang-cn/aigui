@@ -1,5 +1,11 @@
 # @ai-gui/plugin-resultset
 
+## 0.31.0
+
+### Patch Changes
+
+- @ai-gui/core@0.31.0
+
 ## 0.30.0
 
 ### Minor Changes
