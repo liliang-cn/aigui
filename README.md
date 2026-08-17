@@ -46,6 +46,9 @@ pnpm add @ai-gui/openai # or @ai-gui/anthropic / @ai-gui/vercel-ai
 
 # development diagnostics (optional)
 pnpm add -D @ai-gui/devtools
+
+# rendering blocks to images, server-side (optional)
+pnpm add @ai-gui/image
 ```
 
 ## Quick start — React
