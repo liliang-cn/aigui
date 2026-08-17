@@ -13,4 +13,5 @@ export {
   DEFAULT_TIMEOUT_MS,
   DEFAULT_WIDTH,
 } from "./types"
-export { hasTrigger } from "./blocks"
+export { hasTrigger, selectRenderableBlocks, stripBlocks } from "./blocks"
+export type { SelectOptions } from "./blocks"
