@@ -7,6 +7,13 @@ export interface HookDeps {
   outDir: string
   render: (markdown: string, options: RenderOptions) => Promise<RenderResult>
   warn: (message: string, error?: unknown) => void
+  /**
+   * Bring a picture under the channel's size limit, returning the path to send.
+   *
+   * Optional, and allowed to decline by returning undefined: a picture that is already small
+   * enough needs no work, and a re-encode that fails is a worse outcome than a large PNG.
+   */
+  shrink?: (path: string) => Promise<string | undefined>
 }
 
 interface HookEvent {
@@ -65,6 +72,16 @@ export function createReplyPayloadHook(deps: HookDeps) {
     }
 
     if (result.images.length === 0) return undefined
-    return { payload: rewritePayload(payload, result.text, result.images.map((image) => image.path)) }
+    const paths = await Promise.all(
+      result.images.map(async (image) => {
+        if (!deps.shrink) return image.path
+        try {
+          return (await deps.shrink(image.path)) ?? image.path
+        } catch {
+          return image.path
+        }
+      }),
+    )
+    return { payload: rewritePayload(payload, result.text, paths) }
   }
 }

@@ -96,3 +96,39 @@ describe("createReplyPayloadHook", () => {
     )
   })
 })
+
+describe("oversized pictures", () => {
+  it("hands every picture to the shrinker and sends what comes back", async () => {
+    const shrink = vi.fn(async (path: string) => `${path}.jpg`)
+    const d = deps({ shrink })
+    const hook = createReplyPayloadHook(d)
+    const result = await hook(event({ text: CHART }), {})
+    expect(shrink).toHaveBeenCalledWith("/tmp/a.png")
+    expect(result?.payload?.mediaUrls).toEqual(["/tmp/a.png.jpg"])
+  })
+
+  it("sends the original when the shrinker declines", async () => {
+    const d = deps({ shrink: vi.fn(async () => undefined) })
+    const hook = createReplyPayloadHook(d)
+    const result = await hook(event({ text: CHART }), {})
+    expect(result?.payload?.mediaUrls).toEqual(["/tmp/a.png"])
+  })
+
+  it("sends the original when the shrinker throws", async () => {
+    const d = deps({
+      shrink: vi.fn(async () => {
+        throw new Error("sharp is unavailable")
+      }),
+    })
+    const hook = createReplyPayloadHook(d)
+    const result = await hook(event({ text: CHART }), {})
+    expect(result?.payload?.mediaUrls).toEqual(["/tmp/a.png"])
+  })
+
+  it("works with no shrinker at all", async () => {
+    const d = deps()
+    const hook = createReplyPayloadHook(d)
+    const result = await hook(event({ text: CHART }), {})
+    expect(result?.payload?.mediaUrls).toEqual(["/tmp/a.png"])
+  })
+})
