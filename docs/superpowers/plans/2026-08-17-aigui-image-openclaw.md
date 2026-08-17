@@ -1871,6 +1871,8 @@ git commit -m "docs(image): package README and root README entry"
 - Create: `packages/openclaw/openclaw.plugin.json`
 - Create: `packages/openclaw/tsconfig.json`
 - Create: `packages/openclaw/tsdown.config.ts`
+- Create: `packages/openclaw/src/index.ts`
+- Create: `packages/openclaw/src/manifest.test.ts`
 - Copy: `packages/openclaw/LICENSE`
 - Modify: `vitest.workspace.ts`
 
@@ -1983,7 +1985,72 @@ export default defineConfig({
 })
 ```
 
-- [ ] **Step 4: Register with the test workspace**
+- [ ] **Step 4: Create the source entry and pin the manifest to it**
+
+A package with no `src/` breaks three things at once: `tsc --noEmit` reports no inputs, `tsdown` has no entry, and a registered vitest project with no test files errors out. So the entry exists from the start, holding the two names that must agree between the code and the manifest.
+
+`packages/openclaw/src/index.ts`:
+
+```ts
+/** The id OpenClaw knows this plugin by. Must match `openclaw.plugin.json`. */
+export const PLUGIN_ID = "ai-gui"
+
+/** The agent tool this plugin registers. Must be declared in the manifest's `contracts.tools`. */
+export const TOOL_NAME = "aigui_render"
+```
+
+`packages/openclaw/src/manifest.test.ts`. OpenClaw reads `openclaw.plugin.json` to validate configuration *without executing plugin code*, and it rejects a tool that the manifest does not declare. That makes the manifest and the code two sources of one truth, which is exactly the pair worth pinning together.
+
+```ts
+import { readFileSync } from "node:fs"
+import { fileURLToPath } from "node:url"
+import { describe, expect, it } from "vitest"
+import { PLUGIN_ID, TOOL_NAME } from "./index"
+
+const manifest = JSON.parse(
+  readFileSync(fileURLToPath(new URL("../openclaw.plugin.json", import.meta.url)), "utf8"),
+) as {
+  id: string
+  contracts: { tools: string[] }
+  toolMetadata: Record<string, { optional?: boolean }>
+  configSchema: { properties: Record<string, unknown>; additionalProperties: boolean }
+}
+
+describe("openclaw.plugin.json", () => {
+  it("declares the id the code uses", () => {
+    expect(manifest.id).toBe(PLUGIN_ID)
+  })
+
+  it("declares the tool the code registers", () => {
+    // A tool missing from contracts.tools is skipped at load time and reported as a diagnostic.
+    expect(manifest.contracts.tools).toContain(TOOL_NAME)
+  })
+
+  it("keeps the tool opt-in", () => {
+    expect(manifest.toolMetadata[TOOL_NAME]?.optional).toBe(true)
+  })
+
+  it("declares every config key the plugin reads", () => {
+    // `additionalProperties: false` means an undeclared key fails the operator's whole config.
+    expect(manifest.configSchema.additionalProperties).toBe(false)
+    expect(Object.keys(manifest.configSchema.properties).sort()).toEqual([
+      "blocks",
+      "channels",
+      "idleShutdownMs",
+      "maxImages",
+      "scale",
+      "theme",
+      "timeoutMs",
+      "width",
+    ])
+  })
+})
+```
+
+Run: `pnpm exec vitest run --project openclaw`
+Expected: PASS, 4 tests.
+
+- [ ] **Step 5: Register with the test workspace**
 
 Add to the `alias` object in `vitest.workspace.ts`:
 
@@ -2000,14 +2067,24 @@ Add to the projects array:
   },
 ```
 
-- [ ] **Step 5: Licence and install**
+- [ ] **Step 6: Licence and install**
 
 ```bash
 cp packages/plugin-chart/LICENSE packages/openclaw/LICENSE
 pnpm install
 ```
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Verify the package builds and typechecks**
+
+```bash
+pnpm --filter @ai-gui/openclaw build
+pnpm --filter @ai-gui/openclaw exec tsc --noEmit
+pnpm build
+```
+
+All three must succeed. The last one matters: `turbo.json`'s `build` task is unscoped and CI runs a bare `pnpm build`, so a package that cannot build breaks the whole workspace.
+
+- [ ] **Step 8: Commit**
 
 ```bash
 git add packages/openclaw vitest.workspace.ts pnpm-lock.yaml
@@ -2737,6 +2814,12 @@ export { createRenderTool } from "./tool"
 export { resolveConfig } from "./config"
 export type { AiguiPluginConfig } from "./config"
 export { rewritePayload } from "./rewrite"
+
+/** The id OpenClaw knows this plugin by. Must match `openclaw.plugin.json`. */
+export const PLUGIN_ID = "ai-gui"
+
+/** The agent tool this plugin registers. Must be declared in the manifest's `contracts.tools`. */
+export const TOOL_NAME = "aigui_render"
 
 /** The shape of the runtime this plugin reaches into. Everything on it is treated as optional. */
 interface PluginApi {
