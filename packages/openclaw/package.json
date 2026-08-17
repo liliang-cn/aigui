@@ -59,20 +59,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-gui/image": "workspace:*"
+    "@ai-gui/image": "workspace:*",
+    "playwright": "^1.48.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0"
   },
   "peerDependencies": {
-    "openclaw": ">=2026.5.12",
-    "playwright": "^1.48.0"
+    "openclaw": ">=2026.5.12"
   },
   "peerDependenciesMeta": {
     "openclaw": {
-      "optional": true
-    },
-    "playwright": {
       "optional": true
     }
   }

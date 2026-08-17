@@ -6,19 +6,39 @@ WeChat messages are text or media, nothing else. Without this, a ` ```chart ` fe
 
 ## Install
 
+Run these on the machine the Gateway runs on, not on your laptop:
+
 ```sh
 openclaw plugins install "@ai-gui/openclaw"
 openclaw config set plugins.entries.ai-gui.enabled true
+```
+
+Playwright arrives as a normal dependency, but OpenClaw installs plugins with `--ignore-scripts`, so the browser binary it would normally fetch does not come with it. Install it once, and on Linux take the system libraries too:
+
+```sh
+# Linux gateway
+npx playwright install --with-deps chromium
+apt-get install -y fonts-noto-cjk
+
+# macOS gateway
+npx playwright install chromium
+```
+
+Then restart:
+
+```sh
 openclaw gateway restart
 ```
 
-Chromium is needed for rendering:
+The CJK fonts are not optional on Linux: without them every Chinese label in a chart or table renders as tofu (□□□) in the delivered image, and a picture cannot fall back to another font the way a web page can. Maths needs nothing extra — KaTeX's stylesheet and all twenty of its font faces are inlined into the rendered page.
+
+### Checking it loaded
 
 ```sh
-pnpm add playwright && pnpm exec playwright install chromium
+openclaw plugins inspect ai-gui --runtime --json
 ```
 
-On a Linux gateway, install CJK fonts too (`apt-get install -y fonts-noto-cjk`), or Chinese labels come out as tofu in the image. Maths needs nothing extra — KaTeX's fonts are inlined into the rendered page.
+Expect `"status": "loaded"`, `"activated": true`, `"hookCount": 2`, and `aigui_render` in `toolNames`. If Chromium is missing the plugin still loads and every reply is delivered as plain text — the failure is logged once, not per message, so check the Gateway log rather than waiting for it to repeat.
 
 ## What it does
 

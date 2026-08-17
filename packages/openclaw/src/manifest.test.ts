@@ -15,7 +15,12 @@ const manifest = JSON.parse(
 
 const pkg = JSON.parse(
   readFileSync(fileURLToPath(new URL("../package.json", import.meta.url)), "utf8"),
-) as { openclaw: { extensions: unknown }; files: string[] }
+) as {
+  openclaw: { extensions: unknown }
+  files: string[]
+  dependencies: Record<string, string>
+  peerDependencies?: Record<string, string>
+}
 
 describe("package.json", () => {
   /**
@@ -29,6 +34,25 @@ describe("package.json", () => {
 
   it("ships the manifest, or OpenClaw cannot validate config without loading code", () => {
     expect(pkg.files).toContain("openclaw.plugin.json")
+  })
+
+  /**
+   * OpenClaw installs a plugin with `npm install --omit=dev --ignore-scripts` and deliberately
+   * skips peer resolution. A peer-declared Playwright therefore never lands, and the plugin
+   * installs cleanly then silently renders nothing — every reply degrading through
+   * `BrowserUnavailableError`. Drawing is this plugin's whole purpose, so it is a real dependency.
+   */
+  it("declares Playwright as a runtime dependency, not a peer", () => {
+    expect(pkg.dependencies).toHaveProperty("playwright")
+    expect(pkg.peerDependencies ?? {}).not.toHaveProperty("playwright")
+  })
+
+  /**
+   * The host package is the one peer that stays a peer: OpenClaw refuses to let npm pull a second
+   * registry copy of itself into a plugin, and relinks `node_modules/openclaw` after install.
+   */
+  it("keeps the host as an optional peer", () => {
+    expect(pkg.peerDependencies).toHaveProperty("openclaw")
   })
 })
 

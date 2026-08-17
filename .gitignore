@@ -4,3 +4,4 @@ coverage/
 .turbo/
 *.log
 .playwright-mcp/
+.claude/
