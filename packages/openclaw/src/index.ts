@@ -97,6 +97,18 @@ function deps(api: PluginApi): HookDeps {
  * Nothing in `register` needs anything from the `openclaw` package at all — the SDK import is
  * gone entirely rather than merely moved, which keeps a plain Node import of this module free of
  * any OpenClaw dependency, not just free of a top-level await.
+ *
+ * This also sidesteps a trap: `definePluginEntry` defaults an omitted `configSchema` to
+ * `emptyPluginConfigSchema()`, whose `safeParse` rejects any non-empty config with
+ * `"config must be empty"` (`openclaw/dist/config-schema-ByzWLagI.js:100-113`). Calling the helper
+ * without explicitly passing a schema — the obvious way to write it — would make every operator
+ * setting in `openclaw.json` get refused, with the plugin silently running on defaults. Omitting
+ * `configSchema` here instead of calling the helper leaves it genuinely absent, which the loader
+ * treats as "skip" (`openclaw/dist/schema-DRyO1XBt.js:3140`, `if (!plugin.configSchema) continue`)
+ * rather than "empty". `openclaw.plugin.json` — required to declare `configSchema` regardless
+ * (`openclaw/dist/plugins-authoring-command-DORDD8cF.js:119`) — stays the single source of config
+ * truth. Do not wrap this export in `definePluginEntry` without passing an explicit `configSchema`
+ * that mirrors the manifest; `manifest.test.ts` pins the absence of a runtime schema here.
  */
 export default {
   id: "ai-gui",

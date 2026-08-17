@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs"
 import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import { PLUGIN_ID, TOOL_NAME } from "./constants"
+import entry from "./index"
 
 const manifest = JSON.parse(
   readFileSync(fileURLToPath(new URL("../openclaw.plugin.json", import.meta.url)), "utf8"),
@@ -39,5 +40,25 @@ describe("openclaw.plugin.json", () => {
       "timeoutMs",
       "width",
     ])
+  })
+})
+
+describe("plugin entry", () => {
+  it("identifies itself with the manifest's id", () => {
+    expect((entry as { id: string }).id).toBe(manifest.id)
+  })
+
+  /**
+   * Wrapping this in `definePluginEntry` without an explicit schema would default it to
+   * `emptyPluginConfigSchema`, which rejects any non-empty config outright. The manifest is where
+   * the schema lives; a runtime schema here would only shadow it, and an empty one would break
+   * every operator setting.
+   */
+  it("carries no runtime config schema, leaving the manifest authoritative", () => {
+    expect("configSchema" in (entry as object)).toBe(false)
+  })
+
+  it("registers something", () => {
+    expect(typeof (entry as { register: unknown }).register).toBe("function")
   })
 })
