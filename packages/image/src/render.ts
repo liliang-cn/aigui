@@ -20,7 +20,7 @@ interface RenderPage {
   setViewportSize(size: { width: number; height: number }): Promise<void>
   setContent(html: string): Promise<void>
   addScriptTag(options: { path: string }): Promise<void>
-  evaluate(fn: string, arg?: unknown): Promise<unknown>
+  evaluate(fn: (arg: { source: string; width: number }) => unknown, arg: { source: string; width: number }): Promise<unknown>
   locator(selector: string): { screenshot(options: { path: string }): Promise<unknown> }
 }
 
@@ -95,10 +95,20 @@ export async function renderMarkdownToImages(
       const path = join(options.outDir, `aigui-${selection.kind}-${index}-${process.pid}-${images.length}.png`)
       try {
         const size = (await withTimeout(
-          page.evaluate("(arg) => window.__aiguiRenderBlock(arg.source, { width: arg.width })", {
-            source,
-            width,
-          }) as Promise<{ width: number; height: number; failed: boolean }>,
+          // A real function, not a string. Playwright evaluates a string as an *expression*: it
+          // would produce the function object and never call it, so every render silently
+          // returned undefined. Verified in a live browser — the fake page in the unit tests
+          // cannot distinguish the two, which is exactly why it went unnoticed.
+          page.evaluate(
+            (arg) =>
+              (window as unknown as {
+                __aiguiRenderBlock: (
+                  source: string,
+                  options: { width: number },
+                ) => Promise<{ width: number; height: number; failed: boolean }>
+              }).__aiguiRenderBlock(arg.source, { width: arg.width }),
+            { source, width },
+          ) as Promise<{ width: number; height: number; failed: boolean }>,
           timeoutMs,
           `rendering ${selection.kind}`,
         )) as { width: number; height: number; failed: boolean }

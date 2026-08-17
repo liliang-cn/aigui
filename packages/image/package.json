@@ -2,7 +2,16 @@
   "name": "@ai-gui/image",
   "version": "0.30.0",
   "description": "Render AIGUI markdown blocks (charts, diagrams, math, tables, cards) to PNG in a headless browser.",
-  "keywords": ["llm", "ai", "markdown", "chart", "screenshot", "png", "headless", "aigui"],
+  "keywords": [
+    "llm",
+    "ai",
+    "markdown",
+    "chart",
+    "screenshot",
+    "png",
+    "headless",
+    "aigui"
+  ],
   "license": "MIT",
   "author": "Liang Li <ll_faw@hotmail.com>",
   "repository": {
@@ -14,21 +23,35 @@
   "bugs": "https://github.com/liliang-cn/aigui/issues",
   "type": "module",
   "sideEffects": false,
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     },
     "./package.json": "./package.json"
   },
-  "files": ["dist", "README.md", "LICENSE"],
-  "publishConfig": { "access": "public" },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsdown",
+    "build": "tsdown && vite build --config vite.page.config.ts",
     "test": "pnpm --dir ../.. exec vitest run --project image",
     "typecheck": "tsc --noEmit"
   },
@@ -40,7 +63,17 @@
     "@ai-gui/plugin-katex": "workspace:*",
     "@ai-gui/plugin-dashboard": "workspace:*"
   },
-  "peerDependencies": { "playwright": "^1.48.0" },
-  "peerDependenciesMeta": { "playwright": { "optional": true } },
-  "devDependencies": { "@types/node": "^22.0.0", "playwright": "^1.48.0" }
+  "peerDependencies": {
+    "playwright": "^1.48.0"
+  },
+  "peerDependenciesMeta": {
+    "playwright": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "playwright": "^1.48.0",
+    "vite": "^5.4.0"
+  }
 }

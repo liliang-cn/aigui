@@ -103,4 +103,19 @@ describe("renderMarkdownToImages", () => {
     expect(result.images).toHaveLength(1)
     expect(result.text).toBe(MERMAID)
   })
+
+  /**
+   * Playwright evaluates a *string* as an expression, so passing the page function as a string
+   * produces the function object and never calls it — every render silently returns undefined.
+   * That bug shipped once and the fake page could not see it, because a fake `evaluate` returns
+   * its canned answer whatever it is handed. Asserting the argument's type is what closes the gap.
+   */
+  it("hands page.evaluate a function, not a string", async () => {
+    const page = fakePage()
+    const acquire = vi.fn(async () => ({ page, release: vi.fn(async () => {}) }))
+    await renderMarkdownToImages(CHART, { outDir, acquire })
+    expect(page.evaluate).toHaveBeenCalledTimes(1)
+    expect(typeof page.evaluate.mock.calls[0][0]).toBe("function")
+    expect(page.evaluate.mock.calls[0][1]).toMatchObject({ source: expect.stringContaining("```chart") })
+  })
 })

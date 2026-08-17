@@ -809,34 +809,52 @@ window.__aiguiRenderBlock = async (source, options = {}) => {
 }
 ```
 
-- [ ] **Step 3: Add the page build to `tsdown.config.ts`**
+- [ ] **Step 3: Add the page build — with Vite, not tsdown**
 
-Now that `src/page/entry.ts` exists, the second build can be declared. Replace the contents of `packages/image/tsdown.config.ts` with:
+The page bundle is injected into a browser that cannot resolve modules, so everything has to be inlined. tsdown with `noExternal: [/.*/]` produces a bundle that **throws on load** — verified in a real Chromium: `TypeError: Cannot read properties of undefined (reading 'type')` from ECharts component registration, and behind it a second failure in Mermaid's `@braintree/sanitize-url` (`require_constants is not a function`). Both are CJS-interop and module-ordering defects that rolldown does not handle here.
 
-```ts
-import { defineConfig } from "tsdown"
+Vite does, because it pre-bundles CJS dependencies through esbuild and dedupes them. That is not a guess: `apps/playground` already ships `@ai-gui/plugin-mermaid` to a browser with a stock Vite config.
 
-export default defineConfig([
-  {
-    entry: ["src/index.ts"],
-    format: ["esm", "cjs"],
-    dts: true,
-    clean: true,
-    external: ["playwright"],
-  },
-  {
-    entry: ["src/page/entry.ts"],
-    format: ["iife"],
-    outDir: "dist/page",
-    platform: "browser",
-    dts: false,
-    clean: false,
-    noExternal: [/.*/],
-  },
-])
+Add `vite` to `devDependencies` in `packages/image/package.json`:
+
+```json
+  "devDependencies": { "@types/node": "^22.0.0", "playwright": "^1.48.0", "vite": "^5.4.0" }
 ```
 
-The page build inlines everything (`noExternal`) because the bundle is injected into a browser that cannot resolve modules.
+Create `packages/image/vite.page.config.ts`:
+
+```ts
+import { fileURLToPath } from "node:url"
+import { defineConfig } from "vite"
+
+/**
+ * The browser bundle, built separately from the library.
+ *
+ * A Vite *library* build does not shim `process.env` the way an app build does, and something in
+ * the dependency tree reads it — without these defines the bundle dies on load with
+ * `ReferenceError: process is not defined` before it can install `__aiguiRenderBlock`.
+ */
+export default defineConfig({
+  root: fileURLToPath(new URL(".", import.meta.url)),
+  define: {
+    "process.env.NODE_ENV": JSON.stringify("production"),
+    "process.env": "{}",
+    global: "globalThis",
+  },
+  build: {
+    lib: { entry: "src/page/entry.ts", formats: ["iife"], name: "AiguiPage", fileName: () => "entry.js" },
+    outDir: "dist/page",
+    emptyOutDir: true,
+    target: "chrome110",
+  },
+})
+```
+
+Leave `tsdown.config.ts` as the single library config it already is, and chain the two builds in `packages/image/package.json`:
+
+```json
+    "build": "tsdown && vite build --config vite.page.config.ts",
+```
 
 - [ ] **Step 4: Build the page bundle**
 
@@ -1276,6 +1294,21 @@ describe("renderMarkdownToImages", () => {
     expect(result.images).toHaveLength(1)
     expect(result.text).toBe(MERMAID)
   })
+
+  /**
+   * Playwright evaluates a *string* as an expression, so passing the page function as a string
+   * produces the function object and never calls it — every render silently returns undefined.
+   * That bug shipped once and the fake page could not see it, because a fake `evaluate` returns
+   * its canned answer whatever it is handed. Asserting the argument's type is what closes the gap.
+   */
+  it("hands page.evaluate a function, not a string", async () => {
+    const page = fakePage()
+    const acquire = vi.fn(async () => ({ page, release: vi.fn(async () => {}) }))
+    await renderMarkdownToImages(CHART, { outDir, acquire })
+    expect(page.evaluate).toHaveBeenCalledTimes(1)
+    expect(typeof page.evaluate.mock.calls[0][0]).toBe("function")
+    expect(page.evaluate.mock.calls[0][1]).toMatchObject({ source: expect.stringContaining("```chart") })
+  })
 })
 ```
 
@@ -1313,7 +1346,7 @@ interface RenderPage {
   setViewportSize(size: { width: number; height: number }): Promise<void>
   setContent(html: string): Promise<void>
   addScriptTag(options: { path: string }): Promise<void>
-  evaluate(fn: string, arg?: unknown): Promise<unknown>
+  evaluate(fn: (arg: { source: string; width: number }) => unknown, arg: { source: string; width: number }): Promise<unknown>
   locator(selector: string): { screenshot(options: { path: string }): Promise<unknown> }
 }
 
@@ -1388,10 +1421,20 @@ export async function renderMarkdownToImages(
       const path = join(options.outDir, `aigui-${selection.kind}-${index}-${process.pid}-${images.length}.png`)
       try {
         const size = (await withTimeout(
-          page.evaluate("(arg) => window.__aiguiRenderBlock(arg.source, { width: arg.width })", {
-            source,
-            width,
-          }) as Promise<{ width: number; height: number; failed: boolean }>,
+          // A real function, not a string. Playwright evaluates a string as an *expression*: it
+          // would produce the function object and never call it, so every render silently
+          // returned undefined. Verified in a live browser — the fake page in the unit tests
+          // cannot distinguish the two, which is exactly why it went unnoticed.
+          page.evaluate(
+            (arg) =>
+              (window as unknown as {
+                __aiguiRenderBlock: (
+                  source: string,
+                  options: { width: number },
+                ) => Promise<{ width: number; height: number; failed: boolean }>
+              }).__aiguiRenderBlock(arg.source, { width: arg.width }),
+            { source, width },
+          ) as Promise<{ width: number; height: number; failed: boolean }>,
           timeoutMs,
           `rendering ${selection.kind}`,
         )) as { width: number; height: number; failed: boolean }
@@ -1420,7 +1463,7 @@ export async function renderMarkdownToImages(
 - [ ] **Step 5: Run the tests**
 
 Run: `pnpm exec vitest run --project image render`
-Expected: PASS, 8 tests.
+Expected: PASS, 9 tests.
 
 If `pageBundlePath()` throws during the test because `@ai-gui/image/package.json` is not an exported subpath, add `"./package.json": "./package.json"` to the `exports` map in `packages/image/package.json` and rerun.
 
@@ -1527,7 +1570,9 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
   const cases: Array<[string, string, number]> = [
     ["chart", '```chart\n{"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[3,7]}]}\n```', 300],
     ["mermaid", "```mermaid\ngraph TD;\nA-->B;\nB-->C;\n```", 120],
-    ["math", "$$\n\\frac{a}{b} = c\n$$", 60],
+    // A fraction measures about 29px plus the root's 32px of padding. An empty root is 32px, so
+    // the threshold has to sit between the two — measured in a real browser, not guessed.
+    ["math", "$$\n\\frac{a}{b} = c\n$$", 45],
     ["table", "| 城市 | 温度 |\n| --- | --- |\n| 东京 | 24 |\n| 上海 | 31 |", 80],
   ]
 
