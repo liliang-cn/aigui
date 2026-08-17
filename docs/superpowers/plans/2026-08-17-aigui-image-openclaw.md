@@ -1147,11 +1147,26 @@ git commit -m "feat(image): lazy Chromium with page leases and idle shutdown"
 ## Task 7: `renderMarkdownToImages`
 
 **Files:**
+- Modify: `packages/image/package.json`
 - Create: `packages/image/src/render.ts`
 - Create: `packages/image/src/render.test.ts`
 - Modify: `packages/image/src/index.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1: Make Node's own types available**
+
+This is the first module in the package — and in the whole monorepo — to touch Node built-ins. Every other AIGUI package is browser or isomorphic, so `@types/node` has never been a dependency anywhere. Without it, `import { join } from "node:path"` fails with `TS2307: Cannot find module 'node:path'` and `process.pid` fails with `TS2580`. Verified by probe, not assumed.
+
+Add to `devDependencies` in `packages/image/package.json`, keeping the existing entries:
+
+```json
+  "devDependencies": { "@types/node": "^22.0.0", "playwright": "^1.48.0" }
+```
+
+Then `pnpm install`.
+
+Note the knock-on effect: with `@types/node` present, `setTimeout` resolves to the Node overload rather than the DOM one. `browser.ts` casts through `unknown` to reach `.unref()`, which works under either overload, so nothing there needs changing — but re-run its tests after installing to confirm.
+
+- [ ] **Step 2: Write the failing tests**
 
 `packages/image/src/render.test.ts`. The Playwright page is injected, so every orchestration and degradation path is covered without a browser.
 
@@ -1266,12 +1281,12 @@ describe("renderMarkdownToImages", () => {
 
 Note: the screenshot is faked, so no PNG bytes land on disk here. Real pixels are Task 8's job.
 
-- [ ] **Step 2: Run to confirm it fails**
+- [ ] **Step 3: Run to confirm it fails**
 
 Run: `pnpm exec vitest run --project image render`
 Expected: FAIL — `Failed to resolve import "./render"`.
 
-- [ ] **Step 3: Write the implementation**
+- [ ] **Step 4: Write the implementation**
 
 `packages/image/src/render.ts`:
 
@@ -1402,14 +1417,14 @@ export async function renderMarkdownToImages(
 }
 ```
 
-- [ ] **Step 4: Run the tests**
+- [ ] **Step 5: Run the tests**
 
 Run: `pnpm exec vitest run --project image render`
 Expected: PASS, 8 tests.
 
 If `pageBundlePath()` throws during the test because `@ai-gui/image/package.json` is not an exported subpath, add `"./package.json": "./package.json"` to the `exports` map in `packages/image/package.json` and rerun.
 
-- [ ] **Step 5: Export**
+- [ ] **Step 6: Export**
 
 Add to `packages/image/src/index.ts`:
 
@@ -1418,10 +1433,10 @@ export { renderMarkdownToImages } from "./render"
 export type { InternalRenderOptions } from "./render"
 ```
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add packages/image/src packages/image/package.json
+git add packages/image/src packages/image/package.json pnpm-lock.yaml
 git commit -m "feat(image): renderMarkdownToImages with per-block degradation"
 ```
 
@@ -1640,6 +1655,7 @@ git commit -m "docs(image): package README and root README entry"
   "dependencies": {
     "@ai-gui/image": "workspace:*"
   },
+  "devDependencies": { "@types/node": "^22.0.0" },
   "peerDependencies": { "openclaw": ">=2026.5.12", "playwright": "^1.48.0" },
   "peerDependenciesMeta": {
     "openclaw": { "optional": true },
