@@ -2,24 +2,70 @@
   "id": "ai-gui",
   "name": "AIGUI",
   "description": "Renders charts, diagrams, math, tables, cards and dashboards as images for picture-only channels.",
-  "version": "0.30.0",
-  "contracts": { "tools": ["aigui_render"] },
-  "toolMetadata": { "aigui_render": { "optional": true } },
+  "contracts": {
+    "tools": [
+      "aigui_render"
+    ]
+  },
+  "toolMetadata": {
+    "aigui_render": {
+      "optional": true
+    }
+  },
   "configSchema": {
     "type": "object",
     "additionalProperties": false,
     "properties": {
-      "channels": { "type": "array", "items": { "type": "string" } },
+      "channels": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
       "blocks": {
         "type": "array",
-        "items": { "enum": ["chart", "mermaid", "dashboard", "card", "math", "table"] }
+        "items": {
+          "enum": [
+            "chart",
+            "mermaid",
+            "dashboard",
+            "card",
+            "math",
+            "table"
+          ]
+        }
       },
-      "theme": { "enum": ["light", "dark"] },
-      "width": { "type": "integer", "minimum": 200, "maximum": 2000 },
-      "scale": { "type": "integer", "minimum": 1, "maximum": 4 },
-      "maxImages": { "type": "integer", "minimum": 1, "maximum": 20 },
-      "timeoutMs": { "type": "integer", "minimum": 1000, "maximum": 120000 },
-      "idleShutdownMs": { "type": "integer", "minimum": 10000, "maximum": 3600000 }
+      "theme": {
+        "enum": [
+          "light",
+          "dark"
+        ]
+      },
+      "width": {
+        "type": "integer",
+        "minimum": 200,
+        "maximum": 2000
+      },
+      "scale": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 4
+      },
+      "maxImages": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 20
+      },
+      "timeoutMs": {
+        "type": "integer",
+        "minimum": 1000,
+        "maximum": 120000
+      },
+      "idleShutdownMs": {
+        "type": "integer",
+        "minimum": 10000,
+        "maximum": 3600000
+      }
     }
   }
 }

@@ -54,6 +54,15 @@ describe("package.json", () => {
   it("keeps the host as an optional peer", () => {
     expect(pkg.peerDependencies).toHaveProperty("openclaw")
   })
+
+  /**
+   * The manifest must not restate the version. `changeset version` bumps package.json and nothing
+   * else, so a hand-written copy here silently rots: v0.31.0 shipped reporting 0.30.0 to
+   * `openclaw plugins inspect`. The field is optional, and OpenClaw reads the package version.
+   */
+  it("does not duplicate the version the release process owns", () => {
+    expect(manifest).not.toHaveProperty("version")
+  })
 })
 
 describe("openclaw.plugin.json", () => {
