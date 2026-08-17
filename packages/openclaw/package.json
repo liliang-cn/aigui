@@ -1,0 +1,43 @@
+{
+  "name": "@ai-gui/openclaw",
+  "version": "0.30.0",
+  "description": "OpenClaw plugin that renders AIGUI blocks as images for channels that only carry pictures, such as WeChat.",
+  "keywords": ["openclaw", "wechat", "weixin", "chart", "plugin", "aigui"],
+  "license": "MIT",
+  "author": "Liang Li <ll_faw@hotmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liliang-cn/aigui.git",
+    "directory": "packages/openclaw"
+  },
+  "homepage": "https://github.com/liliang-cn/aigui#readme",
+  "bugs": "https://github.com/liliang-cn/aigui/issues",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+    }
+  },
+  "openclaw": { "extensions": "./dist/index.js" },
+  "files": ["dist", "openclaw.plugin.json", "README.md", "LICENSE"],
+  "publishConfig": { "access": "public" },
+  "scripts": {
+    "build": "tsdown",
+    "test": "pnpm --dir ../.. exec vitest run --project openclaw",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-gui/image": "workspace:*"
+  },
+  "devDependencies": { "@types/node": "^22.0.0" },
+  "peerDependencies": { "openclaw": ">=2026.5.12", "playwright": "^1.48.0" },
+  "peerDependenciesMeta": {
+    "openclaw": { "optional": true },
+    "playwright": { "optional": true }
+  }
+}

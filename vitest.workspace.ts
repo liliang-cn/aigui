@@ -28,6 +28,7 @@ const alias = {
   "@ai-gui/vue": fileURLToPath(new URL("./packages/vue/src/index.ts", import.meta.url)),
   "@ai-gui/vanilla": fileURLToPath(new URL("./packages/vanilla/src/index.ts", import.meta.url)),
   "@ai-gui/image": fileURLToPath(new URL("./packages/image/src/index.ts", import.meta.url)),
+  "@ai-gui/openclaw": fileURLToPath(new URL("./packages/openclaw/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-chart": fileURLToPath(new URL("./packages/plugin-chart/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-mermaid": fileURLToPath(new URL("./packages/plugin-mermaid/src/index.ts", import.meta.url)),
   // A plain alias key matches as a prefix, so this more specific entry has to be listed before
@@ -186,5 +187,9 @@ export default defineWorkspace([
   {
     resolve: { alias },
     test: { name: "image", root: "packages/image", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "openclaw", root: "packages/openclaw", coverage },
   },
 ])
