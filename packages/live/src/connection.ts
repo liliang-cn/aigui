@@ -27,10 +27,29 @@ export interface ConnectionOptions {
   random?: () => number
 }
 
+/**
+ * `Omit`, applied to each member of a union rather than to the union as a whole.
+ *
+ * A conditional type only distributes over a *naked type parameter*, which is why this needs the
+ * generic indirection: writing `ClientFrame extends unknown ? … : never` directly would not
+ * distribute, because `ClientFrame` there is a concrete alias rather than a parameter.
+ */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never
+
+/**
+ * A client frame with the version stripped, one union member at a time.
+ *
+ * Plain `Omit<ClientFrame, "v">` collapses the union to the keys every member shares, so `id` and
+ * `action` vanish and passing a real action frame is a type error. That is the difference between
+ * a signature describing the protocol and one describing only the parts every frame happens to
+ * have in common.
+ */
+export type UnversionedClientFrame = DistributiveOmit<ClientFrame, "v">
+
 export interface Connection {
   start(): void
   stop(): void
-  send(frame: Omit<ClientFrame, "v">): boolean
+  send(frame: UnversionedClientFrame): boolean
   readonly state: ConnectionState
 }
 

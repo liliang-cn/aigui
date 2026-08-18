@@ -1,6 +1,6 @@
 import { cardChannel, type ActionOutcome, type CardStore } from "@ai-gui/core"
 import type { Connection } from "./connection"
-import type { ActionFrame, ServerFrame } from "./types"
+import type { ServerFrame } from "./types"
 
 export interface LiveActionResult {
   outcome: ActionOutcome
@@ -60,18 +60,12 @@ export function createLiveClient(options: LiveClientOptions): LiveClient {
 
   return {
     sendAction(action) {
-      // Checked before calling send, not just from its return value: a disconnected socket must
-      // never be handed a frame at all, or "fails immediately" and "never queues" both go quiet.
-      if (options.connection.state !== "open") {
-        return Promise.resolve(DISCONNECTED)
-      }
       const id = `c${++counter}`
       return new Promise<LiveActionResult>((resolve) => {
-        // Typed here first: passed as a fresh object literal, `Omit<ClientFrame, "v">` collapses
-        // the discriminated union to its common keys and `send` rejects `id`/`action` as unknown.
-        const frame: Omit<ActionFrame, "v"> = { t: "action", id, action }
-        const sent = options.connection.send(frame)
-        if (!sent) {
+        // `send` reports whether the frame reached the socket, and refuses to touch a closed one.
+        // Trusting that contract keeps the check in one place; repeating it here would mean every
+        // future caller had to remember to as well.
+        if (!options.connection.send({ t: "action", id, action })) {
           resolve(DISCONNECTED)
           return
         }

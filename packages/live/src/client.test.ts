@@ -12,9 +12,13 @@ function fakeConnection() {
     open: true,
     start: vi.fn(),
     stop: vi.fn(),
+    // Mirrors the real `send` (connection.ts): a closed socket is never handed a frame, and the
+    // caller is told so. A fake that recorded the attempt anyway would model something the real
+    // connection does not do, and every test built on it would be pinning fiction.
     send: (frame) => {
+      if (!connection.open) return false
       sent.push(frame)
-      return connection.open
+      return true
     },
     get state() {
       return connection.open ? ("open" as const) : ("closed" as const)
