@@ -435,6 +435,7 @@ A session MAY have several concurrent connections. Changes are broadcast to all 
     { "name": "sync with a card", "dir": "s2c", "valid": true, "frame": { "v": 1, "t": "sync", "snapshot": { "version": 1, "cards": [ { "id": "a", "type": "metric", "data": { "value": 1 }, "revision": 0 } ] } } },
     { "name": "cards register", "dir": "s2c", "valid": true, "frame": { "v": 1, "t": "cards", "messages": [ { "op": "register", "id": "a", "type": "metric", "data": {} } ] } },
     { "name": "cards merge", "dir": "s2c", "valid": true, "frame": { "v": 1, "t": "cards", "messages": [ { "op": "merge", "cardId": "a", "data": { "value": 2 } } ] } },
+    { "name": "cards replace", "dir": "s2c", "valid": true, "frame": { "v": 1, "t": "cards", "messages": [ { "op": "replace", "cardId": "a", "data": { "value": 3 }, "revision": 2 } ] } },
     { "name": "cards batch", "dir": "s2c", "valid": true, "frame": { "v": 1, "t": "cards", "messages": [ { "op": "batch", "patches": [ { "op": "merge", "cardId": "a", "data": {} } ] } ] } },
     { "name": "outcome", "dir": "s2c", "valid": true, "frame": { "v": 1, "t": "outcome", "id": "c1", "outcome": { "tone": "positive", "message": "Saved" } } },
     { "name": "error fatal", "dir": "s2c", "valid": true, "frame": { "v": 1, "t": "error", "code": "version", "message": "unsupported", "fatal": true } },
@@ -444,12 +445,19 @@ A session MAY have several concurrent connections. Changes are broadcast to all 
     { "name": "outcome missing id", "dir": "s2c", "valid": false, "frame": { "v": 1, "t": "outcome", "outcome": { "tone": "positive" } } },
     { "name": "outcome with unknown tone", "dir": "s2c", "valid": false, "frame": { "v": 1, "t": "outcome", "id": "c1", "outcome": { "tone": "chartreuse" } } },
     { "name": "error missing fatal", "dir": "s2c", "valid": false, "frame": { "v": 1, "t": "error", "code": "x", "message": "y" } },
+    { "name": "cards with messages that is not an array", "dir": "s2c", "valid": false, "frame": { "v": 1, "t": "cards", "messages": { "op": "merge", "cardId": "a", "data": {} } } },
+    { "name": "cards merge without a cardId", "dir": "s2c", "valid": false, "frame": { "v": 1, "t": "cards", "messages": [ { "op": "merge", "data": {} } ] } },
+    { "name": "cards with an unknown op", "dir": "s2c", "valid": false, "frame": { "v": 1, "t": "cards", "messages": [ { "op": "delete", "cardId": "a" } ] } },
+    { "name": "cards batch containing an invalid patch", "dir": "s2c", "valid": false, "frame": { "v": 1, "t": "cards", "messages": [ { "op": "batch", "patches": [ { "op": "merge" } ] } ] } },
+    { "name": "sync with duplicate card ids", "dir": "s2c", "valid": false, "frame": { "v": 1, "t": "sync", "snapshot": { "version": 1, "cards": [ { "id": "a", "type": "metric", "data": {}, "revision": 0 }, { "id": "a", "type": "metric", "data": {}, "revision": 1 } ] } } },
     { "name": "unknown frame type is ignored, not rejected", "dir": "s2c", "valid": true, "frame": { "v": 1, "t": "future-frame", "anything": true } }
   ]
 }
 ```
 
 The last case encodes the forward-compatibility rule as a testable fact rather than a sentence in prose.
+
+Two groups of these earn their place by covering a rule that would otherwise exist only in prose. `cards replace` exists because the document lists four card ops and an implementer with no fixture for one of them has no way to know they got it wrong. The `cards`-frame negative cases exist because without them nothing tests `CardMessage` validation at all. And `sync with duplicate card ids` pins a rule the document states and `CardStore.restore` enforces — catching it in the codec turns a runtime throw into a conformance failure a server author sees while writing the server.
 
 - [ ] **Step 3: Commit**
 
@@ -546,14 +554,17 @@ function isId(value: unknown): boolean {
 
 function isSnapshot(value: unknown): boolean {
   if (!isObject(value) || value.version !== 1 || !Array.isArray(value.cards)) return false
-  return value.cards.every(
-    (card) =>
-      isObject(card) &&
-      isId(card.id) &&
-      isId(card.type) &&
-      Number.isSafeInteger(card.revision) &&
-      (card.revision as number) >= 0,
-  )
+  const ids = new Set<string>()
+  for (const card of value.cards) {
+    if (!isObject(card) || !isId(card.id) || !isId(card.type)) return false
+    if (!Number.isSafeInteger(card.revision) || (card.revision as number) < 0) return false
+    // The protocol document says a duplicate id invalidates the whole snapshot, and
+    // `CardStore.restore` throws on one. Catching it here turns what would be a runtime throw
+    // into a conformance failure the server implementer sees while writing the server.
+    if (ids.has(card.id as string)) return false
+    ids.add(card.id as string)
+  }
+  return true
 }
 
 function isCardMessage(value: unknown): boolean {
@@ -632,7 +643,7 @@ export function encodeFrame(frame: Omit<ClientFrame, "v">): string {
 - [ ] **Step 4: Run the tests**
 
 Run: `pnpm exec vitest run --project live frames`
-Expected: PASS, 31 tests — one asserting the fixture version, 24 fixture cases, and 6 codec tests.
+Expected: PASS, 37 tests — one asserting the fixture version, 30 fixture cases, and 6 codec tests.
 
 - [ ] **Step 5: Export**
 
