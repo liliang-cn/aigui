@@ -14,12 +14,22 @@ export interface ReferenceSession {
   sockets: Set<WebSocket>
 }
 
+type ActionOutcome = { tone: string; message?: string }
+
 export interface ReferenceServer {
   port: number
   /** Push messages to every connection watching a session. */
   push(sessionId: string, messages: CardMessage[]): void
-  /** Answer the next action of this type with this outcome. */
-  onAction(type: string, handler: (params: unknown) => { tone: string; message?: string }): void
+  /**
+   * Answer the next action of this type with this outcome.
+   *
+   * The handler may return a promise. A real server does asynchronous work — a database read, a
+   * call to another service — and can finish that work in a different order than the requests
+   * arrived in. A handler that can only answer synchronously can never produce that reordering,
+   * which means a client that mis-correlates outcomes (resolving whatever is pending first,
+   * rather than matching on `frame.id`) would pass every test run against it.
+   */
+  onAction(type: string, handler: (params: unknown) => ActionOutcome | Promise<ActionOutcome>): void
   sessions: Map<string, ReferenceSession>
   close(): Promise<void>
 }
@@ -27,7 +37,7 @@ export interface ReferenceServer {
 export async function startReferenceServer(): Promise<ReferenceServer> {
   const wss = new WebSocketServer({ port: 0 })
   const sessions = new Map<string, ReferenceSession>()
-  const handlers = new Map<string, (params: unknown) => { tone: string; message?: string }>()
+  const handlers = new Map<string, (params: unknown) => ActionOutcome | Promise<ActionOutcome>>()
 
   function snapshotOf(session: ReferenceSession): CardSnapshot {
     return { version: 1, cards: [...session.cards.values()] }
@@ -36,7 +46,7 @@ export async function startReferenceServer(): Promise<ReferenceServer> {
   wss.on("connection", (socket) => {
     let sessionId: string | undefined
 
-    socket.on("message", (raw) => {
+    socket.on("message", async (raw) => {
       let frame: Record<string, unknown>
       try {
         frame = JSON.parse(String(raw)) as Record<string, unknown>
@@ -70,7 +80,7 @@ export async function startReferenceServer(): Promise<ReferenceServer> {
         const action = frame.action as { type: string; params?: unknown }
         const handler = handlers.get(action.type)
         const outcome = handler
-          ? handler(action.params)
+          ? await handler(action.params)
           : { tone: "negative", message: `Unknown action "${action.type}"` }
         socket.send(JSON.stringify({ v: 1, t: "outcome", id: frame.id, outcome }))
       }

@@ -80,15 +80,21 @@ describe("client against the reference server", () => {
   })
 
   /**
-   * Two actions in flight at once. Every other e2e case sends one, which cannot tell correct
-   * correlation apart from "resolve whatever is pending" — a break check confirmed the whole
-   * suite stays green with correlation removed. Real sockets reorder in ways a fake does not.
+   * Two actions in flight at once, with the server answering out of order: the "slow" action is
+   * sent first but its handler resolves after "quick"'s. A client that resolves pending promises
+   * in arrival order — rather than matching `frame.id` — would hand "slow"'s caller the "quick"
+   * outcome and vice versa. Every other e2e case sends one action at a time, which cannot tell
+   * correct correlation apart from "resolve whatever is pending first"; a break check confirmed
+   * the rest of this suite stays green with correlation removed.
    */
   it("keeps two concurrent actions apart", async () => {
     const store = new CardStore()
     const { connection, client } = connect(store)
     await until(() => server.sessions.size === 1)
-    server.onAction("slow", () => ({ tone: "warning", message: "slow" }))
+    server.onAction(
+      "slow",
+      () => new Promise((resolve) => setTimeout(() => resolve({ tone: "warning", message: "slow" }), 50)),
+    )
     server.onAction("quick", () => ({ tone: "positive", message: "quick" }))
     const [slow, quick] = await Promise.all([
       client.sendAction({ type: "slow" }),
