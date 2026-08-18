@@ -1,0 +1,81 @@
+import { CardStore } from "@ai-gui/core"
+import { WebSocket } from "ws"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
+import { createLiveClient } from "./client"
+import { createConnection, type SocketLike } from "./connection"
+import { startReferenceServer, type ReferenceServer } from "./reference-server"
+import type { ServerFrame } from "./types"
+
+let server: ReferenceServer
+
+beforeEach(async () => {
+  server = await startReferenceServer()
+})
+afterEach(async () => {
+  await server.close()
+})
+
+function connect(store: CardStore) {
+  let handler: ((frame: ServerFrame) => void) | undefined
+  const connection = createConnection({
+    url: `ws://127.0.0.1:${server.port}`,
+    socketFactory: (url) => new WebSocket(url) as unknown as SocketLike,
+    onFrame: (frame) => handler?.(frame),
+  })
+  const client = createLiveClient({
+    store,
+    connection,
+    bindFrames: (next) => (handler = next),
+  })
+  connection.start()
+  return { connection, client }
+}
+
+async function until(predicate: () => boolean, timeoutMs = 3000): Promise<void> {
+  const started = Date.now()
+  while (!predicate()) {
+    if (Date.now() - started > timeoutMs) throw new Error("timed out waiting for condition")
+    await new Promise((resolve) => setTimeout(resolve, 10))
+  }
+}
+
+describe("client against the reference server", () => {
+  it("receives a session and an initial sync", async () => {
+    const store = new CardStore()
+    const { connection } = connect(store)
+    await until(() => server.sessions.size === 1)
+    expect(store.list()).toEqual([])
+    connection.stop()
+  })
+
+  it("renders a card the server pushes", async () => {
+    const store = new CardStore()
+    const { connection } = connect(store)
+    await until(() => server.sessions.size === 1)
+    const sessionId = [...server.sessions.keys()][0]
+    server.push(sessionId, [{ op: "register", id: "a", type: "metric", data: { value: 42 } }])
+    await until(() => store.get("a") !== undefined)
+    expect(store.get("a")?.data).toEqual({ value: 42 })
+    connection.stop()
+  })
+
+  it("carries an action to the server and the outcome back", async () => {
+    const store = new CardStore()
+    const { connection, client } = connect(store)
+    await until(() => server.sessions.size === 1)
+    server.onAction("metric.drill", () => ({ tone: "positive", message: "drilled" }))
+    const result = await client.sendAction({ type: "metric.drill", params: { id: "a" } })
+    expect(result.outcome).toEqual({ tone: "positive", message: "drilled" })
+    connection.stop()
+  })
+
+  it("answers an unknown action with a failure rather than dropping the socket", async () => {
+    const store = new CardStore()
+    const { connection, client } = connect(store)
+    await until(() => server.sessions.size === 1)
+    const result = await client.sendAction({ type: "nope" })
+    expect(result.outcome.tone).toBe("negative")
+    expect(connection.state).toBe("open")
+    connection.stop()
+  })
+})
