@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto"
 import { WebSocketServer, type WebSocket } from "ws"
 import type { CardMessage, CardSnapshot } from "@ai-gui/core"
+import { isFrameValid } from "./frames"
 
 /**
  * A minimal server implementing the live protocol.
@@ -58,6 +59,13 @@ export async function startReferenceServer(): Promise<ReferenceServer> {
         socket.close()
         return
       }
+
+      // A field check hand-rolled here can drift from what `frames.ts` defines as valid — which is
+      // exactly how `{"v":1,"t":"action","id":"c1"}` with no `action` field used to reach
+      // `frame.action.type` and throw. Consulting the same validator the client uses means the two
+      // can no longer silently disagree, and a malformed frame is ignored rather than crashing the
+      // handler.
+      if (!isFrameValid(frame, "c2s")) return
 
       if (frame.t === "hello") {
         const asked = typeof frame.session === "string" ? frame.session : undefined

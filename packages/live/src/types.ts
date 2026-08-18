@@ -1,7 +1,14 @@
 import type { CardMessage, CardSnapshot } from "@ai-gui/core"
 import type { ActionOutcome } from "@ai-gui/core"
 
-/** The protocol version this package speaks. A server answering with anything else is fatal. */
+/**
+ * The protocol version this package speaks, stamped on every frame this client sends.
+ *
+ * The client itself does not compare an incoming frame's `v` against this constant — frame
+ * validation (`isFrameValid`) only checks that `v` is present and numeric. Version negotiation
+ * happens at `hello`: a server that does not support this version answers with `error{fatal:true}`,
+ * and it is that fatal flag, not a client-side version check, that stops reconnection.
+ */
 export const PROTOCOL_VERSION = 1
 
 export interface HelloFrame {

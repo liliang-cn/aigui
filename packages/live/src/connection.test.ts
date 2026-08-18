@@ -159,4 +159,91 @@ describe("createConnection", () => {
     vi.advanceTimersByTime(120_000)
     expect(sockets).toHaveLength(1)
   })
+
+  /**
+   * A second `start()` while a connection attempt is already under way — a React effect
+   * double-invoke, or a retry button clicked twice — must not spin up a second socket. Two
+   * sockets means `stop()` only closes the second one, and if both reach `onopen`, both install a
+   * `setInterval` and the earlier one becomes uncancellable.
+   */
+  it("start() twice creates only one socket", () => {
+    const conn = createConnection({ url: "ws://x", socketFactory: factory })
+    conn.start()
+    conn.start()
+    expect(sockets).toHaveLength(1)
+    conn.stop()
+  })
+
+  it("start() twice, then stop(), leaves nothing running", () => {
+    const conn = createConnection({ url: "ws://x", socketFactory: factory })
+    conn.start()
+    conn.start()
+    sockets[0].fire("open")
+    conn.stop()
+    // If the second start() had created a second socket, stop() would only have closed that one
+    // and left the first socket's heartbeat interval running forever.
+    vi.advanceTimersByTime(120_000)
+    expect(sockets).toHaveLength(1)
+    expect(sockets[0].sent.filter((frame) => JSON.parse(frame).t === "ping")).toHaveLength(0)
+  })
+
+  it("start() after a genuine stop() is not treated as a duplicate", () => {
+    const conn = createConnection({ url: "ws://x", socketFactory: factory })
+    conn.start()
+    sockets[0].fire("open")
+    conn.stop()
+    conn.start()
+    expect(sockets).toHaveLength(2)
+    conn.stop()
+  })
+
+  /**
+   * A real WebSocket closes asynchronously — `close()` returns before `onclose` fires — so a
+   * message already queued for delivery can dispatch in between. `stop()` must guard against that,
+   * or a stray frame from a socket the host believes is gone still reaches `onFrame`.
+   */
+  it("ignores a message that arrives after stop()", () => {
+    const onFrame = vi.fn()
+    const conn = createConnection({ url: "ws://x", socketFactory: factory, onFrame })
+    conn.start()
+    sockets[0].fire("open")
+    conn.stop()
+    // Simulates the queued-message race: the underlying socket delivers a message even though
+    // `close()` has already been called and the connection considers itself stopped.
+    sockets[0].fire("message", JSON.stringify({ v: 1, t: "pong" }))
+    expect(onFrame).not.toHaveBeenCalled()
+  })
+
+  it("does not go fatal from a message that arrives after stop()", () => {
+    const conn = createConnection({ url: "ws://x", socketFactory: factory })
+    conn.start()
+    sockets[0].fire("open")
+    conn.stop()
+    // A `fatal` error frame the host tore the connection down itself should not be able to poison
+    // it — a real socket delivering this after `close()` but before `onclose` is exactly the race
+    // `stop()` has to guard against.
+    sockets[0].fire("message", JSON.stringify({ v: 1, t: "error", code: "boom", message: "no", fatal: true }))
+    conn.start()
+    // If the stray frame had set the internal `fatal` flag, this start() would be a no-op and no
+    // second socket would appear.
+    expect(sockets).toHaveLength(2)
+    conn.stop()
+  })
+
+  /**
+   * The package's headline guarantee — "actions fail immediately while disconnected instead of
+   * queuing" — is implemented entirely by this guard. Before this test, `send()` was never called
+   * anywhere in this file, so removing `state !== "open"` from it left all 68 tests green.
+   */
+  it("send() refuses to write to a socket that is not yet open", () => {
+    const conn = createConnection({ url: "ws://x", socketFactory: factory })
+    conn.start()
+    // A socket exists (assigned in `open()`) but `onopen` has not fired, so state is "connecting".
+    expect(sockets).toHaveLength(1)
+    expect(conn.state).toBe("connecting")
+    const result = conn.send({ t: "ping" })
+    expect(result).toBe(false)
+    expect(sockets[0].sent).toHaveLength(0)
+    conn.stop()
+  })
 })

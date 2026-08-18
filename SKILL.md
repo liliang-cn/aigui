@@ -76,7 +76,7 @@ Four things it guarantees:
 
 - A dropped socket never blanks the page — the last state stays rendered, only the connection state changes.
 - Reconnection is the same code path as first connection (`hello` → `welcome` → full `sync`), so there is no recovery-only branch to rot.
-- Actions fail immediately while disconnected rather than queuing — replaying a click made against a dead socket is worse than reporting the failure.
+- Actions fail immediately while disconnected, and an in-flight action fails the moment the socket drops — rather than queuing, since replaying a click made against a dead socket is worse than reporting the failure. `createLiveClient` wires this itself from the connection's state, so nothing beyond `connection.start()` is required.
 - An unknown frame is ignored, not an error, so a v1 client survives a later server.
 
 `docs/live-protocol.md` is normative, and `fixtures/live-protocol/frames.json` is the conformance suite any server implementation, in any language, tests against.

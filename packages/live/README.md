@@ -41,7 +41,7 @@ Render `store` with whichever adapter you already use. `@ai-gui/live` never touc
 
 - **A dropped socket never blanks the page.** The last state stays rendered; only the connection state changes.
 - **Reconnection is the same code path as the first connection** — `hello`, `welcome`, full `sync`. There is no recovery-only branch to rot, and no cursor to get wrong.
-- **Actions fail immediately while disconnected.** They are never queued, because replaying a click the reader made against a dead socket is worse than telling them it failed.
+- **Actions fail immediately while disconnected, and an in-flight action fails the moment the socket drops.** They are never queued, because replaying a click the reader made against a dead socket is worse than telling them it failed. `createLiveClient` subscribes to the connection's state itself, so this holds with no wiring beyond calling `connection.start()` — `client.handleDisconnect()` stays available for a host that drives the connection some other way, but nothing depends on it being called.
 - **An unknown frame is ignored, not an error**, so a v1 client survives a later server.
 
 ## Protocol

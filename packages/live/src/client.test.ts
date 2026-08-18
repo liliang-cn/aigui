@@ -2,14 +2,15 @@ import { CardStore } from "@ai-gui/core"
 import { describe, expect, it, vi } from "vitest"
 import { createLiveClient } from "./client"
 import type { Connection } from "./connection"
-import type { ServerFrame } from "./types"
+import type { ConnectionState, ServerFrame } from "./types"
 
 function fakeConnection() {
   const sent: unknown[] = []
   let onFrame: ((frame: ServerFrame) => void) | undefined
+  let isOpen = true
+  const stateListeners = new Set<(state: ConnectionState) => void>()
   const connection: Connection & { sent: unknown[]; deliver: (frame: ServerFrame) => void; open: boolean } = {
     sent,
-    open: true,
     start: vi.fn(),
     stop: vi.fn(),
     // Mirrors the real `send` (connection.ts): a closed socket is never handed a frame, and the
@@ -21,7 +22,23 @@ function fakeConnection() {
       return true
     },
     get state() {
-      return connection.open ? ("open" as const) : ("closed" as const)
+      return isOpen ? ("open" as const) : ("closed" as const)
+    },
+    get open() {
+      return isOpen
+    },
+    // Mirrors the real connection.ts: `setState` notifies every `subscribeState` listener on each
+    // transition. Flipping `open` is this fake's stand-in for a state transition, so it has to
+    // notify too — otherwise a test could set `open = false` without the client ever hearing about
+    // the disconnect it is supposed to be wired to.
+    set open(value: boolean) {
+      if (value === isOpen) return
+      isOpen = value
+      for (const listener of stateListeners) listener(isOpen ? "open" : "closed")
+    },
+    subscribeState: (listener) => {
+      stateListeners.add(listener)
+      return () => stateListeners.delete(listener)
     },
     deliver: (frame) => onFrame?.(frame),
   }
@@ -97,7 +114,18 @@ describe("createLiveClient", () => {
     expect(connection.sent).toHaveLength(0)
   })
 
-  it("fails actions that were in flight when the socket dropped", async () => {
+  it("fails actions that were in flight when the socket dropped, without the host calling handleDisconnect", async () => {
+    const { connection, client } = setup()
+    const pending = client.sendAction({ type: "x" })
+    // Nothing here calls client.handleDisconnect() — the client must wire itself to the
+    // connection's state so a host that only follows the README's example still gets a settled
+    // promise instead of a permanently stuck button.
+    connection.open = false
+    const result = await pending
+    expect(result.outcome.tone).toBe("negative")
+  })
+
+  it("still supports a host calling handleDisconnect directly", async () => {
     const { connection, client } = setup()
     const pending = client.sendAction({ type: "x" })
     connection.open = false

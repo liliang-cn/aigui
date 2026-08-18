@@ -51,6 +51,8 @@ export interface Connection {
   stop(): void
   send(frame: UnversionedClientFrame): boolean
   readonly state: ConnectionState
+  /** Notified on every state transition. Returns an unsubscribe function. */
+  subscribeState(listener: (state: ConnectionState) => void): () => void
 }
 
 const defaultFactory: SocketFactory = (url) => new WebSocket(url) as unknown as SocketLike
@@ -69,11 +71,21 @@ export function createConnection(options: ConnectionOptions): Connection {
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined
   let heartbeatTimer: ReturnType<typeof setInterval> | undefined
   let pongTimer: ReturnType<typeof setTimeout> | undefined
+  const stateListeners = new Set<(state: ConnectionState) => void>()
 
   function setState(next: ConnectionState): void {
     if (state === next) return
     state = next
     options.onState?.(next)
+    // A listener throwing is its bug, not a reason to skip the others or corrupt the transition —
+    // the same reasoning as ActionRuntime's `notify` (packages/core/src/actions.ts).
+    for (const listener of stateListeners) {
+      try {
+        listener(next)
+      } catch {
+        // Subscribers are observers and cannot change connection semantics.
+      }
+    }
   }
 
   function clearTimers(): void {
@@ -104,7 +116,13 @@ export function createConnection(options: ConnectionOptions): Connection {
     const current = factory(options.url)
     socket = current
 
+    // A real WebSocket closes asynchronously: `close()` returns before `onclose` fires, so a
+    // message already queued for delivery can still dispatch in between. Every handler below
+    // checks that `current` is still the live socket before touching any shared state, so a frame
+    // (or open/close event) from a socket `stop()` already tore down cannot mutate `session`,
+    // flip `fatal`, or reach the host.
     current.onopen = () => {
+      if (current !== socket) return
       attempt = 0
       setState("open")
       current.send(encodeFrame({ t: "hello", ...(session ? { session } : {}), ...(options.token ? { token: options.token } : {}) }))
@@ -112,6 +130,7 @@ export function createConnection(options: ConnectionOptions): Connection {
     }
 
     current.onmessage = (event) => {
+      if (current !== socket) return
       const frame = decodeServerFrame(event.data)
       if (!frame) return
       if (frame.t === "pong") {
@@ -124,6 +143,7 @@ export function createConnection(options: ConnectionOptions): Connection {
     }
 
     current.onclose = () => {
+      if (current !== socket) return
       clearTimers()
       socket = undefined
       setState(fatal ? "fatal" : "closed")
@@ -138,6 +158,10 @@ export function createConnection(options: ConnectionOptions): Connection {
   return {
     start() {
       stopped = false
+      // A connection attempt is already in progress (or open) — a second call, e.g. from a React
+      // effect double-invoke or a retry button, must not spin up a second socket and orphan the
+      // first one's heartbeat interval.
+      if (state === "connecting" || state === "open") return
       open()
     },
     stop() {
@@ -157,6 +181,10 @@ export function createConnection(options: ConnectionOptions): Connection {
     },
     get state() {
       return state
+    },
+    subscribeState(listener) {
+      stateListeners.add(listener)
+      return () => stateListeners.delete(listener)
     },
   }
 }

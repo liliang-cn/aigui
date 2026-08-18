@@ -31,6 +31,19 @@ export function createLiveClient(options: LiveClientOptions): LiveClient {
   const pending = new Map<string, (result: LiveActionResult) => void>()
   let counter = 0
 
+  function handleDisconnect(): void {
+    for (const [, resolve] of pending) resolve(DISCONNECTED)
+    pending.clear()
+  }
+
+  // A disconnect never has to be wired by the host: any state other than "open" — closed, fatal,
+  // or reconnecting — fails whatever actions were in flight, the same way `send` already refuses
+  // to hand a frame to a closed socket. `handleDisconnect` stays exposed below for a host that
+  // drives the connection itself and wants to call it directly.
+  options.connection.subscribeState((state) => {
+    if (state !== "open") handleDisconnect()
+  })
+
   options.bindFrames((frame) => {
     switch (frame.t) {
       case "sync":
@@ -72,9 +85,6 @@ export function createLiveClient(options: LiveClientOptions): LiveClient {
         pending.set(id, resolve)
       })
     },
-    handleDisconnect() {
-      for (const [, resolve] of pending) resolve(DISCONNECTED)
-      pending.clear()
-    },
+    handleDisconnect,
   }
 }

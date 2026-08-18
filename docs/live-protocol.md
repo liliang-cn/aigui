@@ -6,6 +6,10 @@ A backend pushes cards to a browser over a WebSocket and receives user actions b
 
 One JSON object per WebSocket text message. Every frame carries `v` (integer protocol version) and `t` (frame type). A frame with an unrecognised `t` MUST be ignored rather than rejected, so that a version 1 peer survives a later version adding frames.
 
+Frame validation — the accept/reject verdict a conformant implementation and `fixtures/live-protocol/frames.json` agree on — only checks that `v` is present and numeric; it does not compare it against a specific supported version. Checking the actual version number is version *negotiation*, and it happens at `hello`: a server that does not support the version a client sent answers with `error{fatal:true}` instead of proceeding. A server MAY additionally reject later frames carrying an unsupported `v`, but that is a deployment choice, not something `isFrameValid`-equivalent validation enforces on every frame.
+
+Authentication beyond the opaque `token` on `hello` is out of scope for version 1. An implementer looking for a challenge/response step, signed tokens, or any other auth mechanism will not find one here — `token` is validated however the server chooses to validate it, and that choice is not part of this document.
+
 ## Client to server
 
 | `t` | Fields | Meaning |
