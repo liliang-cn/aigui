@@ -1036,10 +1036,13 @@ export function createConnection(options: ConnectionOptions): Connection {
       if (frame.t === "pong") {
         if (pongTimer !== undefined) clearTimeout(pongTimer)
         pongTimer = undefined
-        return
       }
       if (frame.t === "welcome") session = frame.session
       if (frame.t === "error" && frame.fatal) fatal = true
+      // Every valid frame reaches the host, `pong` included. Swallowing it here would make this
+      // component "you get everything except the one you have to know about", and it would put
+      // round-trip latency or a last-heard-from timestamp out of the host's reach for no gain —
+      // the client's frame switch ignores what it does not handle anyway.
       options.onFrame?.(frame)
     }
 
