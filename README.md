@@ -37,7 +37,7 @@ pnpm add @ai-gui/core @ai-gui/vue
 pnpm add @ai-gui/core @ai-gui/vanilla
 
 # plugins (optional)
-pnpm add @ai-gui/plugin-solid @ai-gui/plugin-function @ai-gui/plugin-optics @ai-gui/plugin-motion @ai-gui/plugin-physics @ai-gui/plugin-quote @ai-gui/plugin-figure @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact @ai-gui/plugin-progress @ai-gui/plugin-flashcard @ai-gui/plugin-evidence @ai-gui/plugin-resultset
+pnpm add @ai-gui/plugin-solid @ai-gui/plugin-function @ai-gui/plugin-optics @ai-gui/plugin-motion @ai-gui/plugin-physics @ai-gui/plugin-quote @ai-gui/plugin-figure @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-dashboard @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact @ai-gui/plugin-progress @ai-gui/plugin-flashcard @ai-gui/plugin-evidence @ai-gui/plugin-resultset
 
 # plugin authoring helpers (optional)
 pnpm add @ai-gui/plugin-sdk
@@ -50,6 +50,12 @@ pnpm add -D @ai-gui/devtools
 
 # rendering blocks to images, server-side (optional)
 pnpm add @ai-gui/image
+
+# an OpenClaw plugin that uses it, for chat channels that carry only pictures (optional)
+openclaw plugins install "@ai-gui/openclaw"
+
+# server-driven cards over a WebSocket, for a backend with no frontend project (optional)
+pnpm add @ai-gui/live
 ```
 
 ## Quick start — React

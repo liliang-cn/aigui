@@ -197,4 +197,10 @@ export default defineWorkspace([
     resolve: { alias },
     test: { name: "live", root: "packages/live", coverage },
   },
+  {
+    // The root README and SKILL.md describe packages, and nothing else checks that what they
+    // describe still exists. `include` is explicit because this project's root is the repo.
+    resolve: { alias },
+    test: { name: "docs", root: ".", include: ["scripts/*.test.ts"], coverage },
+  },
 ])

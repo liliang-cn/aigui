@@ -1,6 +1,6 @@
 ---
 name: aigui
-description: Use when integrating the @ai-gui SDK to render streaming LLM output as declarative generated UI, cards, revisioned artifacts, molecules, maps, markdown, charts, citations, math, and diagrams in React/Vue/vanilla, or when generating content for an @ai-gui frontend.
+description: Use when integrating the @ai-gui SDK to render streaming LLM output as declarative generated UI, cards, revisioned artifacts, molecules, maps, markdown, charts, citations, math, and diagrams in React/Vue/vanilla; when rendering those blocks to PNG server-side for a channel that carries only pictures, such as WeChat via OpenClaw; or when generating content for an @ai-gui frontend.
 ---
 
 # AIGUI
@@ -10,6 +10,7 @@ AIGUI is a framework-agnostic TypeScript SDK that renders **streaming** LLM outp
 ## When to use
 
 - **Integrating**: adding `@ai-gui` to an app to render a streaming model response (markdown + cards + charts + math + diagrams).
+- **Rendering to pictures**: the destination carries text and images but no markup — a chat channel, an email, an image-only webhook. See [Server-side images](#server-side-images).
 - **Generating**: you are the LLM producing content that an AIGUI frontend will render.
 
 ## Integration checklist
@@ -23,6 +24,29 @@ AIGUI is a framework-agnostic TypeScript SDK that renders **streaming** LLM outp
 6. **Build the system prompt** from the same registry + plugins: `buildSystemPrompt({ base, registry, plugins })`; prepend it to your system prompt. Passing `plugins` is what tells the model it may draw a diagram or write TeX — installing a plugin only teaches the renderer to draw one. Backend just streams text.
 7. **Optional host hooks**: `onNodeClick(node, event)` maps a click to the parsed block it landed in; `rawHtml={false}` escapes raw HTML the model wrote instead of interpreting it.
 8. **Feed the stream**: `reset()` then `feed(response.body)` — accepts a `ReadableStream` or `AsyncIterable<string>`. Renders progressively.
+
+## Server-side images
+
+`@ai-gui/image` renders the same blocks to PNG by running the real `@ai-gui/vanilla` renderer in a headless Chromium and screenshotting each one. Reach for it when the destination cannot display markup, not as a faster alternative to the browser path.
+
+```ts
+import { renderMarkdownToImages } from "@ai-gui/image"
+
+const { text, images } = await renderMarkdownToImages(answer, { outDir: "/tmp/aigui" })
+// text   — the answer with every rendered block removed
+// images — [{ kind: "chart", path: "…png", width, height }]
+```
+
+Requires `playwright` (an optional peer) plus `playwright install chromium`. On Linux also install `fonts-noto-cjk`, or Chinese labels arrive as tofu — a screenshot cannot fall back to another font the way a web page can. Maths needs nothing extra; KaTeX's stylesheet and fonts are inlined into the page.
+
+Four things worth knowing before using it:
+
+- **A block that fails to render stays in `text` as its original source.** A broken diagram costs a picture, never the answer. Only blocks that actually produced a file are stripped.
+- **It parses before it launches anything.** Prose costs nothing, and the browser shuts down after five idle minutes.
+- **`kinds` selects the families to draw** — chart, mermaid, dashboard, card, math, table. Default is all six; `max` caps how many (default 6) and the rest stay as text.
+- **The markdown path is not the same thing.** Streaming to a browser parses client-side on purpose, repairing half-typed syntax as bytes arrive. Do not reach for this package to render a live stream.
+
+For the OpenClaw chat gateway, `@ai-gui/openclaw` wires this in with no code: install it, enable it, and a reply containing a ` ```chart ` fence reaches WeChat as prose plus a picture instead of a wall of ECharts JSON. It also exposes an optional `aigui_render` tool for drawing on purpose, which an operator must enable with `tools.allow`.
 
 ## Generation fence cheat-sheet
 
