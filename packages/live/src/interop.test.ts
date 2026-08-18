@@ -17,6 +17,10 @@ function connect(store: CardStore) {
   let handler: ((frame: ServerFrame) => void) | undefined
   const connection = createConnection({
     url: url!,
+    // Agreed out of band with `examples/interop-server.rs`, which pushes its timer-driven card
+    // into this exact session name. `docs/live-protocol.md`'s "a client may name any session"
+    // note is what makes this legal on a first connection, not just a reconnect.
+    session: "interop",
     socketFactory: (target) => new WebSocket(target) as unknown as SocketLike,
     onFrame: (frame) => handler?.(frame),
   })

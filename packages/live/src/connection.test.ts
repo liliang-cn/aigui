@@ -45,6 +45,20 @@ describe("createConnection", () => {
     conn.stop()
   })
 
+  /**
+   * `docs/live-protocol.md`: "a client may name any session, including one it was never given" —
+   * how a dashboard both ends already agree on is addressed on a *first* connection, not just a
+   * reconnect. Before `options.session` existed, nothing in this package's public surface could
+   * express that; a caller could only ever get the session the server happened to assign.
+   */
+  it("names the session it was given on the very first hello", () => {
+    const conn = createConnection({ url: "ws://x", socketFactory: factory, session: "dash-1" })
+    conn.start()
+    sockets[0].fire("open")
+    expect(JSON.parse(sockets[0].sent[0])).toEqual({ v: 1, t: "hello", session: "dash-1" })
+    conn.stop()
+  })
+
   it("echoes the session it was given on the next hello", () => {
     const conn = createConnection({ url: "ws://x", socketFactory: factory })
     conn.start()

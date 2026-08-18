@@ -17,6 +17,17 @@ export type SocketFactory = (url: string) => SocketLike
 export interface ConnectionOptions {
   url: string
   token?: string
+  /**
+   * A session name agreed out of band — e.g. hard-coded, or read from a URL — rather than one
+   * this connection was assigned by an earlier `welcome`.
+   *
+   * `docs/live-protocol.md`'s "a client may name any session" note is what makes this legal: the
+   * server is required to honour the name it is given rather than substitute one of its own. This
+   * is how a dashboard both ends already agree on gets addressed on a first connection, not just
+   * on a reconnect — the `welcome`-assigned case that `session` (the internal variable below)
+   * already handled.
+   */
+  session?: string
   socketFactory?: SocketFactory
   onFrame?: (frame: ServerFrame) => void
   onState?: (state: ConnectionState) => void
@@ -64,7 +75,9 @@ export function createConnection(options: ConnectionOptions): Connection {
 
   let socket: SocketLike | undefined
   let state: ConnectionState = "closed"
-  let session: string | undefined
+  // Seeded from `options.session` when the caller names one out of band; overwritten by whatever
+  // `welcome` assigns from then on, same as a caller-less connection reconnecting.
+  let session: string | undefined = options.session
   let attempt = 0
   let stopped = false
   let fatal = false
