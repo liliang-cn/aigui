@@ -78,4 +78,24 @@ describe("client against the reference server", () => {
     expect(connection.state).toBe("open")
     connection.stop()
   })
+
+  /**
+   * Two actions in flight at once. Every other e2e case sends one, which cannot tell correct
+   * correlation apart from "resolve whatever is pending" — a break check confirmed the whole
+   * suite stays green with correlation removed. Real sockets reorder in ways a fake does not.
+   */
+  it("keeps two concurrent actions apart", async () => {
+    const store = new CardStore()
+    const { connection, client } = connect(store)
+    await until(() => server.sessions.size === 1)
+    server.onAction("slow", () => ({ tone: "warning", message: "slow" }))
+    server.onAction("quick", () => ({ tone: "positive", message: "quick" }))
+    const [slow, quick] = await Promise.all([
+      client.sendAction({ type: "slow" }),
+      client.sendAction({ type: "quick" }),
+    ])
+    expect(slow.outcome.message).toBe("slow")
+    expect(quick.outcome.message).toBe("quick")
+    connection.stop()
+  })
 })

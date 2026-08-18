@@ -1,6 +1,6 @@
 ---
 name: aigui
-description: Use when integrating the @ai-gui SDK to render streaming LLM output as declarative generated UI, cards, revisioned artifacts, molecules, maps, markdown, charts, citations, math, and diagrams in React/Vue/vanilla; when rendering those blocks to PNG server-side for a channel that carries only pictures, such as WeChat via OpenClaw; or when generating content for an @ai-gui frontend.
+description: Use when integrating the @ai-gui SDK to render streaming LLM output as declarative generated UI, cards, revisioned artifacts, molecules, maps, markdown, charts, citations, math, and diagrams in React/Vue/vanilla; when rendering those blocks to PNG server-side for a channel that carries only pictures, such as WeChat via OpenClaw; when a backend needs to drive cards over a WebSocket to a browser with no frontend project and no LLM in the loop; or when generating content for an @ai-gui frontend.
 ---
 
 # AIGUI
@@ -12,6 +12,7 @@ AIGUI is a framework-agnostic TypeScript SDK that renders **streaming** LLM outp
 - **Integrating**: adding `@ai-gui` to an app to render a streaming model response (markdown + cards + charts + math + diagrams).
 - **Rendering to pictures**: the destination carries text and images but no markup — a chat channel, an email, an image-only webhook. See [Server-side images](#server-side-images).
 - **Generating**: you are the LLM producing content that an AIGUI frontend will render.
+- **Driving cards from a backend, no frontend project**: a server wants to push cards straight to a browser over a socket and get actions back, with no model in the loop at all. See [Live cards over a socket](#live-cards-over-a-socket).
 
 ## Integration checklist
 
@@ -47,6 +48,38 @@ Four things worth knowing before using it:
 - **The markdown path is not the same thing.** Streaming to a browser parses client-side on purpose, repairing half-typed syntax as bytes arrive. Do not reach for this package to render a live stream.
 
 For the OpenClaw chat gateway, `@ai-gui/openclaw` wires this in with no code: install it, enable it, and a reply containing a ` ```chart ` fence reaches WeChat as prose plus a picture instead of a wall of ECharts JSON. It also exposes an optional `aigui_render` tool for drawing on purpose, which an operator must enable with `tools.allow`.
+
+## Live cards over a socket
+
+`@ai-gui/live` lets a backend hold a WebSocket to a browser, push cards, and receive user actions back — no frontend project on the backend's side, and **no LLM required**: this path works with no model in the loop at all.
+
+It carries cards, `ui` documents and actions — deliberately not the markdown stream. That half parses in the browser on purpose, so it can repair half-typed syntax as bytes arrive; moving it server-side would cost a round trip per token.
+
+```ts
+import { CardStore } from "@ai-gui/core"
+import { createConnection, createLiveClient } from "@ai-gui/live"
+
+const store = new CardStore({ registry })
+let onFrame
+const connection = createConnection({
+  url: "wss://example.com/live",
+  onFrame: (frame) => onFrame?.(frame),
+  onState: (state) => setIndicator(state),
+})
+const client = createLiveClient({ store, connection, bindFrames: (h) => (onFrame = h) })
+connection.start()
+
+const { outcome } = await client.sendAction({ type: "metric.drill", params: { id: "a" } })
+```
+
+Four things it guarantees:
+
+- A dropped socket never blanks the page — the last state stays rendered, only the connection state changes.
+- Reconnection is the same code path as first connection (`hello` → `welcome` → full `sync`), so there is no recovery-only branch to rot.
+- Actions fail immediately while disconnected rather than queuing — replaying a click made against a dead socket is worse than reporting the failure.
+- An unknown frame is ignored, not an error, so a v1 client survives a later server.
+
+`docs/live-protocol.md` is normative, and `fixtures/live-protocol/frames.json` is the conformance suite any server implementation, in any language, tests against.
 
 ## Generation fence cheat-sheet
 
