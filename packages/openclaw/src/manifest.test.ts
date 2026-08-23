@@ -8,6 +8,7 @@ const manifest = JSON.parse(
   readFileSync(fileURLToPath(new URL("../openclaw.plugin.json", import.meta.url)), "utf8"),
 ) as {
   id: string
+  activation?: { onStartup?: boolean }
   contracts: { tools: string[] }
   toolMetadata: Record<string, { optional?: boolean }>
   configSchema: { properties: Record<string, unknown>; additionalProperties: boolean }
@@ -68,6 +69,19 @@ describe("package.json", () => {
 describe("openclaw.plugin.json", () => {
   it("declares the id the code uses", () => {
     expect(manifest.id).toBe(PLUGIN_ID)
+  })
+
+  /**
+   * Without this the gateway loads the plugin but never activates it at startup, so `register`
+   * runs only later in the agent runtime — and the hooks it adds there never reach the global
+   * hook runner that `reply_payload_sending` dispatches through. The symptom is silent and
+   * misleading: `openclaw plugins inspect` reports `status: loaded`, `activated: true` and
+   * `hookCount: 2` (that is the CLI activating it in its own process), while every reply on the
+   * real channel goes out with the fence intact and `mediaUrl=none`. Verified against
+   * `openclaw@2026.7.1-2`, where all 67 stock manifests carry an explicit `activation`.
+   */
+  it("activates at startup, or the reply hook never reaches the global runner", () => {
+    expect(manifest.activation?.onStartup).toBe(true)
   })
 
   it("declares the tool the code registers", () => {

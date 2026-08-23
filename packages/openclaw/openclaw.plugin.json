@@ -2,6 +2,9 @@
   "id": "ai-gui",
   "name": "AIGUI",
   "description": "Renders charts, diagrams, math, tables, cards and dashboards as images for picture-only channels.",
+  "activation": {
+    "onStartup": true
+  },
   "contracts": {
     "tools": [
       "aigui_render"

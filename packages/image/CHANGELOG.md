@@ -1,5 +1,16 @@
 # @ai-gui/image
 
+## 0.32.0
+
+### Patch Changes
+
+- @ai-gui/core@0.32.0
+- @ai-gui/vanilla@0.32.0
+- @ai-gui/plugin-katex@0.32.0
+- @ai-gui/plugin-mermaid@0.32.0
+- @ai-gui/plugin-chart@0.32.0
+- @ai-gui/plugin-dashboard@0.32.0
+
 ## 0.31.0
 
 ### Minor Changes

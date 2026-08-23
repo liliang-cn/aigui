@@ -30,15 +30,31 @@ Then restart:
 openclaw gateway restart
 ```
 
+If the Gateway is a failover resource, run the Chromium and font steps on **every** node it can land on. The plugin itself travels with the shared state directory, but Playwright's browser lives under the Gateway user's `$HOME/.cache`, which is normally local disk — so a node that has never had it installed silently degrades every reply to text the moment the resource moves there. Architectures may differ across the set (an arm64 node needs its own arm64 build); `playwright install` picks the right one per node.
+
 The CJK fonts are not optional on Linux: without them every Chinese label in a chart or table renders as tofu (□□□) in the delivered image, and a picture cannot fall back to another font the way a web page can. Maths needs nothing extra — KaTeX's stylesheet and all twenty of its font faces are inlined into the rendered page.
 
 ### Checking it loaded
 
+Check the Gateway's own startup line, not the CLI:
+
 ```sh
-openclaw plugins inspect ai-gui --runtime --json
+journalctl -u openclaw | grep "http server listening"
 ```
 
-Expect `"status": "loaded"`, `"activated": true`, `"hookCount": 2`, and `aigui_render` in `toolNames`. If Chromium is missing the plugin still loads and every reply is delivered as plain text — the failure is logged once, not per message, so check the Gateway log rather than waiting for it to repeat.
+`ai-gui` must appear in the plugin list it prints — that list is the Gateway's loaded plugins, and it is the only place that answers the question.
+
+`openclaw plugins inspect ai-gui --runtime --json` is worth running for `aigui_render` in `toolNames`, but do not read its `"status": "loaded"`, `"activated": true` and `"hookCount": 2` as proof: the CLI activates the plugin inside its **own** process to answer, so it reports all three even when the Gateway never activated it and every reply is going out with the fence intact. A plugin whose manifest lacks `activation.onStartup` is loaded but not activated at Gateway start, and the hooks it registers later in the agent runtime never reach the global hook runner that `reply_payload_sending` dispatches through. This manifest sets it; a fork that drops it will fail exactly this way, silently.
+
+If Chromium is missing the plugin still loads and every reply is delivered as plain text — the failure is logged once, not per message, so check the Gateway log rather than waiting for it to repeat.
+
+### The WeChat channel needs one more thing (OpenClaw ≤ 2026.7.1)
+
+`reply_payload_sending` is dispatched by OpenClaw's core delivery pipeline — but the `@tencent-weixin/openclaw-weixin` channel plugin (verified at 2.4.6) runs its own inbound→agent→send pipeline through `dispatchReplyFromConfig`, an entry point that never installs this hook. Core only installs it in the `dispatchInboundMessage*` entry points. The result: on the one channel this plugin exists for, the hook never fires, silently.
+
+Until that is fixed upstream, the channel plugin's `deliver` callback (in `dist/src/messaging/process-message.js`) needs a small patch: call `getGlobalHookRunner()?.runReplyPayloadSending({ payload, kind: info?.kind ?? "final", channel: "openclaw-weixin", runId, context }, context)` before it extracts `text`/`mediaUrl` from the payload, honour `result.cancel`, and replace the payload with `result.payload` when set — the result is a `{ payload, cancel, reason }` envelope, not a payload. The callback already receives `(payload, info)`; the stock code just ignores the second argument. Note the channel sends only `payload.mediaUrls[0]`, so one picture per reply reaches WeChat.
+
+Do not try to verify any of this with `openclaw agent --deliver`: that CLI path delivers through the agent-command pipeline, which also skips the hook. Only a real inbound WeChat message exercises the channel pipeline; success is the channel log's `outbound:` line flipping from `mediaUrl=none` to `media sent OK`.
 
 ## What it does
 

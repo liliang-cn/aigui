@@ -1,5 +1,11 @@
 # @ai-gui/devtools
 
+## 0.32.0
+
+### Patch Changes
+
+- @ai-gui/core@0.32.0
+
 ## 0.31.0
 
 ### Patch Changes

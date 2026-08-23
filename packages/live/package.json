@@ -1,8 +1,14 @@
 {
   "name": "@ai-gui/live",
-  "version": "0.31.0",
+  "version": "0.32.0",
   "description": "WebSocket client for AIGUI's card layer — a backend drives cards and receives actions, with no frontend project.",
-  "keywords": ["websocket", "liveview", "server-driven-ui", "cards", "aigui"],
+  "keywords": [
+    "websocket",
+    "liveview",
+    "server-driven-ui",
+    "cards",
+    "aigui"
+  ],
   "license": "MIT",
   "author": "Liang Li <ll_faw@hotmail.com>",
   "repository": {
@@ -14,18 +20,32 @@
   "bugs": "https://github.com/liliang-cn/aigui/issues",
   "type": "module",
   "sideEffects": false,
-  "engines": { "node": ">=18" },
+  "engines": {
+    "node": ">=18"
+  },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
-      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
-  "files": ["dist", "README.md", "LICENSE"],
-  "publishConfig": { "access": "public" },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsdown",
     "test": "pnpm --dir ../.. exec vitest run --project live",
