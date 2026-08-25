@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-physics",
-  "version": "0.32.0",
+  "version": "0.33.0",
   "description": "Force and vector diagrams for teaching mechanics, rendered as SVG from a declarative block.",
   "keywords": [
     "llm",

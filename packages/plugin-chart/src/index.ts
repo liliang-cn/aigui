@@ -138,15 +138,23 @@ const loadGl = () => (glReady ??= import("echarts-gl"))
 const PROMPT: MessageBundle = {
   en: {
     spec: [
-      "Charts (fenced): ```chart <ECharts option JSON>```.",
-      'Example: ```chart {"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[1,2]}]}```',
+      "Charts: a fenced `chart` block with the ECharts option JSON on the lines inside it.",
+      "",
+      "```chart",
+      '{"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[1,2]}]}',
+      "```",
+      "",
       "When gl mode is enabled, 3D types are available: bar3D, scatter3D, surface, line3D, globe, map3D (WebGL, live-only).",
     ].join("\n"),
   },
   "zh-CN": {
     spec: [
-      "图表（围栏代码块）：```chart <ECharts option JSON>```。",
-      '示例：```chart {"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[1,2]}]}```',
+      "图表：一个 `chart` 围栏代码块，ECharts option JSON 写在围栏里面的行上。",
+      "",
+      "```chart",
+      '{"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[1,2]}]}',
+      "```",
+      "",
       "启用 gl 模式后可用 3D 类型：bar3D、scatter3D、surface、line3D、globe、map3D（WebGL，仅实时渲染）。",
     ].join("\n"),
   },

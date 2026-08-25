@@ -475,7 +475,12 @@ export function renderPhysicsSVG(diagram: PhysicsDiagram, options: PhysicsOption
 export function physicsPromptSpec(options: PhysicsOptions = {}): string {
   const limits = { ...DEFAULTS, ...options }
   return [
-    "Force and vector diagrams (one fenced block): ```physics <strict JSON>```.",
+    "Force and vector diagrams: one fenced block, strict JSON on the lines inside it.",
+    "",
+    "```physics",
+    "<strict JSON>",
+    "```",
+    "",
     'Root: {"version":1,"title":"..."?,"view":[minX,minY,maxX,maxY]?,"bodies":[...]?,"surfaces":[...]?,"vectors":[...]?,"angles":[...]?}. No unknown fields.',
     'Body: {"at":[x,y],"shape":"box|circle|point"?,"width":n?,"height":n?,"radius":n?,"rotation":deg?,"label":"..."?}.',
     'Surface: {"from":[x,y],"to":[x,y],"hatch":true?,"label":"..."?} — hatching marks the solid side.',

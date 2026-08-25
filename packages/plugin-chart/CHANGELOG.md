@@ -1,5 +1,31 @@
 # @ai-gui/plugin-chart
 
+## 0.33.0
+
+### Minor Changes
+
+- Prompt specs teach the block shape that actually parses.
+
+  Eleven specs demonstrated their block on a single line — ` ```list {"items":[…]}``` `
+  — and a model that copies that exactly produces no block at all. A fence's
+  info string may not contain backticks, so CommonMark reads the line as an
+  inline code span: the reader gets raw JSON running through the middle of a
+  sentence, and an empty code block where the list should have been. The
+  mistake is invisible from the model's side, which emitted precisely what it
+  was shown.
+
+  Every spec now shows the multi-line form, `buildSystemPrompt` states the rule
+  once before the specs it governs (new export: `fencingRule`), and a test lints
+  every package's model-facing text so the shape cannot come back.
+
+  Hosts that assemble guidance themselves rather than calling `buildSystemPrompt`
+  should prepend `fencingRule(locale)`.
+
+### Patch Changes
+
+- Updated dependencies
+  - @ai-gui/core@0.33.0
+
 ## 0.32.0
 
 ### Patch Changes

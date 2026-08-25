@@ -438,7 +438,12 @@ function viewWithCallouts(
 export function figurePromptSpec(options: FigureOptions = {}): string {
   const limits = { ...DEFAULTS, ...options }
   return [
-    "Labelled figures (one fenced block): ```figure <strict JSON>```.",
+    "Labelled figures: one fenced block, strict JSON on the lines inside it.",
+    "",
+    "```figure",
+    "<strict JSON>",
+    "```",
+    "",
     'Root: {"version":1,"title":"..."?,"caption":"..."?,"view":[minX,minY,maxX,maxY]?,"parts":[...]}. No unknown fields.',
     'Part: {"shape":"ellipse|rect|polygon|point"?,"at":[x,y],"width":n?,"height":n?,"points":[[x,y],...]?,"rotation":deg?,"fill":"none|tint|solid"?,"label":"..."?,"note":"..."?,"labelAt":[x,y]?}.',
     'Give "at" for ellipse, rect and point; give "points" (three or more) for polygon. Default shape is ellipse, default fill is tint.',
@@ -446,7 +451,7 @@ export function figurePromptSpec(options: FigureOptions = {}): string {
     "Draw containers before the parts inside them, so an enclosing outline does not cover them.",
     "y increases upwards, the same convention as ```physics.",
     `Figure source is local JSON only, at most ${limits.maxSourceBytes} UTF-8 bytes. Never emit URLs, scripts, remote resources, HTML, or executable content.`,
-    "Use this when naming the parts is the lesson: cell organelles, a leaf's layers, apparatus, a labelled cross-section. Use ```mermaid for boxes joined by arrows and ```chart for data.",
+    "Use this when naming the parts is the lesson: cell organelles, a leaf's layers, apparatus, a labelled cross-section. Use a `mermaid` block for boxes joined by arrows and a `chart` block for data.",
   ].join("\n")
 }
 

@@ -216,7 +216,9 @@ describe("plugin-figure", () => {
     expect(spec).toContain("```figure")
     expect(spec).toContain("y increases upwards")
     // A model reaching for a labelled diagram will otherwise reach for mermaid.
-    expect(spec).toContain("```mermaid")
+    // Named, not fenced: a second opening fence in this spec would read as a
+    // second block to emit rather than a pointer to a different plugin.
+    expect(spec).toContain("`mermaid` block")
     expect(spec).toContain("Never emit URLs")
   })
 })

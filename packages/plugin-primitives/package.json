@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-primitives",
-  "version": "0.32.0",
+  "version": "0.33.0",
   "description": "Framework-neutral primitive UI cards (list/table/key-value/layout) for AIGUI.",
   "keywords": [
     "llm",

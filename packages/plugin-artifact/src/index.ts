@@ -302,7 +302,7 @@ export function artifactPromptSpec(store?: ArtifactStore): string {
     ? "Current artifacts: none."
     : `Current artifacts:\n${records.map((record) => `- ${record.id}: ${record.kind}, revision ${record.revision}, title ${JSON.stringify(record.title)}`).join("\n")}`
   return [
-    "Artifacts use only fenced JSON commands named exactly ```artifact-create and ```artifact-update.",
+    "Artifacts use only fenced JSON commands, named exactly `artifact-create` and `artifact-update`.",
     "Create schema: {version:1, operationId, artifact:{id,title,filename,kind:text|code|markdown|json,language?,content}}. Do not send a create revision.",
     "Update schema: {version:1, operationId,id,baseRevision,content,title?,filename?,language?}. Updates replace full content; kind is immutable. There is no model delete command.",
     "Use a new safe operationId for each intended mutation. Never claim success; the application commits commands only after validation.",

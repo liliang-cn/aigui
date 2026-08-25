@@ -220,7 +220,12 @@ export interface FormPluginOptions {
  */
 export function formPromptSpec(): string {
   return [
-    "Forms (fenced): ```form <safe form JSON>```.",
+    "Forms: one fenced block, the safe form JSON on the lines inside it.",
+    "",
+    "```form",
+    "<safe form JSON>",
+    "```",
+    "",
     "Fields: text, textarea, number, date, select, radio, checkbox (one box, yes or no), checkboxes (several answers to one question), audio (a spoken answer, recorded in the browser). Constraints: required, minLength, maxLength, pattern, min, max; on checkboxes, minSelected and maxSelected; on audio, maxSeconds.",
     'A question with more than one right answer is `checkboxes` with `options`, never radio (they exclude each other) and never a text box (the format has to be guessed). Its value is the chosen option values, and its `expect` is the array of every correct one: {"name":"answer","type":"checkboxes","label":"...","options":[{"label":"A. ...","value":"A"}],"expect":["A","C"]}.',
     'Ask for `audio` when a written answer cannot carry what is being assessed — pronunciation, intonation, fluency, reading aloud: {"name":"reading","type":"audio","label":"读出这句：Ich möchte über mein Projekt sprechen","required":true,"maxSeconds":20}. Its value is the recording itself, so never give it `expect` (two recordings are never equal; the application judges it) and never ask the person to type what they said instead — a spelling is not a pronunciation.',

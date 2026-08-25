@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/live",
-  "version": "0.32.0",
+  "version": "0.33.0",
   "description": "WebSocket client for AIGUI's card layer — a backend drives cards and receives actions, with no frontend project.",
   "keywords": [
     "websocket",

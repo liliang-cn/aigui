@@ -1,5 +1,11 @@
 # @ai-gui/openclaw
 
+## 0.33.0
+
+### Patch Changes
+
+- @ai-gui/image@0.33.0
+
 ## 0.32.0
 
 ### Patch Changes

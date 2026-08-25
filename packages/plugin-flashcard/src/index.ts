@@ -370,7 +370,12 @@ function mountDeck(
  */
 export function flashcardPromptSpec(): string {
   return [
-    "Flashcards (fenced): ```flashcards <safe deck JSON>```.",
+    "Flashcards: one fenced block, the safe deck JSON on the lines inside it.",
+    "",
+    "```flashcards",
+    "<safe deck JSON>",
+    "```",
+    "",
     'Deck: {"version":1,"id":"...","reveal":"hidden|immediate"?,"gradeAction":"..."?,"title":"..."?,"cards":[{"id":"...","front":"...","back":"...","hint":"..."?,"example":"..."?}]}.',
     "`hidden` (the default) shows one card at a time and asks the person to say how it went before showing the answer — use it to revise. `immediate` shows both sides of every card at once and grades nothing — use it when they are meeting these for the first time.",
     "`front` is what is being asked and `back` is what it is checked against; a `hint` is shown with the front and must never give the answer away. `id` on each card is what a grade is reported against, so use the host's own ids.",

@@ -42,14 +42,24 @@ export const citationCss = [
 const PROMPT: MessageBundle = {
   en: {
     spec: [
-      "Sources (fenced JSON): ```sources {\"sources\":[{\"id\":\"safe-id\",\"title\":\"Source title\",\"url\":\"https://example.com/page\",\"citedText\":\"Optional exact supporting text\"}]} ```.",
+      "Sources: a fenced `sources` block with the JSON on the lines inside it.",
+      "",
+      "```sources",
+      '{"sources":[{"id":"safe-id","title":"Source title","url":"https://example.com/page","citedText":"Optional exact supporting text"}]}',
+      "```",
+      "",
       "Use 1-100 sources. IDs must be unique and contain only letters, numbers, underscores, or hyphens, starting with a letter.",
       "Use HTTPS URLs unless the application explicitly permits an HTTP host. Never emit HTML, actions, scripts, handlers, credentials, or extra fields.",
     ].join("\n"),
   },
   "zh-CN": {
     spec: [
-      "来源（围栏 JSON）：```sources {\"sources\":[{\"id\":\"safe-id\",\"title\":\"来源标题\",\"url\":\"https://example.com/page\",\"citedText\":\"可选：原文摘录\"}]} ```。",
+      "来源：一个 `sources` 围栏代码块，JSON 写在围栏里面的行上。",
+      "",
+      "```sources",
+      '{"sources":[{"id":"safe-id","title":"来源标题","url":"https://example.com/page","citedText":"可选：原文摘录"}]}',
+      "```",
+      "",
       "来源数量 1-100 条。id 必须唯一，只能包含字母、数字、下划线或连字符，且以字母开头。",
       "除非应用明确允许 HTTP，一律使用 HTTPS 链接。禁止输出 HTML、动作、脚本、事件回调、凭据或额外字段。",
     ].join("\n"),

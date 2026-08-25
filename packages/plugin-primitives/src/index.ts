@@ -35,14 +35,26 @@ function renderLayout(node: ASTNode): RenderOutput {
 const PROMPT: MessageBundle = {
   en: {
     spec: [
-      "Primitive UI blocks (fenced): ```list {\"items\":[...]}```; ```table {\"headers\":[...],\"rows\":[[...]]}```;",
-      "```key-value {\"pairs\":{\"k\":\"v\"}}```; ```layout {\"direction\":\"row|column\",\"items\":[...]}```.",
+      "Primitive UI blocks. Each is a fenced block with its JSON on the lines inside the fence:",
+      "",
+      "```list",
+      '{"items":["first","second"]}',
+      "```",
+      "",
+      "The same shape for `table` ({\"headers\":[...],\"rows\":[[...]]}), `key-value`",
+      '({"pairs":{"k":"v"}}) and `layout` ({"direction":"row|column","items":[...]}).',
     ].join("\n"),
   },
   "zh-CN": {
     spec: [
-      "基础 UI 块（围栏代码块）：```list {\"items\":[...]}```；```table {\"headers\":[...],\"rows\":[[...]]}```；",
-      "```key-value {\"pairs\":{\"k\":\"v\"}}```；```layout {\"direction\":\"row|column\",\"items\":[...]}```。",
+      "基础 UI 块。每个都是围栏代码块，JSON 写在围栏里面的行上：",
+      "",
+      "```list",
+      '{"items":["第一项","第二项"]}',
+      "```",
+      "",
+      "`table`（{\"headers\":[...],\"rows\":[[...]]}）、`key-value`（{\"pairs\":{\"k\":\"v\"}}）、",
+      '`layout`（{"direction":"row|column","items":[...]}）用同样的写法。',
     ].join("\n"),
   },
 }

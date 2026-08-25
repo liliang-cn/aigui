@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-artifact",
-  "version": "0.32.0",
+  "version": "0.33.0",
   "description": "Secure framework-neutral artifact workspaces for AIGUI.",
   "keywords": [
     "llm",

@@ -459,7 +459,12 @@ async function createOutput(node: ASTNode, options: ResolvedOptions): Promise<Re
 export function moleculePromptSpec(options: MoleculeOptions = {}): string {
   const resolved = resolveOptions(options)
   return [
-    "Molecules (one complete-gated fenced block): ```molecule <strict JSON>```.",
+    "Molecules: one complete-gated fenced block, strict JSON on the lines inside it.",
+    "",
+    "```molecule",
+    "<strict JSON>",
+    "```",
+    "",
     'Exact root fields: {"version":1,"format":"smiles|molfile","source":"...","view":"2d|3d","style":"ball-and-stick|space-filling"?,"atomLabels":"standard|all"?,"highlight":{"atoms":[0],"bonds":[0]}?}. No unknown fields.',
     "SMILES supports 2d only. Molfile supports 2d and 3d; 3d requires genuine finite non-flat z coordinates.",
     `Source is local text only and must be at most ${resolved.maxSourceBytes} UTF-8 bytes. Atom and bond indexes are zero-based unique nonnegative integers.`,

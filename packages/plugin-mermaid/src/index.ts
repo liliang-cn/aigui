@@ -46,14 +46,24 @@ function errorHtml(): RenderOutput {
 const PROMPT: MessageBundle = {
   en: {
     spec: [
-      "Diagrams (fenced): ```mermaid <Mermaid diagram syntax>```.",
+      "Diagrams: one fenced block, the Mermaid diagram syntax on the lines inside it.",
+      "",
+      "```mermaid",
+      "<Mermaid diagram syntax>",
+      "```",
+      "",
       "Supported examples include flowchart, sequenceDiagram, classDiagram (UML), stateDiagram-v2, erDiagram, journey, gantt, pie, mindmap, timeline, and gitGraph.",
       "Use concise labels and valid Mermaid syntax. Never emit HTML, scripts, click handlers, URLs, initialization directives, remote resources, or credentials.",
     ].join("\n"),
   },
   "zh-CN": {
     spec: [
-      "图示（围栏代码块）：```mermaid <Mermaid 图示语法>```。",
+      "图示：一个围栏代码块，Mermaid 图示语法写在围栏里面的行上。",
+      "",
+      "```mermaid",
+      "<Mermaid 图示语法>",
+      "```",
+      "",
       "可用类型包括 flowchart、sequenceDiagram、classDiagram（UML）、stateDiagram-v2、erDiagram、journey、gantt、pie、mindmap、timeline、gitGraph。",
       "标签保持简洁，语法必须合法。禁止输出 HTML、脚本、点击回调、URL、初始化指令、远程资源或任何凭据。",
     ].join("\n"),

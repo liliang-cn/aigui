@@ -147,7 +147,12 @@ export function renderProgressHTML(steps: ProgressStep[]): string {
 export function progressPromptSpec(options: ProgressOptions = {}): string {
   const limits = { ...DEFAULTS, ...options }
   return [
-    "Progress for a long turn (fenced): ```progress <strict JSON>```.",
+    "Progress for a long turn: one fenced block, strict JSON on the lines inside it.",
+    "",
+    "```progress",
+    "<strict JSON>",
+    "```",
+    "",
     'One step: {"version":1,"id":"search","label":"检索资料","state":"running","detail":"..."?,"percent":40?}.',
     'Several at once: {"version":1,"steps":[{...},{...}]}. No unknown fields.',
     'State is one of pending, running, done, failed, skipped; it defaults to running.',
