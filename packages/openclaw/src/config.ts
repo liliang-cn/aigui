@@ -11,7 +11,7 @@ export interface AiguiPluginConfig {
   idleShutdownMs: number
 }
 
-const ALL_BLOCKS: RenderableKind[] = ["chart", "mermaid", "dashboard", "card", "math", "table"]
+const ALL_BLOCKS: RenderableKind[] = ["chart", "mermaid", "dashboard", "card", "math", "table", "scene", "gravity", "bigscreen", "molecule"]
 
 const DEFAULTS: AiguiPluginConfig = {
   // WeChat only. Telegram and Slack already render markdown; turning pictures on for them is an

@@ -1,4 +1,5 @@
 import { baseCss, collectPluginStyles } from "@ai-gui/core"
+import { moleculeCss } from "@ai-gui/plugin-molecule"
 import { imagePlugins } from "../plugins"
 import { katexCss } from "./fonts"
 
@@ -19,6 +20,10 @@ export interface PageHtmlOptions {
  * plugin animate on entry, and an animating element is a coin flip between a finished picture and
  * a half-faded one. The font stack names CJK families explicitly: a screenshot has no fallback
  * chain to fall back to at read time, so a missing face is permanent tofu in the delivered image.
+ *
+ * The molecule plugin leaves its stylesheet to the host, so it is included here, and its Reset
+ * button — a control for a reader who can turn the molecule — is hidden from a picture nobody can
+ * turn.
  */
 export function pageHtml(options: PageHtmlOptions = {}): string {
   const theme = THEMES[options.theme ?? "light"]
@@ -30,9 +35,11 @@ export function pageHtml(options: PageHtmlOptions = {}): string {
 *,*::before,*::after{animation:none!important;transition:none!important}
 html,body{margin:0;padding:0;background:${theme.bg};color:${theme.fg}}
 body{font-family:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC","Noto Sans SC",system-ui,sans-serif;font-size:16px;line-height:1.6}
-#root{display:inline-block;padding:16px;box-sizing:border-box;max-width:${options.width ?? 720}px}
+#root{display:inline-block;padding:16px;box-sizing:border-box;width:${options.width ?? 720}px;max-width:${options.width ?? 720}px}
 ${baseCss}
 ${katexCss()}
+${moleculeCss}
+[data-aigui-molecule-reset]{display:none}
 ${pluginCss}
 </style></head><body><div id="root"></div></body></html>`
 }

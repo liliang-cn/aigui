@@ -62,6 +62,11 @@
     "@ai-gui/plugin-mermaid": "workspace:*",
     "@ai-gui/plugin-katex": "workspace:*",
     "@ai-gui/plugin-dashboard": "workspace:*",
+    "@ai-gui/plugin-scene": "workspace:*",
+    "@ai-gui/plugin-gravity": "workspace:*",
+    "@ai-gui/plugin-bigscreen": "workspace:*",
+    "@ai-gui/plugin-molecule": "workspace:*",
+    "echarts-gl": "^2.0.9",
     "katex": "^0.16.9"
   },
   "peerDependencies": {

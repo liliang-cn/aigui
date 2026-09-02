@@ -7,7 +7,7 @@ describe("resolveConfig", () => {
   })
 
   it("defaults to every block family", () => {
-    expect(resolveConfig(undefined).blocks).toEqual(["chart", "mermaid", "dashboard", "card", "math", "table"])
+    expect(resolveConfig(undefined).blocks).toEqual(["chart", "mermaid", "dashboard", "card", "math", "table", "scene", "gravity", "bigscreen", "molecule"])
   })
 
   it("carries the documented numeric defaults", () => {

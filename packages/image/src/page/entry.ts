@@ -5,7 +5,7 @@ declare global {
   interface Window {
     __aiguiRenderBlock: (
       source: string,
-      options?: { width?: number; theme?: string; quietMs?: number },
+      options?: { width?: number; theme?: string; quietMs?: number; canvasSettleMs?: number },
     ) => Promise<{ width: number; height: number; failed: boolean }>
   }
 }
@@ -63,6 +63,15 @@ window.__aiguiRenderBlock = async (source, options = {}) => {
   await document.fonts.ready
   await frame()
   await frame()
+  // A canvas is a WebGL or 2D context that paints on its own clock: three.js and 3Dmol draw on
+  // the next animation frame, ECharts-GL a few frames after it has read the element's size.
+  // None of that is a DOM mutation, so the quiet watch above cannot see it. Software GL in a
+  // headless browser is slow, too — so give a canvas a moment, and then a moment more.
+  if (root.querySelector("canvas")) {
+    await new Promise((resolve) => window.setTimeout(resolve, options.canvasSettleMs ?? 600))
+    await frame()
+    await frame()
+  }
   const box = root.getBoundingClientRect()
   // A plugin that threw leaves an empty host behind. Saying so lets the caller keep the block as
   // text rather than sending a blank picture, which is the worse of the two failures.

@@ -16,7 +16,7 @@ import { type BlockSelection, DEFAULT_KINDS, DEFAULT_MAX, type RenderableKind } 
  * fence to four backticks whenever the payload contains three.
  */
 const TRIGGER =
-  /^ {0,3}(?:(?:`{3,}|~{3,})[ \t]*(?:chart|mermaid|dashboard|card:)|\$\$|\||:?-+:?[ \t]*\|)/m
+  /^ {0,3}(?:(?:`{3,}|~{3,})[ \t]*(?:chart|mermaid|dashboard|scene|gravity|bigscreen|molecule|card:)|\$\$|\||:?-+:?[ \t]*\|)/m
 
 export function hasTrigger(markdown: string): boolean {
   return TRIGGER.test(markdown)
@@ -36,8 +36,10 @@ export interface SelectOptions {
  * registering a renderer, and tables are plain markdown-it, so both arrive as generic `html`
  * nodes carrying already-rendered markup. They have to be recognised by what is in that markup.
  */
+const FENCED: ReadonlySet<string> = new Set(["chart", "mermaid", "dashboard", "scene", "gravity", "bigscreen", "molecule"])
+
 function classify(node: ASTNode): RenderableKind | undefined {
-  if (node.type === "chart" || node.type === "mermaid" || node.type === "dashboard") {
+  if (FENCED.has(node.type)) {
     return node.complete ? (node.type as RenderableKind) : undefined
   }
   if (node.type === "card") return node.card?.complete && node.card.valid ? "card" : undefined

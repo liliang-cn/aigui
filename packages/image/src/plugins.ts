@@ -1,15 +1,22 @@
 import type { AIGuiPlugin } from "@ai-gui/core"
+import { bigscreen } from "@ai-gui/plugin-bigscreen"
 import { chart } from "@ai-gui/plugin-chart"
 import { dashboard } from "@ai-gui/plugin-dashboard"
+import { gravity } from "@ai-gui/plugin-gravity"
 import { katex } from "@ai-gui/plugin-katex"
 import { mermaid } from "@ai-gui/plugin-mermaid"
+import { molecule } from "@ai-gui/plugin-molecule"
+import { scene } from "@ai-gui/plugin-scene"
 import { DEFAULT_WIDTH } from "./types"
 
 /**
  * The plugins an image render understands.
  *
  * `interactive: false` is not a preference. It makes plugin-chart return an SSR SVG in the same
- * tick rather than mounting a live ECharts instance with animations to wait out.
+ * tick rather than mounting a live ECharts instance with animations to wait out. The same goes
+ * for `animate: false` on gravity and the big screen: a picture is one moment, and the moment
+ * wanted is the finished one — the number counted up, the bar grown, the bodies at the end of
+ * their run — not whichever frame the screenshot happened to land on.
  *
  * The chart is sized to the page rather than left at the plugin's 600x400 default, which would
  * otherwise sit in a 720px column with a band of dead space beside it.
@@ -26,5 +33,9 @@ export function imagePlugins(width: number = DEFAULT_WIDTH): AIGuiPlugin[] {
     // bundle imports it too.
     katex({ css: "" }),
     dashboard(),
+    scene({ height: Math.round(inner * 0.6) }),
+    gravity({ animate: false, width: inner, height: Math.round(inner * 0.625) }),
+    bigscreen({ animate: false }),
+    molecule({ width: inner, height: Math.round(inner * 0.6) }),
   ]
 }

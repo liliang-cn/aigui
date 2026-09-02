@@ -25,6 +25,13 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
     // sits above both failure modes and comfortably below the real thing.
     ["math", "$$\n\\frac{a}{b} = c\n$$", 80],
     ["table", "| 城市 | 温度 |\n| --- | --- |\n| 东京 | 24 |\n| 上海 | 31 |", 80],
+    // The four WebGL-or-SVG additions. A scene's canvas is 0.6 × the inner width tall, a
+    // gravity figure is drawn at 0.625 ×, a molecule in 3D at 0.6 ×; the big screen is a grid
+    // of panels and a single row of it already clears 200px.
+    ["scene", '```scene\n{"objects":[{"shape":"box","size":[2,1,1],"anchor":"bottom","color":"wheat","label":"crate"},{"shape":"sphere","radius":0.5,"position":[0,1,0],"anchor":"bottom","color":"blue"}],"caption":"a crate and a ball"}\n```', 380],
+    ["gravity", '```gravity\n{"units":"astronomical","bodies":[{"id":"Sun","mass":1},{"id":"Earth","mass":3e-6,"orbit":{"around":"Sun","distance":1}}],"duration":1,"caption":"one year"}\n```', 400],
+    ["bigscreen", '```bigscreen\n{"title":"Wall","panels":[{"kind":"kpi","title":"Revenue","value":12843000,"prefix":"¥","delta":0.12,"span":6},{"kind":"gauge","title":"Target","value":82,"unit":"%","span":6},{"kind":"chart3d","title":"3D","span":12,"type":"bar3D","xAxis":["a","b"],"yAxis":["x","y"],"data":[[0,0,1],[1,0,2],[0,1,3],[1,1,4]]}]}\n```', 500],
+    ["molecule", '```molecule\n{"version":1,"format":"smiles","source":"Cn1cnc2c1c(=O)n(C)c(=O)n2C","view":"3d","style":"ball-and-stick"}\n```', 380],
   ]
 
   it.each(cases)("draws a %s to a non-trivial PNG", async (kind, source, minHeight) => {
@@ -81,6 +88,20 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
     const result = await renderMarkdownToImages(source, { outDir, timeoutMs: 30_000 })
     expect(result.text).toBe("Here is the breakdown.\n\nLet me know if you want it by month.")
     expect(result.images).toHaveLength(1)
+  }, 60_000)
+
+  /**
+   * A WebGL canvas that failed to get a context is still a canvas — the element is there, its
+   * size is right, and it is blank. Size alone would pass it. A drawn scene has a grid, a crate
+   * and a ball on it, and compresses to far more than a flat rectangle does.
+   */
+  it("actually paints WebGL rather than screenshotting an empty canvas", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-webgl-"))
+    const source = '```scene\n{"objects":[{"shape":"box","size":[2,1,1],"anchor":"bottom","color":"wheat"},{"shape":"torus","radius":1,"tube":0.3,"position":[0,2,0],"color":"red"}]}\n```'
+    const result = await renderMarkdownToImages(source, { outDir, timeoutMs: 30_000 })
+    expect(result.images).toHaveLength(1)
+    const info = await stat(result.images[0].path)
+    expect(info.size).toBeGreaterThan(20_000)
   }, 60_000)
 
   it("draws a dark chart when asked for one", async () => {

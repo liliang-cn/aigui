@@ -1,7 +1,7 @@
 {
   "id": "ai-gui",
   "name": "AIGUI",
-  "description": "Renders charts, diagrams, math, tables, cards and dashboards as images for picture-only channels.",
+  "description": "Renders charts, diagrams, math, tables, cards, dashboards, 3D scenes, orbits, data walls and molecules as images for picture-only channels.",
   "activation": {
     "onStartup": true
   },
@@ -34,7 +34,11 @@
             "dashboard",
             "card",
             "math",
-            "table"
+            "table",
+            "scene",
+            "gravity",
+            "bigscreen",
+            "molecule"
           ]
         }
       },

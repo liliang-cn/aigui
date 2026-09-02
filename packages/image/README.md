@@ -1,8 +1,10 @@
 # @ai-gui/image
 
-Render [AIGUI](../../README.md) markdown blocks — ECharts charts, Mermaid diagrams, KaTeX math, tables, cards, dashboards — to PNG, by running the real `@ai-gui/vanilla` renderer in a headless Chromium and screenshotting each block.
+Render [AIGUI](../../README.md) markdown blocks — ECharts charts, Mermaid diagrams, KaTeX math, tables, cards, dashboards, 3D scenes, orbits, data walls and molecules — to PNG, by running the real `@ai-gui/vanilla` renderer in a headless Chromium and screenshotting each block.
 
 Use it where a channel carries pictures but not markup: WeChat, email, an image-only webhook.
+
+The 3D families (`scene`, `molecule` in 3D, the big screen's 3D and globe panels) draw with WebGL. Headless Chromium has no GPU, so the browser is launched with SwiftShader — software WebGL — enabled; it is slower than a real GPU, which is why the per-block budget is ten seconds and a canvas is given a moment to paint before the screenshot. Anything animated is drawn at its finished state: the counted number, the grown bar, the bodies at the end of their run.
 
 ## Install
 
@@ -45,7 +47,7 @@ Blocks that fail to render are left in `text` as their original source, so a bro
 ## Options
 
 - `outDir` — where PNGs are written (required).
-- `kinds` — which families to draw. Default: all six.
+- `kinds` — which families to draw. Default: all ten — `chart`, `mermaid`, `dashboard`, `card`, `math`, `table`, `scene`, `gravity`, `bigscreen`, `molecule`.
 - `theme` — `"light"` (default) or `"dark"`.
 - `width` — viewport width in CSS pixels. Default 720.
 - `scale` — device pixels per CSS pixel. Default 2, which is what a phone screen wants.

@@ -1,5 +1,20 @@
-/** A block family that can be turned into a picture. */
-export type RenderableKind = "chart" | "mermaid" | "dashboard" | "card" | "math" | "table"
+/**
+ * A block family that can be turned into a picture.
+ *
+ * The first six are flat. `scene`, `molecule` and `bigscreen` draw on WebGL, which headless
+ * Chromium provides in software; `gravity` is SVG with the animation switched off.
+ */
+export type RenderableKind =
+  | "chart"
+  | "mermaid"
+  | "dashboard"
+  | "card"
+  | "math"
+  | "table"
+  | "scene"
+  | "gravity"
+  | "bigscreen"
+  | "molecule"
 
 /** One block chosen for rendering, with the source range it occupies. */
 export interface BlockSelection {
@@ -39,7 +54,7 @@ export interface RenderResult {
   images: RenderedImage[]
 }
 
-export const DEFAULT_KINDS: RenderableKind[] = ["chart", "mermaid", "dashboard", "card", "math", "table"]
+export const DEFAULT_KINDS: RenderableKind[] = ["chart", "mermaid", "dashboard", "card", "math", "table", "scene", "gravity", "bigscreen", "molecule"]
 export const DEFAULT_WIDTH = 720
 export const DEFAULT_SCALE = 2
 export const DEFAULT_MAX = 6

@@ -1,6 +1,6 @@
 # @ai-gui/openclaw
 
-An [OpenClaw](https://openclaw.ai) plugin that renders [AIGUI](../../README.md) blocks as images, so charts, diagrams, formulas, tables, cards and dashboards survive a channel that only carries pictures — WeChat above all.
+An [OpenClaw](https://openclaw.ai) plugin that renders [AIGUI](../../README.md) blocks as images, so charts, diagrams, formulas, tables, cards, dashboards, 3D scenes, orbits, data walls and molecules survive a channel that only carries pictures — WeChat above all.
 
 WeChat messages are text or media, nothing else. Without this, a ` ```chart ` fence arrives as a wall of ECharts JSON.
 
@@ -92,7 +92,7 @@ A drawing that fails never costs the answer: the reply is delivered as written, 
 All keys are optional and fall back to the defaults shown above if omitted or malformed — a typo in the config file leaves that one setting at its default rather than stopping replies from being delivered.
 
 - `channels` — which OpenClaw channel ids get pictures. Defaults to WeChat alone (`openclaw-weixin`). Telegram and Slack already render markdown well, so turning pictures on for them is a decision an operator states rather than one an install makes.
-- `blocks` — which block kinds to draw. Defaults to all six: `chart`, `mermaid`, `dashboard`, `card`, `math`, `table`.
+- `blocks` — which block kinds to draw. Defaults to all ten: `chart`, `mermaid`, `dashboard`, `card`, `math`, `table`, `scene`, `gravity`, `bigscreen`, `molecule`. The last four arrived with 0.35: a 3D scene, an orbit or collision figure, a data wall, and a molecule, each as one still picture.
 - `theme` — `"light"` (default) or `"dark"`.
 - `width` — viewport width in CSS pixels. Default 720.
 - `scale` — device pixels per CSS pixel. Default 2, which is what a phone screen wants.

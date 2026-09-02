@@ -10,6 +10,12 @@ describe("hasTrigger", () => {
     expect(hasTrigger("```card:weather\n{}\n```")).toBe(true)
   })
 
+  it("finds the 3D and physics fences too", () => {
+    for (const name of ["scene", "gravity", "bigscreen", "molecule"]) {
+      expect(hasTrigger(`\`\`\`${name}\n{}\n\`\`\``), name).toBe(true)
+    }
+  })
+
   it("finds display math and tables", () => {
     expect(hasTrigger("text\n\n$$\nx^2\n$$\n")).toBe(true)
     expect(hasTrigger("| a | b |\n| - | - |\n| 1 | 2 |")).toBe(true)
@@ -40,6 +46,17 @@ const MATH = "$$\nx^2 + y^2 = z^2\n$$"
 const TABLE = "| a | b |\n| - | - |\n| 1 | 2 |"
 
 describe("selectRenderableBlocks", () => {
+  it("selects the scene, gravity, bigscreen and molecule fences by their node type", () => {
+    const source = [
+      '```scene\n{"objects":[{"shape":"box","size":[1,1,1]}]}\n```',
+      '```gravity\n{"units":"toy","bodies":[{"id":"A","mass":1}],"duration":1}\n```',
+      '```bigscreen\n{"panels":[{"kind":"kpi","value":1}]}\n```',
+      '```molecule\n{"version":1,"format":"smiles","source":"CCO","view":"2d"}\n```',
+    ].join("\n\n")
+    expect(selectRenderableBlocks(source).map((s) => s.kind)).toEqual(["scene", "gravity", "bigscreen", "molecule"])
+    expect(selectRenderableBlocks(source, { kinds: ["molecule"] }).map((s) => s.kind)).toEqual(["molecule"])
+  })
+
   it("selects a complete chart fence and reports its source range", () => {
     const source = `Intro.\n\n${CHART}\n\nOutro.`
     const selections = selectRenderableBlocks(source)

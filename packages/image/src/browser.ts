@@ -35,9 +35,20 @@ export interface PageLease {
   release(): Promise<void>
 }
 
+/**
+ * Chromium's flags.
+ *
+ * The 3D blocks — scenes, molecules, the big screen's bars and globes — draw with WebGL, and a
+ * headless browser has no GPU. SwiftShader renders it in software instead; recent Chromium keeps
+ * that behind `--enable-unsafe-swiftshader` and needs to be told to use it, or `getContext("webgl")`
+ * returns null and every 3D block falls back to its text. Hinting is off so glyphs look the same
+ * at every scale factor.
+ */
+export const LAUNCH_ARGS = ["--font-render-hinting=none", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
+
 const defaultLauncher: Launcher = async () => {
   const playwright = await import("playwright")
-  return await playwright.chromium.launch({ args: ["--font-render-hinting=none"] })
+  return await playwright.chromium.launch({ args: LAUNCH_ARGS })
 }
 
 let browser: BrowserLike | undefined

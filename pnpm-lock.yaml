@@ -139,21 +139,36 @@ importers:
       '@ai-gui/core':
         specifier: workspace:*
         version: link:../core
+      '@ai-gui/plugin-bigscreen':
+        specifier: workspace:*
+        version: link:../plugin-bigscreen
       '@ai-gui/plugin-chart':
         specifier: workspace:*
         version: link:../plugin-chart
       '@ai-gui/plugin-dashboard':
         specifier: workspace:*
         version: link:../plugin-dashboard
+      '@ai-gui/plugin-gravity':
+        specifier: workspace:*
+        version: link:../plugin-gravity
       '@ai-gui/plugin-katex':
         specifier: workspace:*
         version: link:../plugin-katex
       '@ai-gui/plugin-mermaid':
         specifier: workspace:*
         version: link:../plugin-mermaid
+      '@ai-gui/plugin-molecule':
+        specifier: workspace:*
+        version: link:../plugin-molecule
+      '@ai-gui/plugin-scene':
+        specifier: workspace:*
+        version: link:../plugin-scene
       '@ai-gui/vanilla':
         specifier: workspace:*
         version: link:../vanilla
+      echarts-gl:
+        specifier: ^2.0.9
+        version: 2.1.0(echarts@5.6.0)
       katex:
         specifier: ^0.16.9
         version: 0.16.47
