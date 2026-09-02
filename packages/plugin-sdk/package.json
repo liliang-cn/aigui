@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-sdk",
-  "version": "0.35.2",
+  "version": "0.36.0",
   "description": "Minimal plugin authoring and testing helpers for AIGUI.",
   "keywords": [
     "llm",

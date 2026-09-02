@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-optics",
-  "version": "0.35.2",
+  "version": "0.36.0",
   "description": "Ray-optics teaching figures for AIGUI — lenses, mirrors and refraction, with the image position and the rays computed from the conditions.",
   "keywords": [
     "llm",

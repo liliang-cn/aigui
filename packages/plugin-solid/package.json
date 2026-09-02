@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-solid",
-  "version": "0.35.2",
+  "version": "0.36.0",
   "description": "Solid-geometry teaching figures for AIGUI — cubes, prisms, pyramids, cones and their sections, described the way a textbook names them.",
   "keywords": [
     "llm",
