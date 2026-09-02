@@ -1,5 +1,7 @@
 # @ai-gui/core
 
+## 0.34.0
+
 ## 0.33.0
 
 ### Minor Changes
