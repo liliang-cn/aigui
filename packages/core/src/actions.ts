@@ -333,6 +333,23 @@ export class ActionRuntime {
     return this.destroyed ? [] : Object.freeze(this.registry.list().map((action) => action.type))
   }
 
+  /**
+   * The parameter schema of one action, and nothing else.
+   *
+   * A model asked to draw a form that calls an action has to know what the
+   * action wants. Told only the name, it invents plausible parameter names —
+   * `when` for a start time — and every dispatch is rejected before it reaches
+   * the host. Prompt builders read this to describe the shape.
+   *
+   * Deliberately narrower than `registry.get`: a schema is a description, while
+   * an ActionDefinition carries `run`, and handing that out is handing out the
+   * side effect itself.
+   */
+  describeAction(type: string): JSONSchema | undefined {
+    if (this.destroyed) return undefined
+    return this.registry.get(type)?.schema
+  }
+
   subscribe(listener: ActionStateListener): () => void {
     if (this.destroyed) return () => {}
     this.listeners.add(listener)

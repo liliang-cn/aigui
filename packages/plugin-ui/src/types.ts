@@ -1,4 +1,4 @@
-import type { ActionDispatchOptions, ActionRequest, CardDef, RenderMountContext } from "@ai-gui/core"
+import type { ActionDispatchOptions, ActionRequest, CardDef, JSONSchema, RenderMountContext } from "@ai-gui/core"
 
 export type UIScalar = string | number | boolean | null
 export interface UIStateBinding { $state: string }
@@ -100,5 +100,12 @@ export interface UICardRegistry {
 export interface UIActionRuntime {
   hasAction(type: string): boolean
   listActionTypes(): readonly string[]
+  /**
+   * The parameter schema of one action, for the prompt spec to describe.
+   * Optional so a host with its own runtime object keeps working; without it
+   * the rules can only name the action, and a model has to guess what a form
+   * submitting to it should bind — which it gets wrong.
+   */
+  describeAction?(type: string): JSONSchema | undefined
   dispatch<TResult = unknown>(request: ActionRequest, options?: ActionDispatchOptions): Promise<TResult>
 }

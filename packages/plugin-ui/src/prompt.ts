@@ -82,7 +82,7 @@ const PROMPT: MessageBundle = {
     bounds: "Bounds: {nodes} nodes, depth {depth}, {children} children per container, {bytes} source bytes.",
     // The whole document is refused when one action name is wrong, so the model
     // needs to be told that plainly rather than left to infer it from a list.
-    actions: "Registered actions: {actions}.",
+    actions: "Registered actions (a form or button may name only these, and must bind exactly the parameters listed; * marks required):",
     actionsRule: "A button or form may name only a registered action. Naming any other action discards the whole block, so when none are registered, emit no button and no form.",
     example: "Example (replace ACTION with a registered action, and drop the form entirely if none are registered):",
     cards: "Registered cards:",
@@ -94,7 +94,7 @@ const PROMPT: MessageBundle = {
     state: "动作是声明式的，由应用负责执行。",
     never: "禁止输出 HTML、Markdown、CSS、JavaScript、URL、import、远程组件、工作流、artifact 指令、生成的代码，以及任何多余的字段。",
     bounds: "限制：最多 {nodes} 个节点，嵌套深度 {depth}，每个容器最多 {children} 个子节点，源码最多 {bytes} 字节。",
-    actions: "已注册的动作：{actions}。",
+    actions: "已注册的动作（form 和 button 只能用这些，并且必须按列出的参数名来 bind；带 * 的是必填）：",
     actionsRule: "button 和 form 只能引用已注册的动作。写了别的动作会导致整个块被丢弃，所以当一个动作都没有注册时，不要输出 button，也不要输出 form。",
     example: "示例（把 ACTION 换成已注册的动作；一个都没注册时，整个 form 都不要写）：",
     cards: "已注册的卡片：",
@@ -131,7 +131,15 @@ export function uiPromptSpec(
       children: String(bounded.children),
       bytes: String(bounded.sourceBytes),
     }),
-    fill(m.actions, { actions: actions.length ? actions.join(", ") : m.none }),
+    m.actions,
+    ...(actions.length
+      ? actions.map((type) => {
+          // Same shape as the card list below: a model that has to bind a form
+          // to an action needs its parameter names, not just its own.
+          const fields = schemaFields(actionRuntime.describeAction?.(type))
+          return fields ? `- ${type}: ${fields}` : `- ${type}`
+        })
+      : [`- ${m.none}`]),
     m.actionsRule,
     m.example,
     EXAMPLE.replace("ACTION", actions[0] ?? "ACTION"),
@@ -148,5 +156,11 @@ export function uiPromptSpec(
 
 function schemaFields(schema?: JSONSchema): string {
   if (!schema?.properties) return ""
-  return Object.entries(schema.properties).map(([name, field]) => `${name}(${Array.isArray(field.type) ? field.type.join("|") : field.type ?? "any"})`).join(", ")
+  const required = new Set(Array.isArray(schema.required) ? schema.required : [])
+  return Object.entries(schema.properties)
+    .map(([name, field]) => {
+      const type = Array.isArray(field.type) ? field.type.join("|") : field.type ?? "any"
+      return `${name}${required.has(name) ? "*" : ""}(${type})`
+    })
+    .join(", ")
 }

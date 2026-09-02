@@ -131,7 +131,9 @@ describe("UI plugin and prompt", () => {
     expect(prompt).toContain("save")
     expect(prompt).toContain("delete")
     expect(prompt).toContain("weather: Current weather")
-    expect(prompt).toContain("city(string)")
+    // Required keys carry a star now, for cards as well as actions: a model
+    // that cannot tell required from optional fills in neither or both.
+    expect(prompt).toContain("city*(string), units(string)")
     for (const forbidden of ["HTML", "Markdown", "CSS", "JavaScript", "URLs", "imports", "remote components", "workflows", "artifact commands", "declarative"]) expect(prompt).toContain(forbidden)
   })
 
@@ -480,5 +482,43 @@ describe("the ui prompt spec teaches a shape that parses", () => {
     const { registry, actionRuntime } = setup()
     expect(uiPromptSpec(registry, actionRuntime, undefined, "en")).toContain("`kind` is the discriminator")
     expect(uiPromptSpec(registry, actionRuntime, undefined, "zh-CN")).toContain("判别字段叫 `kind`，不是 `type`")
+  })
+})
+
+describe("the spec describes what an action wants", () => {
+  // Told only an action's name, a model invents plausible parameter names — a
+  // real one bound a start time to "when" against an action that required
+  // "start_at" — and every dispatch is rejected before it reaches the host.
+  it("lists each action's parameters and marks the required ones", () => {
+    const actions = new ActionRegistry()
+    actions.register({
+      type: "life.addSchedule",
+      schema: {
+        type: "object",
+        properties: { title: { type: "string" }, start_at: { type: "string" }, location: { type: "string" } },
+        required: ["title", "start_at"],
+      },
+      run: vi.fn(),
+    })
+    const spec = uiPromptSpec(new CardRegistry(), createActionRuntime({ registry: actions }), undefined, "zh-CN")
+    expect(spec).toContain("- life.addSchedule: title*(string), start_at*(string), location(string)")
+  })
+
+  it("still names an action that has no schema, and says none when there are none", () => {
+    const actions = new ActionRegistry()
+    actions.register({ type: "bare", run: vi.fn() })
+    const withOne = uiPromptSpec(new CardRegistry(), createActionRuntime({ registry: actions }), undefined, "en")
+    expect(withOne).toContain("- bare")
+
+    const empty = uiPromptSpec(new CardRegistry(), createActionRuntime({ registry: new ActionRegistry() }), undefined, "en")
+    expect(empty).toContain("- none")
+  })
+
+  // describeAction is optional on the interface, so a host passing its own
+  // runtime object keeps working rather than throwing on an absent method.
+  it("tolerates a runtime that cannot describe its actions", () => {
+    const runtime = { hasAction: () => true, listActionTypes: () => ["x"] as readonly string[], dispatch: async () => undefined }
+    expect(() => uiPromptSpec(new CardRegistry(), runtime, undefined, "en")).not.toThrow()
+    expect(uiPromptSpec(new CardRegistry(), runtime, undefined, "en")).toContain("- x")
   })
 })
