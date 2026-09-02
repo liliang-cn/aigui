@@ -446,3 +446,39 @@ describe("the tone colours are a host seam", () => {
     expect(uiCss).toContain("[data-aigui-ui-field-error], [data-aigui-ui-action-error] { color: var(--aigui-ui-critical); }")
   })
 })
+
+describe("the ui prompt spec teaches a shape that parses", () => {
+  // Listing the node kinds was not enough: a model wrote {"type":"stack"} with
+  // no ids and a string action, and the whole block was refused. So the spec now
+  // carries a worked example — and the example has to be a document this very
+  // plugin accepts, or the rules teach a shape that cannot render.
+  const extractExample = (spec: string) => {
+    const start = spec.indexOf("```ui\n")
+    expect(start).toBeGreaterThan(-1)
+    const body = spec.slice(start + 6)
+    return body.slice(0, body.indexOf("\n```"))
+  }
+
+  it("ships an example the validator accepts", () => {
+    const { registry, actionRuntime } = setup()
+    for (const locale of ["en", "zh-CN"]) {
+      const example = extractExample(uiPromptSpec(registry, actionRuntime, undefined, locale))
+      const doc = parseUIDocument(example, { registry, actionRuntime })
+      expect(doc.root.kind).toBe("stack")
+    }
+  })
+
+  it("substitutes a registered action into the example", () => {
+    const { registry, actionRuntime } = setup()
+    const spec = uiPromptSpec(registry, actionRuntime, undefined, "zh-CN")
+    // "save" is the first registered action in setup().
+    expect(extractExample(spec)).toContain('"submit": { "type": "save" }')
+    expect(spec).not.toContain('"type": "ACTION"')
+  })
+
+  it("names the discriminator, because `type` is the natural wrong guess", () => {
+    const { registry, actionRuntime } = setup()
+    expect(uiPromptSpec(registry, actionRuntime, undefined, "en")).toContain("`kind` is the discriminator")
+    expect(uiPromptSpec(registry, actionRuntime, undefined, "zh-CN")).toContain("判别字段叫 `kind`，不是 `type`")
+  })
+})
