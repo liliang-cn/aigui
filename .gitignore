@@ -4,4 +4,6 @@ coverage/
 .turbo/
 *.log
 .playwright-mcp/
+# vendored at build time from openchemlib, see packages/plugin-molecule/scripts
+packages/plugin-molecule/src/generated/
 .claude/

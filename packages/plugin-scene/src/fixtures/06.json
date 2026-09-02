@@ -1,0 +1,9 @@
+{
+  "objects": [
+    { "shape": "cylinder", "radius": 0.011, "height": 0.008, "sides": 6, "position": [0, 0, 0], "anchor": "bottom", "color": "silver", "material": "metal", "label": "螺栓头" },
+    { "shape": "cylinder", "radius": 0.006, "height": 0.08, "position": [0, 0.008, 0], "anchor": "bottom", "color": "#9a9a9a", "material": "metal", "label": "螺杆" },
+    { "shape": "cylinder", "radius": 0.011, "height": 0.01, "sides": 6, "position": [0, 0.05, 0], "anchor": "bottom", "color": "#c9a227", "material": "metal", "label": "六角螺母" }
+  ],
+  "autoRotate": true,
+  "caption": "M12 螺栓：六角头 + 直径 12 mm 螺杆，六角螺母套在杆上约 50 mm 处"
+}

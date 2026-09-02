@@ -1,0 +1,28 @@
+{
+  "objects": [
+    { "shape": "box", "size": [0.02, 1.2, 0.3], "position": [-0.39, 0, 0], "anchor": "bottom", "color": "#8b5a2b" },
+    { "shape": "box", "size": [0.02, 1.2, 0.3], "position": [0.39, 0, 0], "anchor": "bottom", "color": "#8b5a2b" },
+    { "shape": "box", "size": [0.8, 1.2, 0.02], "position": [0, 0, -0.14], "anchor": "bottom", "color": "#a0703a" },
+    { "shape": "box", "size": [0.76, 0.02, 0.28], "position": [0, 0, 0], "anchor": "bottom", "color": "#8b5a2b", "label": "第一层" },
+    { "shape": "box", "size": [0.76, 0.02, 0.28], "position": [0, 0.4, 0], "anchor": "bottom", "color": "#8b5a2b", "label": "第二层" },
+    { "shape": "box", "size": [0.76, 0.02, 0.28], "position": [0, 0.8, 0], "anchor": "bottom", "color": "#8b5a2b", "label": "第三层" },
+    { "shape": "box", "size": [0.8, 0.02, 0.3], "position": [0, 1.18, 0], "anchor": "bottom", "color": "#8b5a2b" },
+
+    { "shape": "box", "size": [0.04, 0.28, 0.2], "position": [-0.32, 0.02, 0], "anchor": "bottom", "color": "#c0392b" },
+    { "shape": "box", "size": [0.05, 0.25, 0.2], "position": [-0.27, 0.02, 0], "anchor": "bottom", "color": "#2980b9" },
+    { "shape": "box", "size": [0.03, 0.3, 0.2], "position": [-0.23, 0.02, 0], "anchor": "bottom", "color": "#27ae60" },
+    { "shape": "box", "size": [0.06, 0.26, 0.2], "position": [-0.18, 0.02, 0], "anchor": "bottom", "color": "#f1c40f" },
+
+    { "shape": "box", "size": [0.05, 0.32, 0.22], "position": [0.1, 0.42, 0], "anchor": "bottom", "color": "#8e44ad" },
+    { "shape": "box", "size": [0.04, 0.3, 0.22], "position": [0.15, 0.42, 0], "anchor": "bottom", "color": "#e67e22" },
+    { "shape": "box", "size": [0.05, 0.33, 0.22], "position": [0.2, 0.42, 0], "anchor": "bottom", "color": "#16a085" },
+
+    { "shape": "box", "size": [0.04, 0.24, 0.18], "position": [-0.3, 0.82, 0], "anchor": "bottom", "color": "#34495e" },
+    { "shape": "box", "size": [0.03, 0.22, 0.18], "position": [-0.26, 0.82, 0], "anchor": "bottom", "color": "#d35400" },
+    { "shape": "box", "size": [0.05, 0.26, 0.18], "position": [-0.22, 0.82, 0], "anchor": "bottom", "color": "#7f8c8d" },
+    { "shape": "box", "size": [0.04, 0.23, 0.18], "position": [-0.17, 0.82, 0], "anchor": "bottom", "color": "#c0392b" },
+    { "shape": "box", "size": [0.04, 0.25, 0.18], "position": [-0.13, 0.82, 0], "anchor": "bottom", "color": "#2ecc71" }
+  ],
+  "autoRotate": true,
+  "caption": "0.8 m 宽、1.2 m 高、0.3 m 深的三层书架，每层立着几本书"
+}

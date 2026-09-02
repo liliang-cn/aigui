@@ -1,0 +1,20 @@
+{
+  "objects": [
+    { "shape": "sphere", "radius": 0.5, "position": [0, 0, 0], "anchor": "bottom", "color": "white", "label": "底球" },
+    { "shape": "sphere", "radius": 0.35, "position": [0, 0.9, 0], "anchor": "bottom", "color": "white", "label": "身体" },
+    { "shape": "sphere", "radius": 0.25, "position": [0, 1.5, 0], "anchor": "bottom", "color": "white", "label": "头" },
+    { "shape": "cylinder", "radius": 0.32, "height": 0.03, "position": [0, 1.96, 0], "anchor": "bottom", "color": "#222222" },
+    { "shape": "cylinder", "radius": 0.18, "height": 0.3, "position": [0, 1.99, 0], "anchor": "bottom", "color": "#222222", "label": "帽子" },
+    { "shape": "cylinder", "radius": 0.19, "height": 0.05, "position": [0, 2.02, 0], "anchor": "bottom", "color": "red" },
+    { "shape": "cone", "radius": 0.04, "height": 0.22, "position": [0, 1.76, 0.34], "rotation": [90, 0, 0], "color": "orange", "label": "胡萝卜鼻子" },
+    { "shape": "sphere", "radius": 0.03, "position": [-0.09, 1.84, 0.22], "color": "#111111" },
+    { "shape": "sphere", "radius": 0.03, "position": [0.09, 1.84, 0.22], "color": "#111111" },
+    { "shape": "sphere", "radius": 0.03, "position": [0, 1.4, 0.32], "color": "#111111" },
+    { "shape": "sphere", "radius": 0.03, "position": [0, 1.25, 0.35], "color": "#111111" },
+    { "shape": "sphere", "radius": 0.03, "position": [0, 1.1, 0.32], "color": "#111111" },
+    { "shape": "cylinder", "radius": 0.02, "height": 0.6, "position": [-0.55, 1.4, 0], "rotation": [0, 0, 60], "color": "brown", "label": "树枝手臂" },
+    { "shape": "cylinder", "radius": 0.02, "height": 0.6, "position": [0.55, 1.4, 0], "rotation": [0, 0, -60], "color": "brown" }
+  ],
+  "autoRotate": true,
+  "caption": "三球雪人，约 2.3 m 高：礼帽、胡萝卜鼻子、煤球眼睛和纽扣、树枝手臂"
+}

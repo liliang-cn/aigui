@@ -1,15 +1,14 @@
 {
-  "name": "@ai-gui/plugin-molecule",
+  "name": "@ai-gui/plugin-scene",
   "version": "0.33.0",
-  "description": "Safe 2D and 3D molecular structure rendering plugin for AIGUI.",
+  "description": "3D scenes for AIGUI — boxes, spheres, cylinders and glTF models the model places in space, drawn with three.js.",
   "keywords": [
     "llm",
     "ai",
-    "chemistry",
-    "molecule",
-    "smiles",
-    "molfile",
     "3d",
+    "three",
+    "gltf",
+    "scene",
     "plugin",
     "aigui"
   ],
@@ -18,7 +17,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/liliang-cn/aigui.git",
-    "directory": "packages/plugin-molecule"
+    "directory": "packages/plugin-scene"
   },
   "homepage": "https://github.com/liliang-cn/aigui#readme",
   "bugs": "https://github.com/liliang-cn/aigui/issues",
@@ -52,14 +51,15 @@
     "access": "public"
   },
   "scripts": {
-    "prepare": "node scripts/vendor-conformer-resources.mjs",
-    "build": "node scripts/vendor-conformer-resources.mjs && tsdown",
-    "test": "pnpm --dir ../.. exec vitest run --project plugin-molecule",
-    "typecheck": "node scripts/vendor-conformer-resources.mjs && tsc --noEmit"
+    "build": "tsdown",
+    "test": "pnpm --dir ../.. exec vitest run --project plugin-scene",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-gui/core": "workspace:*",
-    "openchemlib": "^9.24.0",
-    "3dmol": "^2.5.5"
+    "three": "^0.185.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.185.3"
   }
 }

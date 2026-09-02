@@ -1,0 +1,12 @@
+{
+  "objects": [
+    { "shape": "cylinder", "radius": 0.04, "height": 0.72, "position": [-0.6, 0, -0.35], "anchor": "bottom", "color": "#8b5a2b" },
+    { "shape": "cylinder", "radius": 0.04, "height": 0.72, "position": [0.6, 0, -0.35], "anchor": "bottom", "color": "#8b5a2b" },
+    { "shape": "cylinder", "radius": 0.04, "height": 0.72, "position": [-0.6, 0, 0.35], "anchor": "bottom", "color": "#8b5a2b" },
+    { "shape": "cylinder", "radius": 0.04, "height": 0.72, "position": [0.6, 0, 0.35], "anchor": "bottom", "color": "#8b5a2b" },
+    { "shape": "box", "size": [1.4, 0.04, 0.8], "position": [0, 0.72, 0], "anchor": "bottom", "color": "wheat" },
+    { "shape": "model", "src": "https://assets.example.com/models/robot.glb", "size": 0.5, "position": [0, 0.76, 0], "anchor": "bottom", "label": "机器人" }
+  ],
+  "autoRotate": true,
+  "caption": "机器人模型放在 1.4 m × 0.8 m 的桌面上，桌面高 0.72 m"
+}

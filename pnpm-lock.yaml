@@ -41,9 +41,15 @@ importers:
       '@ai-gui/plugin-artifact':
         specifier: workspace:*
         version: link:../../packages/plugin-artifact
+      '@ai-gui/plugin-bigscreen':
+        specifier: workspace:*
+        version: link:../../packages/plugin-bigscreen
       '@ai-gui/plugin-citation':
         specifier: workspace:*
         version: link:../../packages/plugin-citation
+      '@ai-gui/plugin-gravity':
+        specifier: workspace:*
+        version: link:../../packages/plugin-gravity
       '@ai-gui/plugin-map':
         specifier: workspace:*
         version: link:../../packages/plugin-map
@@ -53,6 +59,9 @@ importers:
       '@ai-gui/plugin-molecule':
         specifier: workspace:*
         version: link:../../packages/plugin-molecule
+      '@ai-gui/plugin-scene':
+        specifier: workspace:*
+        version: link:../../packages/plugin-scene
       '@ai-gui/plugin-solid':
         specifier: workspace:*
         version: link:../../packages/plugin-solid
@@ -68,6 +77,9 @@ importers:
       '@ai-gui/vue':
         specifier: workspace:*
         version: link:../../packages/vue
+      echarts-gl:
+        specifier: ^2.0.9
+        version: 2.1.0(echarts@5.6.0)
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -200,6 +212,19 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/plugin-bigscreen:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+      echarts:
+        specifier: ^5.5.1
+        version: 5.6.0
+    devDependencies:
+      echarts-gl:
+        specifier: ^2.0.9
+        version: 2.1.0(echarts@5.6.0)
+
   packages/plugin-chart:
     dependencies:
       '@ai-gui/core':
@@ -253,6 +278,12 @@ importers:
         version: link:../core
 
   packages/plugin-function:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/plugin-gravity:
     dependencies:
       '@ai-gui/core':
         specifier: workspace:*
@@ -358,6 +389,19 @@ importers:
       '@ai-gui/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/plugin-scene:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+      three:
+        specifier: ^0.185.1
+        version: 0.185.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.185.3
+        version: 0.185.3
 
   packages/plugin-sdk:
     dependencies:

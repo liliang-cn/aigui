@@ -1,0 +1,10 @@
+{
+  "objects": [
+    { "shape": "cylinder", "radius": 0.04, "height": 0.095, "position": [0, 0, 0], "anchor": "bottom", "color": "#4f86c6", "label": "杯身" },
+    { "shape": "cylinder", "radius": 0.035, "height": 0.004, "position": [0, 0.092, 0], "anchor": "bottom", "color": "#3a2a1a" },
+    { "shape": "torus", "radius": 0.0375, "tube": 0.003, "position": [0, 0.095, 0], "color": "#4f86c6" },
+    { "shape": "torus", "radius": 0.028, "tube": 0.007, "position": [0.06, 0.05, 0], "rotation": [90, 0, 0], "color": "#4f86c6", "label": "把手" }
+  ],
+  "autoRotate": true,
+  "caption": "直径 8 cm、高 9.5 cm 的马克杯，右侧是 C 形把手"
+}

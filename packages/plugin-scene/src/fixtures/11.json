@@ -1,0 +1,12 @@
+{
+  "objects": [
+    { "shape": "box", "size": [2.4, 0.5, 1.2], "position": [0, 0.35, 0], "anchor": "bottom", "color": "#d9463b", "label": "车身" },
+    { "shape": "box", "size": [1.2, 0.5, 1.0], "position": [-0.1, 0.85, 0], "anchor": "bottom", "color": "#4a90d9", "material": "glass", "opacity": 0.7, "label": "车舱" },
+    { "shape": "cylinder", "radius": 0.3, "height": 0.2, "position": [0.8, 0.3, 0.6], "rotation": [90, 0, 0], "color": "#222222" },
+    { "shape": "cylinder", "radius": 0.3, "height": 0.2, "position": [-0.8, 0.3, 0.6], "rotation": [90, 0, 0], "color": "#222222" },
+    { "shape": "cylinder", "radius": 0.3, "height": 0.2, "position": [0.8, 0.3, -0.6], "rotation": [90, 0, 0], "color": "#222222" },
+    { "shape": "cylinder", "radius": 0.3, "height": 0.2, "position": [-0.8, 0.3, -0.6], "rotation": [90, 0, 0], "color": "#222222" }
+  ],
+  "autoRotate": true,
+  "caption": "四轮小车：红色车身 + 玻璃车舱 + 四个直径 0.6 m 的轮子"
+}

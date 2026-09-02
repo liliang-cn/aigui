@@ -1,4 +1,5 @@
 import type { AIGuiPlugin, ASTNode, RenderOutput } from "@ai-gui/core"
+import { ensureConformerResources, generateConformer, type ConformerCapableModule } from "./conformer"
 
 export type MoleculeFormat = "smiles" | "molfile"
 export type MoleculeView = "2d" | "3d"
@@ -19,9 +20,16 @@ export interface Molecule2DDefinition {
   highlight?: MoleculeHighlight
 }
 
+/**
+ * A structure drawn in 3D.
+ *
+ * From a Molfile the coordinates are the file's own and must be genuinely spatial. From SMILES
+ * there are none, so a conformer is generated — which is what makes 3D reachable for a model at
+ * all: it writes SMILES fluently and a Molfile with real z coordinates almost never.
+ */
 export interface Molecule3DDefinition {
   version: 1
-  format: "molfile"
+  format: MoleculeFormat
   source: string
   view: "3d"
   style?: MoleculeStyle
@@ -38,6 +46,14 @@ export interface MoleculeOptions {
   maxAtoms?: number
   maxBonds?: number
   maxSourceBytes?: number
+  /**
+   * Largest SMILES structure (heavy atoms) that will be given generated 3D coordinates.
+   *
+   * Conformer search runs on the page's main thread and grows quickly with rotatable bonds — a
+   * steroid takes seconds. Structures over the limit are refused in 3D; the model can still draw
+   * them in 2D. Default 64.
+   */
+  maxConformerAtoms?: number
 }
 
 export type MoleculeErrorCode = "invalid-definition" | "invalid-options"
@@ -58,6 +74,7 @@ interface ResolvedOptions {
   maxAtoms: number
   maxBonds: number
   maxSourceBytes: number
+  maxConformerAtoms: number
 }
 
 interface ParsedChemistry {
@@ -65,6 +82,8 @@ interface ParsedChemistry {
   molecule: OclMolecule
   atomCount: number
   bondCount: number
+  /** What the 3D viewer is given: the Molfile as written, or the one generated from SMILES. */
+  molfile: string
 }
 
 interface OclMolecule {
@@ -73,12 +92,16 @@ interface OclMolecule {
   getAtomX(atom: number): number
   getAtomY(atom: number): number
   getAtomZ(atom: number): number
+  setAtomX(atom: number, x: number): void
+  setAtomY(atom: number, y: number): void
+  setAtomZ(atom: number, z: number): void
   getBondAtom(side: number, bond: number): number
   setAtomSelection(atom: number, selected: boolean): void
   toSVG(width: number, height: number, id?: string, options?: Record<string, unknown>): string
+  toMolfile(): string
 }
 
-interface OclModule {
+interface OclModule extends ConformerCapableModule {
   Molecule: {
     fromSmiles(source: string): OclMolecule
     fromMolfile(source: string): OclMolecule
@@ -92,6 +115,7 @@ const DEFAULTS: ResolvedOptions = {
   maxAtoms: 256,
   maxBonds: 512,
   maxSourceBytes: 64 * 1024,
+  maxConformerAtoms: 64,
 }
 
 const MAX_SOURCE_BYTES = 256 * 1024
@@ -99,7 +123,7 @@ const MAX_ATOMS = 1024
 const MAX_BONDS = 2048
 const DEFINITION_KEYS = new Set(["version", "format", "source", "view", "style", "atomLabels", "highlight"])
 const HIGHLIGHT_KEYS = new Set(["atoms", "bonds"])
-const OPTION_KEYS = new Set(["width", "height", "enable3D", "maxAtoms", "maxBonds", "maxSourceBytes"])
+const OPTION_KEYS = new Set(["width", "height", "enable3D", "maxAtoms", "maxBonds", "maxSourceBytes", "maxConformerAtoms"])
 const DANGEROUS_KEYS = new Set(["__proto__", "prototype", "constructor"])
 const encoder = new TextEncoder()
 let oclPromise: Promise<OclModule> | null = null
@@ -166,6 +190,7 @@ function resolveOptions(options: MoleculeOptions = {}): ResolvedOptions {
   boundedInteger("maxAtoms", 1, MAX_ATOMS)
   boundedInteger("maxBonds", 0, MAX_BONDS)
   boundedInteger("maxSourceBytes", 1, MAX_SOURCE_BYTES)
+  boundedInteger("maxConformerAtoms", 1, MAX_ATOMS)
   if (typeof resolved.enable3D !== "boolean") throw new TypeError("enable3D must be boolean")
   return resolved
 }
@@ -187,7 +212,7 @@ function validateShape(value: unknown, options: ResolvedOptions): MoleculeDefini
   if (value.view === "2d") {
     if (value.style !== undefined) return null
   } else {
-    if (value.format !== "molfile" || !options.enable3D) return null
+    if (!options.enable3D) return null
     if (value.style !== undefined && value.style !== "ball-and-stick" && value.style !== "space-filling") return null
   }
   return value as unknown as MoleculeDefinition
@@ -205,7 +230,18 @@ async function validateChemistry(definition: MoleculeDefinition, options: Resolv
     if (!Number.isSafeInteger(bondCount) || bondCount < 0 || bondCount > options.maxBonds) return null
     if (definition.highlight?.atoms?.some((index) => index >= atomCount)) return null
     if (definition.highlight?.bonds?.some((index) => index >= bondCount)) return null
-    if (definition.view === "3d") {
+    let molfile = definition.source
+    if (definition.view === "3d" && definition.format === "smiles") {
+      if (atomCount > options.maxConformerAtoms) return null
+      await ensureConformerResources(OCL)
+      // Adds the hydrogens and writes coordinates into `parsed` in place. Existing atoms and
+      // bonds keep their indexes — the hydrogens are appended — so the highlight indexes the
+      // model wrote against the SMILES still point at the same atoms.
+      if (!generateConformer(OCL, parsed)) return null
+      molfile = parsed.toMolfile()
+    } else if (definition.view === "3d") {
+      // A Molfile's coordinates are the author's claim; a flat one is a 2D drawing dressed up as
+      // 3D and would render as a sheet of atoms seen edge-on.
       let minZ = Number.POSITIVE_INFINITY
       let maxZ = Number.NEGATIVE_INFINITY
       for (let atom = 0; atom < atomCount; atom++) {
@@ -218,7 +254,7 @@ async function validateChemistry(definition: MoleculeDefinition, options: Resolv
       }
       if (maxZ - minZ <= 1e-6) return null
     }
-    return { definition, molecule: parsed, atomCount, bondCount }
+    return { definition, molecule: parsed, atomCount, bondCount, molfile }
   } catch {
     return null
   }
@@ -329,7 +365,7 @@ const ELEMENT_COLORS = {
   S: 0xffff30, Cl: 0x1ff01f, Br: 0xa62929, I: 0x940094,
 }
 
-function mount3D(definition: Molecule3DDefinition, options: ResolvedOptions): RenderOutput {
+function mount3D(definition: Molecule3DDefinition, chemistry: ParsedChemistry, options: ResolvedOptions): RenderOutput {
   return {
     kind: "mount",
     mount(host) {
@@ -364,25 +400,33 @@ function mount3D(definition: Molecule3DDefinition, options: ResolvedOptions): Re
           const createViewer = (module as unknown as { createViewer: (element: HTMLElement, config: Record<string, unknown>) => Viewer }).createViewer
           viewer = createViewer(viewport, { backgroundColor: "white", defaultcolors: ELEMENT_COLORS })
           if (disposed) return
-          viewer.addModel(definition.source, "mol")
+          viewer.addModel(chemistry.molfile, "mol")
           const style = definition.style ?? "ball-and-stick"
           viewer.setStyle({}, style === "space-filling"
             ? { sphere: { scale: 1, colorscheme: "default" } }
             : { stick: { radius: 0.18, colorscheme: "default" }, sphere: { scale: 0.28, colorscheme: "default" } })
+          // A highlight has to be drawn in the vocabulary of the style it sits in: a bigger sphere
+          // reads as a mark among balls and sticks, but is buried inside a space-filling sphere
+          // of scale 1, and a thicker stick is buried the same way. There, the atoms themselves
+          // change colour. And it replaces the style rather than adding to it, because 3Dmol
+          // lets a `colorscheme` win over a `color` in the same style — merged onto the base
+          // style, the amber was never drawn.
+          const spaceFilling = style === "space-filling"
+          const amber = 0xffc400
           if (definition.highlight?.atoms?.length) {
-            viewer.addStyle({ index: definition.highlight.atoms }, { sphere: { color: 0xffc400, scale: 0.48 } })
+            viewer.setStyle({ index: definition.highlight.atoms }, spaceFilling
+              ? { sphere: { color: amber, scale: 1 } }
+              : { stick: { radius: 0.18, colorscheme: "default" }, sphere: { color: amber, scale: 0.48 } })
           }
           if (definition.highlight?.bonds?.length) {
-            void validateChemistry(definition, options).then((chemistry) => {
-              if (disposed || !viewer || !chemistry) return
-              const atoms = new Set<number>()
-              for (const bond of definition.highlight?.bonds ?? []) {
-                atoms.add(chemistry.molecule.getBondAtom(0, bond))
-                atoms.add(chemistry.molecule.getBondAtom(1, bond))
-              }
-              viewer.addStyle({ index: [...atoms] }, { stick: { color: 0xffc400, radius: 0.3 } })
-              viewer.render()
-            }).catch(() => undefined)
+            const atoms = new Set<number>()
+            for (const bond of definition.highlight.bonds) {
+              atoms.add(chemistry.molecule.getBondAtom(0, bond))
+              atoms.add(chemistry.molecule.getBondAtom(1, bond))
+            }
+            viewer.setStyle({ index: [...atoms] }, spaceFilling
+              ? { sphere: { color: amber, scale: 1 } }
+              : { stick: { color: amber, radius: 0.3 }, sphere: { color: amber, scale: 0.36 } })
           }
           viewer.zoomTo()
           viewer.render()
@@ -434,7 +478,7 @@ async function createOutput(node: ASTNode, options: ResolvedOptions): Promise<Re
   if (!definition) return errorOutput()
   const chemistry = await validateChemistry(definition, options)
   if (!chemistry) return errorOutput()
-  if (definition.view === "3d") return mount3D(definition, options)
+  if (definition.view === "3d") return mount3D(definition, chemistry, options)
   try {
     for (const atom of definition.highlight?.atoms ?? []) chemistry.molecule.setAtomSelection(atom, true)
     for (const bond of definition.highlight?.bonds ?? []) {
@@ -466,7 +510,7 @@ export function moleculePromptSpec(options: MoleculeOptions = {}): string {
     "```",
     "",
     'Exact root fields: {"version":1,"format":"smiles|molfile","source":"...","view":"2d|3d","style":"ball-and-stick|space-filling"?,"atomLabels":"standard|all"?,"highlight":{"atoms":[0],"bonds":[0]}?}. No unknown fields.',
-    "SMILES supports 2d only. Molfile supports 2d and 3d; 3d requires genuine finite non-flat z coordinates.",
+    `SMILES supports 2d and 3d: for 3d the coordinates are generated from the SMILES, so prefer SMILES for a 3d view (up to ${resolved.maxConformerAtoms} heavy atoms). Molfile supports 2d and 3d; a 3d Molfile requires genuine finite non-flat z coordinates. Never write a Molfile from memory to get 3d — write the SMILES.`,
     `Source is local text only and must be at most ${resolved.maxSourceBytes} UTF-8 bytes. Atom and bond indexes are zero-based unique nonnegative integers.`,
     "Never emit URLs, scripts, network requests, remote resources, HTML, credentials, download/get/autoload/fetch instructions, or executable content.",
   ].join("\n")

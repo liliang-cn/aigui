@@ -1,15 +1,17 @@
 {
-  "name": "@ai-gui/plugin-molecule",
+  "name": "@ai-gui/plugin-bigscreen",
   "version": "0.33.0",
-  "description": "Safe 2D and 3D molecular structure rendering plugin for AIGUI.",
+  "description": "Animated data walls for AIGUI — counting KPIs, sweeping gauges, growing ranks, self-drawing charts, turning 3D bars and globes, on a grid the model lays out.",
   "keywords": [
     "llm",
     "ai",
-    "chemistry",
-    "molecule",
-    "smiles",
-    "molfile",
+    "dashboard",
+    "big-screen",
+    "data-wall",
+    "echarts",
+    "echarts-gl",
     "3d",
+    "animation",
     "plugin",
     "aigui"
   ],
@@ -18,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/liliang-cn/aigui.git",
-    "directory": "packages/plugin-molecule"
+    "directory": "packages/plugin-bigscreen"
   },
   "homepage": "https://github.com/liliang-cn/aigui#readme",
   "bugs": "https://github.com/liliang-cn/aigui/issues",
@@ -52,14 +54,23 @@
     "access": "public"
   },
   "scripts": {
-    "prepare": "node scripts/vendor-conformer-resources.mjs",
-    "build": "node scripts/vendor-conformer-resources.mjs && tsdown",
-    "test": "pnpm --dir ../.. exec vitest run --project plugin-molecule",
-    "typecheck": "node scripts/vendor-conformer-resources.mjs && tsc --noEmit"
+    "build": "tsdown",
+    "test": "pnpm --dir ../.. exec vitest run --project plugin-bigscreen",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-gui/core": "workspace:*",
-    "openchemlib": "^9.24.0",
-    "3dmol": "^2.5.5"
+    "echarts": "^5.5.1"
+  },
+  "peerDependencies": {
+    "echarts-gl": "^2.0.9"
+  },
+  "peerDependenciesMeta": {
+    "echarts-gl": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "echarts-gl": "^2.0.9"
   }
 }

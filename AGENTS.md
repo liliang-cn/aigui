@@ -22,7 +22,7 @@ AIGUI renders a streaming LLM response as live UI. A headless core (`@ai-gui/cor
 | Vue | `@ai-gui/vue` | `pnpm add @ai-gui/core @ai-gui/vue` |
 | vanilla DOM | `@ai-gui/vanilla` | `pnpm add @ai-gui/core @ai-gui/vanilla` |
 
-Add any plugins you need: `@ai-gui/plugin-solid`, `@ai-gui/plugin-function`, `@ai-gui/plugin-optics`, `@ai-gui/plugin-motion`, `@ai-gui/plugin-physics`, `@ai-gui/plugin-quote`, `@ai-gui/plugin-figure`, `@ai-gui/plugin-progress`, `@ai-gui/plugin-flashcard`, `@ai-gui/plugin-ui`, `@ai-gui/plugin-katex`, `@ai-gui/plugin-highlight`, `@ai-gui/plugin-mermaid`, `@ai-gui/plugin-molecule`, `@ai-gui/plugin-map`, `@ai-gui/plugin-primitives`, `@ai-gui/plugin-chart`, `@ai-gui/plugin-form`, `@ai-gui/plugin-citation`, `@ai-gui/plugin-artifact`, plus `@ai-gui/plugin-evidence` and `@ai-gui/plugin-resultset` for the two fences the host writes rather than the model.
+Add any plugins you need: `@ai-gui/plugin-solid`, `@ai-gui/plugin-scene`, `@ai-gui/plugin-function`, `@ai-gui/plugin-optics`, `@ai-gui/plugin-motion`, `@ai-gui/plugin-gravity`, `@ai-gui/plugin-physics`, `@ai-gui/plugin-quote`, `@ai-gui/plugin-figure`, `@ai-gui/plugin-progress`, `@ai-gui/plugin-flashcard`, `@ai-gui/plugin-ui`, `@ai-gui/plugin-katex`, `@ai-gui/plugin-highlight`, `@ai-gui/plugin-mermaid`, `@ai-gui/plugin-molecule`, `@ai-gui/plugin-map`, `@ai-gui/plugin-primitives`, `@ai-gui/plugin-chart`, `@ai-gui/plugin-bigscreen`, `@ai-gui/plugin-form`, `@ai-gui/plugin-citation`, `@ai-gui/plugin-artifact`, plus `@ai-gui/plugin-evidence` and `@ai-gui/plugin-resultset` for the two fences the host writes rather than the model.
 
 ### 2. Register cards
 
@@ -93,15 +93,18 @@ import { highlight } from "@ai-gui/plugin-highlight"
 import { mermaid } from "@ai-gui/plugin-mermaid"
 import { primitives } from "@ai-gui/plugin-primitives"
 import { chart } from "@ai-gui/plugin-chart"
+import { bigscreen } from "@ai-gui/plugin-bigscreen"
 import { citation } from "@ai-gui/plugin-citation"
 import { ArtifactStore, artifact } from "@ai-gui/plugin-artifact"
 import { ui } from "@ai-gui/plugin-ui"
 import { molecule } from "@ai-gui/plugin-molecule"
 import { map } from "@ai-gui/plugin-map"
 import { solid } from "@ai-gui/plugin-solid"
+import { scene } from "@ai-gui/plugin-scene"
 import { fn } from "@ai-gui/plugin-function"
 import { optics } from "@ai-gui/plugin-optics"
 import { motion } from "@ai-gui/plugin-motion"
+import { gravity } from "@ai-gui/plugin-gravity"
 import { physics } from "@ai-gui/plugin-physics"
 import { quote } from "@ai-gui/plugin-quote"
 import { figure } from "@ai-gui/plugin-figure"

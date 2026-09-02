@@ -1,0 +1,15 @@
+{
+  "objects": [
+    { "shape": "plane", "size": [14, 8], "position": [0, 0.01, 0], "color": "#3b82f6", "opacity": 0.8, "label": "河" },
+    { "shape": "box", "size": [4, 0.5, 8], "position": [-9, 0, 0], "anchor": "bottom", "color": "#6b8e23" },
+    { "shape": "box", "size": [4, 0.5, 8], "position": [9, 0, 0], "anchor": "bottom", "color": "#6b8e23" },
+    { "shape": "box", "size": [1.2, 4, 3.2], "position": [-5, 0, 0], "anchor": "bottom", "color": "gray", "label": "桥墩" },
+    { "shape": "box", "size": [1.2, 4, 3.2], "position": [5, 0, 0], "anchor": "bottom", "color": "gray", "label": "桥墩" },
+    { "shape": "torus", "radius": 3.8, "tube": 0.2, "position": [0, 0, 0], "rotation": [90, 0, 0], "color": "#b5533c", "label": "拱" },
+    { "shape": "box", "size": [22, 0.4, 3], "position": [0, 4, 0], "anchor": "bottom", "color": "#d1d5db", "label": "桥面" },
+    { "shape": "box", "size": [22, 0.6, 0.1], "position": [0, 4.4, -1.45], "anchor": "bottom", "color": "silver" },
+    { "shape": "box", "size": [22, 0.6, 0.1], "position": [0, 4.4, 1.45], "anchor": "bottom", "color": "silver" }
+  ],
+  "autoRotate": true,
+  "caption": "拱桥示意：两岸之间的桥面架在两个桥墩上，中间一道拱，下方是河"
+}

@@ -1,0 +1,10 @@
+{
+  "objects": [
+    { "shape": "box", "size": [0.36, 0.03, 0.36], "position": [0, 0, 0], "anchor": "bottom", "color": "#1a1a1a", "label": "底座" },
+    { "shape": "cone", "radius": 0.15, "height": 0.7, "position": [0, 0.03, 0], "anchor": "bottom", "color": "#ff6a00", "label": "锥体" },
+    { "shape": "cylinder", "radius": 0.101, "radiusTop": 0.08, "height": 0.1, "position": [0, 0.28, 0], "anchor": "bottom", "color": "white" },
+    { "shape": "cylinder", "radius": 0.058, "radiusTop": 0.043, "height": 0.07, "position": [0, 0.48, 0], "anchor": "bottom", "color": "white" }
+  ],
+  "autoRotate": true,
+  "caption": "约 73 cm 高的交通锥：黑色方底座、橙色锥体、两道白色反光带"
+}

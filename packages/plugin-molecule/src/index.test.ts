@@ -41,7 +41,6 @@ describe("molecule protocol", () => {
     {},
     { ...smiles2d, version: 2 },
     { ...smiles2d, format: "pdb" },
-    { ...smiles2d, view: "3d" },
     { ...smiles2d, style: "ball-and-stick" },
     { ...molfile3d, style: "cartoon" },
     { ...smiles2d, atomLabels: "none" },
@@ -92,6 +91,39 @@ describe("molecule protocol", () => {
     expect((await validateMoleculeDefinition({ ...smiles2d, highlight: { bonds: [2] } })).ok).toBe(false)
     expect((await validateMoleculeDefinition({ ...molfile3d, source: flatMolfile })).ok).toBe(false)
     expect((await validateMoleculeDefinition(molfile3d, { enable3D: false })).ok).toBe(false)
+  })
+
+  describe("3D from SMILES", () => {
+    const smiles3d = { ...smiles2d, view: "3d" } as const
+
+    it("accepts a SMILES structure in 3D by generating its coordinates", async () => {
+      // This is the whole point: a model writes SMILES, not Molfiles with z coordinates.
+      expect((await validateMoleculeDefinition(smiles3d)).ok).toBe(true)
+      expect((await validateMoleculeDefinition({ ...smiles3d, style: "space-filling" })).ok).toBe(true)
+    })
+    it("accepts a planar molecule, whose generated conformer is legitimately flat", async () => {
+      // The flatness check exists to catch a 2D drawing passed off as 3D; a generated benzene is
+      // flat because benzene is.
+      expect((await validateMoleculeDefinition({ ...smiles3d, source: "c1ccccc1" })).ok).toBe(true)
+    })
+    it("still honours enable3D and the highlight bounds of the SMILES as written", async () => {
+      expect((await validateMoleculeDefinition(smiles3d, { enable3D: false })).ok).toBe(false)
+      // Hydrogens are added for the conformer, but the model indexed the heavy atoms it wrote.
+      expect((await validateMoleculeDefinition({ ...smiles3d, highlight: { atoms: [2] } })).ok).toBe(true)
+      expect((await validateMoleculeDefinition({ ...smiles3d, highlight: { atoms: [3] } })).ok).toBe(false)
+    })
+    it("refuses structures above maxConformerAtoms rather than stalling the page", async () => {
+      expect((await validateMoleculeDefinition({ ...smiles3d, source: "CC(=O)Oc1ccccc1C(=O)O" }, { maxConformerAtoms: 12 })).ok).toBe(false)
+      expect((await validateMoleculeDefinition({ ...smiles3d, source: "CC(=O)Oc1ccccc1C(=O)O" }, { maxConformerAtoms: 13 })).ok).toBe(true)
+      expect(() => molecule({ maxConformerAtoms: 0 })).toThrow()
+      expect(() => molecule({ maxConformerAtoms: 1025 })).toThrow()
+    })
+    it("tells the model to write SMILES for 3D rather than a Molfile from memory", () => {
+      const prompt = moleculePromptSpec({ maxConformerAtoms: 40 })
+      expect(prompt).toContain("SMILES supports 2d and 3d")
+      expect(prompt).toContain("40 heavy atoms")
+      expect(prompt).toMatch(/Never write a Molfile from memory/)
+    })
   })
 
   it("does not expose chemistry parser errors", async () => {

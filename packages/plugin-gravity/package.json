@@ -1,15 +1,16 @@
 {
-  "name": "@ai-gui/plugin-molecule",
+  "name": "@ai-gui/plugin-gravity",
   "version": "0.33.0",
-  "description": "Safe 2D and 3D molecular structure rendering plugin for AIGUI.",
+  "description": "Gravity and collision figures for AIGUI — orbits, binaries, comets and colliding discs, integrated from the conditions the model states.",
   "keywords": [
     "llm",
     "ai",
-    "chemistry",
-    "molecule",
-    "smiles",
-    "molfile",
-    "3d",
+    "physics",
+    "gravity",
+    "orbit",
+    "n-body",
+    "collision",
+    "teaching",
     "plugin",
     "aigui"
   ],
@@ -18,7 +19,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/liliang-cn/aigui.git",
-    "directory": "packages/plugin-molecule"
+    "directory": "packages/plugin-gravity"
   },
   "homepage": "https://github.com/liliang-cn/aigui#readme",
   "bugs": "https://github.com/liliang-cn/aigui/issues",
@@ -52,14 +53,11 @@
     "access": "public"
   },
   "scripts": {
-    "prepare": "node scripts/vendor-conformer-resources.mjs",
-    "build": "node scripts/vendor-conformer-resources.mjs && tsdown",
-    "test": "pnpm --dir ../.. exec vitest run --project plugin-molecule",
-    "typecheck": "node scripts/vendor-conformer-resources.mjs && tsc --noEmit"
+    "build": "tsdown",
+    "test": "pnpm --dir ../.. exec vitest run --project plugin-gravity",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-gui/core": "workspace:*",
-    "openchemlib": "^9.24.0",
-    "3dmol": "^2.5.5"
+    "@ai-gui/core": "workspace:*"
   }
 }

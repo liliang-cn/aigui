@@ -37,7 +37,7 @@ pnpm add @ai-gui/core @ai-gui/vue
 pnpm add @ai-gui/core @ai-gui/vanilla
 
 # plugins (optional)
-pnpm add @ai-gui/plugin-solid @ai-gui/plugin-function @ai-gui/plugin-optics @ai-gui/plugin-motion @ai-gui/plugin-physics @ai-gui/plugin-quote @ai-gui/plugin-figure @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-dashboard @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact @ai-gui/plugin-progress @ai-gui/plugin-flashcard @ai-gui/plugin-evidence @ai-gui/plugin-resultset
+pnpm add @ai-gui/plugin-solid @ai-gui/plugin-scene @ai-gui/plugin-function @ai-gui/plugin-optics @ai-gui/plugin-motion @ai-gui/plugin-gravity @ai-gui/plugin-physics @ai-gui/plugin-quote @ai-gui/plugin-figure @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-dashboard @ai-gui/plugin-bigscreen @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact @ai-gui/plugin-progress @ai-gui/plugin-flashcard @ai-gui/plugin-evidence @ai-gui/plugin-resultset
 
 # plugin authoring helpers (optional)
 pnpm add @ai-gui/plugin-sdk
@@ -179,6 +179,7 @@ await r.feed(res.body!)
 | `@ai-gui/plugin-mermaid` | `mermaid({ theme? })` | ` ```mermaid ` diagrams |
 | `@ai-gui/plugin-primitives` | `primitives()` | ` ```list `, ` ```table `, ` ```key-value `, ` ```layout ` UI blocks |
 | `@ai-gui/plugin-chart` | `chart({ interactive?, gl?, width?, height? })` | ` ```chart ` ECharts blocks — static SVG, live interactive, or 3D |
+| `@ai-gui/plugin-bigscreen` | `bigscreen(options?)` | ` ```bigscreen ` animated data walls — counting KPIs, sweeping gauges, growing ranks, charts, turning 3D bars and globes on a grid the model lays out |
 | `@ai-gui/plugin-form` | `form({ actionRuntime })` | Safe interactive ` ```form ` blocks with local validation and registered actions |
 | `@ai-gui/plugin-citation` | `citation()` | Secure ` ```sources ` blocks with validated HTTPS links |
 | `@ai-gui/plugin-artifact` | `artifact({ store? })` | Revisioned `artifact-create` / `artifact-update` commands and an inert document workspace |
@@ -186,9 +187,11 @@ await r.feed(res.body!)
 | `@ai-gui/plugin-molecule` | `molecule(options?)` | Strict ` ```molecule ` blocks for SMILES/Molfile 2D and Molfile 3D structures |
 | `@ai-gui/plugin-map` | `map(options?)` | Strict ` ```map ` blocks for inline GeoJSON, markers, routes, bounded navigation, and host-controlled basemaps |
 | `@ai-gui/plugin-solid` | `solid(options?)` | ` ```solid ` blocks for solid-geometry teaching figures — solids, named points, sections, and marked lines and angles |
+| `@ai-gui/plugin-scene` | `scene(options?)` | ` ```scene ` blocks for 3D scenes — primitives placed in metres, plus glTF models from host-allowed origins, turned with the mouse |
 | `@ai-gui/plugin-function` | `fn(options?)` | ` ```function ` blocks for function and calculus figures — curves, tangents, areas, Riemann sums, computed from an expression |
 | `@ai-gui/plugin-optics` | `optics(options?)` | ` ```optics ` blocks for ray optics — lenses, mirrors and refraction, with the image and the conclusion computed |
 | `@ai-gui/plugin-motion` | `motion(options?)` | ` ```motion ` blocks for mechanics — projectiles, collisions and oscillation, drawn stroboscopically from the initial conditions |
+| `@ai-gui/plugin-gravity` | `gravity(options?)` | ` ```gravity ` blocks for gravity and collisions — orbits, binaries, comets and colliding discs, integrated from the masses and orbits the model states |
 | `@ai-gui/plugin-physics` | `physics(options?)` | ` ```physics ` blocks for force and vector diagrams — bodies, surfaces, labelled arrows and angles, drawn not simulated |
 | `@ai-gui/plugin-quote` | `quote(options?)` | ` ```quote ` blocks for candlestick charts — the host supplies the prices, the renderer computes every indicator |
 | `@ai-gui/plugin-figure` | `figure(options?)` | ` ```figure ` blocks for labelled figures — regions with leader-line callouts naming each part |
@@ -513,9 +516,11 @@ LLM stream ──▶ @ai-gui/core (headless)
 | [`@ai-gui/vanilla`](./packages/vanilla/README.md) | Vanilla-DOM adapter: `createRenderer(el, options)`. |
 | [`@ai-gui/plugin-katex`](./packages/plugin-katex/README.md) | KaTeX math (`$…$`, `$$…$$`). |
 | [`@ai-gui/plugin-solid`](./packages/plugin-solid/README.md) | Solid-geometry teaching figures (` ```solid `). |
+| [`@ai-gui/plugin-scene`](./packages/plugin-scene/README.md) | 3D scenes from primitives and glTF models (` ```scene `). |
 | [`@ai-gui/plugin-function`](./packages/plugin-function/README.md) | Function and calculus figures (` ```function `). |
 | [`@ai-gui/plugin-optics`](./packages/plugin-optics/README.md) | Ray-optics figures (` ```optics `). |
 | [`@ai-gui/plugin-motion`](./packages/plugin-motion/README.md) | Mechanics motion figures (` ```motion `). |
+| [`@ai-gui/plugin-gravity`](./packages/plugin-gravity/README.md) | Orbits and collisions, integrated (` ```gravity `). |
 | [`@ai-gui/plugin-physics`](./packages/plugin-physics/README.md) | Force and vector diagrams (` ```physics `). |
 | [`@ai-gui/plugin-quote`](./packages/plugin-quote/README.md) | Candlestick charts with computed indicators (` ```quote `). |
 | [`@ai-gui/plugin-figure`](./packages/plugin-figure/README.md) | Labelled figures with leader-line callouts (` ```figure `). |
@@ -528,6 +533,7 @@ LLM stream ──▶ @ai-gui/core (headless)
 | [`@ai-gui/plugin-mermaid`](./packages/plugin-mermaid/README.md) | Mermaid diagrams. |
 | [`@ai-gui/plugin-primitives`](./packages/plugin-primitives/README.md) | Primitive UI blocks: list / table / key-value / layout. |
 | [`@ai-gui/plugin-chart`](./packages/plugin-chart/README.md) | ECharts charts: static SVG, live interactive, or 3D. |
+| [`@ai-gui/plugin-bigscreen`](./packages/plugin-bigscreen/README.md) | Animated data walls with 3D panels (` ```bigscreen `). |
 | [`@ai-gui/plugin-form`](./packages/plugin-form/README.md) | Accessible, validated forms that submit through `ActionRuntime`. |
 | [`@ai-gui/plugin-citation`](./packages/plugin-citation/README.md) | Secure source-list blocks with bounded fields and validated links. |
 | [`@ai-gui/plugin-artifact`](./packages/plugin-artifact/README.md) | Revisioned generated documents with a safe framework-neutral workspace. |

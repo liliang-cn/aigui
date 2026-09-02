@@ -1,0 +1,11 @@
+{
+  "objects": [
+    { "shape": "sphere", "radius": 1.2, "position": [0, 1.5, 0], "color": "orange", "label": "太阳" },
+    { "shape": "torus", "radius": 5, "tube": 0.02, "position": [0, 1.5, 0], "color": "gray", "opacity": 0.5 },
+    { "shape": "sphere", "radius": 0.4, "position": [5, 1.5, 0], "color": "#2563eb", "label": "地球" },
+    { "shape": "torus", "radius": 1, "tube": 0.015, "position": [5, 1.5, 0], "color": "silver", "opacity": 0.6 },
+    { "shape": "sphere", "radius": 0.12, "position": [6, 1.5, 0], "color": "#d1d5db", "label": "月亮" }
+  ],
+  "autoRotate": true,
+  "caption": "太阳–地球–月亮示意（非真实比例）：大圈是地球公转轨道，小圈是月球绕地轨道"
+}

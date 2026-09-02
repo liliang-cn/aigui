@@ -84,6 +84,59 @@ describe("molecule 3D lifecycle", () => {
     expect(mocks.render).toHaveBeenCalled()
   })
 
+  it("hands the viewer a generated Molfile for a SMILES structure, hydrogens included", async () => {
+    const { molecule } = await import("./index")
+    const render = collectNodeRenderers([molecule()]).molecule
+    const content = JSON.stringify({ version: 1, format: "smiles", source: "CCO", view: "3d", highlight: { atoms: [2], bonds: [1] } })
+    const out = await render({ key: "m:smiles3d", type: "molecule", content, complete: true } as ASTNode) as RenderOutput
+    expect(out.kind).toBe("mount")
+    if (out.kind !== "mount") return
+    const host = document.createElement("div")
+    out.mount(host)
+    await vi.waitFor(() => expect(mocks.createViewer).toHaveBeenCalledOnce())
+    const [molfile, format] = mocks.addModel.mock.calls[0] as [string, string]
+    expect(format).toBe("mol")
+    // Ethanol: three heavy atoms plus six hydrogens, with real z coordinates.
+    expect(molfile).toContain("  9  8  0")
+    const zs = molfile.split("\n").slice(4, 13).map((line) => Number(line.slice(20, 30)))
+    expect(Math.max(...zs) - Math.min(...zs)).toBeGreaterThan(0.5)
+    // The highlight the model wrote against the SMILES reaches the viewer unchanged: atom 2 is
+    // the oxygen, bond 1 the C–O bond, and both were validated before the hydrogens arrived.
+    expect(mocks.setStyle).toHaveBeenCalledWith({ index: [2] }, expect.anything())
+    expect(mocks.setStyle).toHaveBeenCalledWith({ index: [1, 2] }, expect.anything())
+  })
+
+  it("replaces the style for a highlight instead of merging onto one whose colorscheme would win", async () => {
+    const { molecule } = await import("./index")
+    const render = collectNodeRenderers([molecule()]).molecule
+    const content = JSON.stringify({ version: 1, format: "smiles", source: "CCO", view: "3d", highlight: { atoms: [2] } })
+    const out = await render({ key: "m:hl", type: "molecule", content, complete: true } as ASTNode) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected mount")
+    out.mount(document.createElement("div"))
+    await vi.waitFor(() => expect(mocks.createViewer).toHaveBeenCalledOnce())
+    expect(mocks.addStyle).not.toHaveBeenCalled()
+    const highlight = (mocks.setStyle.mock.calls as Array<[Record<string, unknown>, { sphere?: Record<string, unknown> }]>).find(([selection]) => "index" in selection)
+    expect(highlight?.[1].sphere).toMatchObject({ color: 0xffc400 })
+    expect(highlight?.[1].sphere).not.toHaveProperty("colorscheme")
+  })
+
+  it("recolours rather than resizes a highlight in space-filling, where a bigger sphere is buried", async () => {
+    const { molecule } = await import("./index")
+    const render = collectNodeRenderers([molecule()]).molecule
+    const content = JSON.stringify({ version: 1, format: "smiles", source: "CCO", view: "3d", style: "space-filling", highlight: { atoms: [2], bonds: [1] } })
+    const out = await render({ key: "m:sf", type: "molecule", content, complete: true } as ASTNode) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected mount")
+    out.mount(document.createElement("div"))
+    await vi.waitFor(() => expect(mocks.createViewer).toHaveBeenCalledOnce())
+    const highlights = (mocks.setStyle.mock.calls as Array<[Record<string, unknown>, { sphere?: { scale?: number; color?: number }; stick?: unknown }]>)
+      .filter(([selection]) => "index" in selection)
+    expect(highlights).toHaveLength(2)
+    for (const [, style] of highlights) {
+      expect(style.stick).toBeUndefined()
+      expect(style.sphere).toMatchObject({ scale: 1, color: 0xffc400 })
+    }
+  })
+
   it("provides a Reset control that restores zoom and rendering", async () => {
     const { molecule } = await import("./index")
     const render = collectNodeRenderers([molecule()]).molecule

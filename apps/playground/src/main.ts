@@ -13,6 +13,9 @@ import { mermaid } from "@ai-gui/plugin-mermaid"
 import { molecule } from "@ai-gui/plugin-molecule"
 import { map } from "@ai-gui/plugin-map"
 import { solid } from "@ai-gui/plugin-solid"
+import { scene } from "@ai-gui/plugin-scene"
+import { gravity } from "@ai-gui/plugin-gravity"
+import { bigscreen } from "@ai-gui/plugin-bigscreen"
 import { AIRenderer as ReactAIRenderer, type AIRendererHandle as ReactHandle } from "@ai-gui/react"
 import { AIRenderer as VueAIRenderer } from "@ai-gui/vue"
 import { createRenderer, type VanillaRenderer } from "@ai-gui/vanilla"
@@ -55,10 +58,32 @@ flowchart LR
 {"version":1,"format":"smiles","source":"CCO","view":"2d","atomLabels":"standard","highlight":{"atoms":[2]}}
 \`\`\`
 
+\`\`\`molecule
+{"version":1,"format":"smiles","source":"Cn1cnc2c1c(=O)n(C)c(=O)n2C","view":"3d","style":"ball-and-stick"}
+\`\`\`
+
 ## Solid geometry
 
 \`\`\`solid
 {"solid":"cube","label":"ABCD-A1B1C1D1","edge":2,"points":[{"id":"M","on":"A1C1","at":0.5}],"segments":[{"from":"B","to":"M","style":"solid","note":"BM"}],"section":{"through":["A","B1","D1"]},"highlight":[{"plane":["A","B1","D1"]}],"caption":"平面 AB1D1 截正方体，M 为 A1C1 的中点"}
+\`\`\`
+
+## 3D scene
+
+\`\`\`scene
+{"objects":[{"shape":"box","size":[6,3,4],"anchor":"bottom","color":"#e7dcc8","label":"主体"},{"shape":"cone","radius":3.9,"height":2,"sides":4,"position":[0,3,0],"anchor":"bottom","rotation":[0,45,0],"color":"#b5533c","label":"屋顶"},{"shape":"box","size":[0.6,1.2,0.6],"position":[1.5,4,0.8],"anchor":"bottom","color":"gray","label":"烟囱"},{"shape":"box","size":[0.9,2,0.1],"position":[0,0,2],"anchor":"bottom","color":"#5b3a1e"}],"autoRotate":true,"caption":"房子的体块关系：主体、四坡顶、烟囱和门"}
+\`\`\`
+
+## Big screen
+
+\`\`\`bigscreen
+{"title":"华东区销售大屏","subtitle":"2026 年 8 月","panels":[{"kind":"kpi","title":"本月营收","value":12843000,"prefix":"¥","delta":0.124,"trend":[8.1,8.6,9.2,9.0,10.4,11.9,12.8],"span":3},{"kind":"kpi","title":"订单数","value":48210,"unit":"单","delta":0.051,"span":3},{"kind":"kpi","title":"客单价","value":266.4,"prefix":"¥","decimals":1,"delta":-0.018,"span":3},{"kind":"gauge","title":"目标完成率","value":82,"unit":"%","span":3},{"kind":"chart","title":"月度趋势","span":8,"option":{"xAxis":{"type":"category","data":["3月","4月","5月","6月","7月","8月"]},"yAxis":{"type":"value"},"series":[{"type":"line","smooth":true,"areaStyle":{},"data":[820,932,901,934,1290,1330]}]}},{"kind":"rank","title":"门店排行","span":4,"unit":"万","items":[{"name":"上海","value":320},{"name":"杭州","value":245},{"name":"南京","value":198},{"name":"苏州","value":176},{"name":"宁波","value":121}]},{"kind":"chart3d","title":"品类 × 月份","span":6,"type":"bar3D","xAxis":["6月","7月","8月"],"yAxis":["家电","服饰","食品"],"data":[[0,0,120],[1,0,150],[2,0,180],[0,1,90],[1,1,110],[2,1,140],[0,2,60],[1,2,75],[2,2,95]]},{"kind":"globe","title":"出口流向","span":6,"arcs":[{"from":[121.47,31.23],"to":[8.68,50.11],"label":"上海→法兰克福"},{"from":[121.47,31.23],"to":[-74.01,40.71],"label":"上海→纽约"},{"from":[121.47,31.23],"to":[151.21,-33.87],"label":"上海→悉尼"},{"from":[121.47,31.23],"to":[55.27,25.2],"label":"上海→迪拜"}],"points":[{"coord":[121.47,31.23],"label":"上海","value":320},{"coord":[-74.01,40.71],"label":"纽约","value":120},{"coord":[8.68,50.11],"label":"法兰克福","value":90}]}]}
+\`\`\`
+
+## Gravity
+
+\`\`\`gravity
+{"units":"astronomical","bodies":[{"id":"太阳","mass":1,"color":"orange"},{"id":"地球","mass":3e-6,"orbit":{"around":"太阳","distance":1},"color":"blue"},{"id":"彗星","mass":0,"orbit":{"around":"太阳","distance":0.4,"eccentricity":0.8,"angle":180},"color":"gray"}],"duration":3,"caption":"地球与一颗近日点 0.4 AU 的彗星"}
 \`\`\`
 
 ## Geography route
@@ -182,7 +207,7 @@ function mount(kind: PlaygroundAdapter): void {
   timeline = []
   adapterBadge.textContent = kind.toUpperCase()
   const registry = createRegistry(kind)
-  const plugins: AIGuiPlugin[] = [citation(), ui({ registry, actionRuntime }), mermaid({ theme: "neutral" }), molecule(), map(), solid(), artifact({ store: artifactStore })]
+  const plugins: AIGuiPlugin[] = [citation(), ui({ registry, actionRuntime }), mermaid({ theme: "neutral" }), molecule(), map(), solid(), scene(), gravity(), bigscreen(), artifact({ store: artifactStore })]
   const mounted = kind === "react" ? mountReact(registry, plugins) : kind === "vue" ? mountVue(registry, plugins) : mountVanilla(registry, plugins)
   handle = mounted.handle
   cleanupRenderer = mounted.cleanup
