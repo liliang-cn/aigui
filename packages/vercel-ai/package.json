@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/vercel-ai",
-  "version": "0.35.1",
+  "version": "0.35.2",
   "description": "Vercel AI SDK model stream adapter for AIGUI.",
   "keywords": [
     "vercel",
