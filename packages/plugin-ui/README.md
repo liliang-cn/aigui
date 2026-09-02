@@ -50,6 +50,12 @@ ui({ registry, actionRuntime, locale: "zh-CN" })   // pinned regardless of host
 
 Colour is derived from the inherited text colour, so a block sits on whatever background it is given. The three tone colours cannot be — a critical line that is only a tint of the surrounding text is not a critical line — so they resolve as: a value the host set on `--aigui-ui-positive` / `--aigui-ui-warning` / `--aigui-ui-critical`, then the renderer's `theme`, then the OS preference.
 
+The defaults are declared inside `:where()`, so they carry no specificity and a host wins by writing the property anywhere:
+
+```css
+.my-app [data-aigui-ui] { --aigui-ui-critical: var(--destructive); }
+```
+
 ## When an action fails
 
 The reader is told which kind of failure it was, because the answers differ: invalid input to fix, a timeout to retry, a cancelled or unavailable action to stop at. Only the error's *class* is ever read. A message thrown by the host's own action code — a stack, an internal id, a database error — is never shown, on a surface whose shape the model chose.

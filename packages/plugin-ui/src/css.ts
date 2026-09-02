@@ -15,22 +15,30 @@
  * last step is the fallback rather than the rule, because a host that paints a
  * dark page while the OS is in light mode is common, and it is the one that
  * told us its theme.
+ *
+ * Every default below is wrapped in `:where()`, which contributes no
+ * specificity, so a host setting `--aigui-ui-critical` wins wherever it writes
+ * it. Without that the seam does not exist: this stylesheet is injected when
+ * the plugin loads, which is after the host's own has been parsed, so an
+ * override written at the same specificity loses on order alone — and the theme
+ * default `[data-aigui-ui][data-aigui-ui-theme="dark"]` matches the doubled
+ * selector a host would most naturally reach for.
  */
 export const uiCss = `
-[data-aigui-ui] {
-  display: block; color: inherit; font: inherit;
+[data-aigui-ui] { display: block; color: inherit; font: inherit; }
+:where([data-aigui-ui]) {
   --aigui-ui-positive: #18794e;
   --aigui-ui-warning: #9a6700;
   --aigui-ui-critical: #b42318;
 }
 @media (prefers-color-scheme: dark) {
-  [data-aigui-ui]:not([data-aigui-ui-theme="light"]) {
+  :where([data-aigui-ui]:not([data-aigui-ui-theme="light"])) {
     --aigui-ui-positive: #5cd6a0;
     --aigui-ui-warning: #f0c065;
     --aigui-ui-critical: #ff9086;
   }
 }
-[data-aigui-ui][data-aigui-ui-theme="dark"] {
+:where([data-aigui-ui][data-aigui-ui-theme="dark"]) {
   --aigui-ui-positive: #5cd6a0;
   --aigui-ui-warning: #f0c065;
   --aigui-ui-critical: #ff9086;

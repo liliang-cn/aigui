@@ -420,3 +420,29 @@ describe("UI plugin locale, action failures and theme", () => {
     expect(uiPromptSpec(registry, actionRuntime, undefined, "zh-CN")).toContain("整个块被丢弃")
   })
 })
+
+describe("the tone colours are a host seam", () => {
+  // The defaults are shipped at zero specificity so a host wins by writing the
+  // property at all. Before this they were plain attribute selectors: the
+  // stylesheet is injected after the host's own is parsed, so an override at the
+  // same specificity lost on order, and the dark default matched exactly the
+  // doubled selector a host reaches for.
+  it("declares every default inside :where()", () => {
+    // Every block that *assigns* a tone token, as opposed to reading one back
+    // through var(), must open with a zero-specificity selector.
+    const assigning = uiCss
+      .split("}")
+      .filter((block) => /--aigui-ui-(positive|warning|critical)\s*:/.test(block.replace(/var\([^)]*\)/g, "")))
+    expect(assigning.length).toBe(3)
+    for (const block of assigning) expect(block).toContain(":where(")
+
+    expect(uiCss).toContain(":where([data-aigui-ui])")
+    expect(uiCss).toContain(':where([data-aigui-ui][data-aigui-ui-theme="dark"])')
+    expect(uiCss).toContain(':where([data-aigui-ui]:not([data-aigui-ui-theme="light"]))')
+  })
+
+  it("keeps the tone rules themselves reading the token", () => {
+    expect(uiCss).toContain('[data-tone="critical"] { color: var(--aigui-ui-critical); }')
+    expect(uiCss).toContain("[data-aigui-ui-field-error], [data-aigui-ui-action-error] { color: var(--aigui-ui-critical); }")
+  })
+})
