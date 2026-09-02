@@ -1,4 +1,8 @@
-import { ActionRuntimeError, type MountedCardSlot } from "@ai-gui/core"
+import {
+  ActionAbortedError, ActionDestroyedError, ActionNotFoundError, ActionRuntimeError,
+  ActionTimeoutError, ActionValidationError, translator, type MountedCardSlot,
+} from "@ai-gui/core"
+import { UI_MESSAGES, format } from "./messages"
 import type {
   UIBoundJSON, UIButtonNode, UICardNode, UIDocument, UIFieldNode, UIFormNode, UIKeyValueNode, UINode, UIScalar, UIScalarExpression, UIMountOptions,
 } from "./types"
@@ -11,6 +15,8 @@ interface RuntimeContext {
   bindings: Map<string, Set<() => void>>
   cleanups: Array<() => void>
   disposed: boolean
+  /** Resolved once per mount: a block draws many strings and each is a map hit. */
+  t: (key: string) => string
 }
 
 export function mountUIDocument(host: HTMLElement, document: UIDocument, options: UIMountOptions): () => void {
@@ -23,10 +29,12 @@ export function mountUIDocument(host: HTMLElement, document: UIDocument, options
     bindings: new Map(),
     cleanups: [],
     disposed: false,
+    t: translator(UI_MESSAGES, options.locale),
   }
   const root = createNode(document.root, context, undefined)
   const container = globalThis.document.createElement("div")
   container.setAttribute("data-aigui-ui", document.id)
+  if (options.theme) container.setAttribute("data-aigui-ui-theme", options.theme)
   container.appendChild(root)
   host.replaceChildren(container)
   let cleaned = false
@@ -136,7 +144,7 @@ function createForm(node: UIFormNode, context: RuntimeContext): HTMLElement {
       { type: node.submit.type, params, cardType: `ui:${context.document.id}:${node.id}` },
       { owner, signal: controller.signal },
     ).then(() => settle(), (error: unknown) => {
-      if (!context.disposed && !controller.signal.aborted) { actionError.textContent = safeActionError(error); actionError.hidden = false }
+      if (!context.disposed && !controller.signal.aborted) { actionError.textContent = safeActionError(error, context.t); actionError.hidden = false }
       settle()
     })
     function settle() { if (context.disposed) return; pending = false; submit.disabled = false; form.removeAttribute("aria-busy") }
@@ -206,7 +214,7 @@ function createButton(node: UIButtonNode, context: RuntimeContext): HTMLElement 
     void context.options.actionRuntime.dispatch(
       { type: node.action.type, params, cardType: `ui:${context.document.id}:${node.id}` },
       { owner, signal: controller.signal },
-    ).then(() => settle(), (cause: unknown) => { if (!context.disposed && !controller.signal.aborted) { error.textContent = safeActionError(cause); error.hidden = false } settle() })
+    ).then(() => settle(), (cause: unknown) => { if (!context.disposed && !controller.signal.aborted) { error.textContent = safeActionError(cause, context.t); error.hidden = false } settle() })
     function settle() { if (context.disposed) return; pending = false; button.disabled = false; button.removeAttribute("aria-busy") }
   }
   button.addEventListener("click", onClick)
@@ -243,13 +251,14 @@ function validateField(node: UIFieldNode, context: RuntimeContext, form: HTMLFor
   if (!container) return true
   const value = context.state[node.bind]
   let message = ""
-  if (node.required && (value === "" || value === null || value === false)) message = "This field is required."
-  else if (node.fieldType === "number" && typeof value === "number") { if (node.min !== undefined && value < node.min) message = `Must be at least ${node.min}.`; else if (node.max !== undefined && value > node.max) message = `Must be at most ${node.max}.` }
+  const t = context.t
+  if (node.required && (value === "" || value === null || value === false)) message = t("field.required")
+  else if (node.fieldType === "number" && typeof value === "number") { if (node.min !== undefined && value < node.min) message = format(t("field.min"), { min: String(node.min) }); else if (node.max !== undefined && value > node.max) message = format(t("field.max"), { max: String(node.max) }) }
   else if (typeof value === "string") {
-    if (node.minLength !== undefined && value.length < node.minLength) message = `Must contain at least ${node.minLength} characters.`
-    else if (node.maxLength !== undefined && value.length > node.maxLength) message = `Must contain at most ${node.maxLength} characters.`
-    else if (node.pattern !== undefined && !new RegExp(node.pattern).test(value)) message = "Must match the required format."
-    else if ((node.fieldType === "select" || node.fieldType === "radio") && !node.options?.some((option) => option.value === value)) message = "Select an allowed option."
+    if (node.minLength !== undefined && value.length < node.minLength) message = format(t("field.minLength"), { min: String(node.minLength) })
+    else if (node.maxLength !== undefined && value.length > node.maxLength) message = format(t("field.maxLength"), { max: String(node.maxLength) })
+    else if (node.pattern !== undefined && !new RegExp(node.pattern).test(value)) message = t("field.pattern")
+    else if ((node.fieldType === "select" || node.fieldType === "radio") && !node.options?.some((option) => option.value === value)) message = t("field.option")
   }
   const controls = container.querySelectorAll<HTMLElement>("input, textarea, select")
   const error = container.querySelector<HTMLElement>(`[data-aigui-ui-field-error="${node.id}"]`)
@@ -280,7 +289,30 @@ function readControl(control: HTMLInputElement | HTMLTextAreaElement | HTMLSelec
 function writeControl(control: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement, field: UIFieldNode, value: UIScalar): void { if (field.fieldType === "checkbox" && control instanceof HTMLInputElement) control.checked = value === true; else control.value = value === null ? "" : String(value) }
 function clearFieldError(node: UIFieldNode, container: HTMLElement): void { for (const control of container.querySelectorAll<HTMLElement>("input, textarea, select")) control.removeAttribute("aria-invalid"); const error = container.querySelector<HTMLElement>(`[data-aigui-ui-field-error="${node.id}"]`); if (error) { error.textContent = ""; error.hidden = true } }
 function actionErrorElement(id: string): HTMLElement { const error = globalThis.document.createElement("div"); error.setAttribute("data-aigui-ui-action-error", id); error.setAttribute("role", "alert"); error.hidden = true; return error }
-function safeActionError(error: unknown): string { return error instanceof ActionRuntimeError ? "Action failed." : "Action failed." }
+/**
+ * What the reader is told when an action fails.
+ *
+ * The split is between errors the runtime raised, whose *class* is a fact about
+ * the request and safe to describe, and anything thrown by the host's own
+ * action code, which is not: a stack, a DSN, an internal id or a database
+ * message would all arrive here as `error.message`, on a surface the model
+ * chose the shape of. So only the class is ever read, never the message, and an
+ * unrecognised error is the generic line.
+ *
+ * The classes are worth telling apart because they imply different next moves:
+ * fix the input, wait and retry, or stop. Before this they were one sentence,
+ * and a mistyped field and a dead backend looked identical.
+ */
+function safeActionError(error: unknown, t: (key: string) => string): string {
+  if (error instanceof ActionValidationError) return t("action.invalid")
+  if (error instanceof ActionTimeoutError) return t("action.timeout")
+  if (error instanceof ActionAbortedError) return t("action.cancelled")
+  if (error instanceof ActionNotFoundError) return t("action.notFound")
+  if (error instanceof ActionDestroyedError) return t("action.unavailable")
+  // ActionExecutionError included: it wraps whatever the host threw.
+  if (error instanceof ActionRuntimeError) return t("action.failed")
+  return t("action.failed")
+}
 function base(tag: string, node: { id: string }): HTMLElement { const element = globalThis.document.createElement(tag); element.setAttribute("data-aigui-ui-id", node.id); return element }
 let instance = 0
 function nextInstance(): number { return ++instance }

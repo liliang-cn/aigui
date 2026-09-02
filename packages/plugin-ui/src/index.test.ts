@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import {
+  ActionAbortedError,
+  ActionDestroyedError,
+  ActionExecutionError,
+  ActionNotFoundError,
   ActionRegistry,
+  ActionTimeoutError,
+  ActionValidationError,
   CardRegistry,
   Renderer,
   collectNodeRenderers,
@@ -129,7 +135,7 @@ describe("UI plugin and prompt", () => {
     for (const forbidden of ["HTML", "Markdown", "CSS", "JavaScript", "URLs", "imports", "remote components", "workflows", "artifact commands", "declarative"]) expect(prompt).toContain(forbidden)
   })
 
-  it("is complete-gated through the real Renderer, returns generic invalid UI, and caches by AST node", () => {
+  it("is complete-gated through the real Renderer, names the rule that refused the block, and caches by AST node", () => {
     const { registry, actionRuntime } = setup()
     const plugin = ui({ registry, actionRuntime })
     let nodes = [] as Parameters<NonNullable<ConstructorParameters<typeof Renderer>[0]["onPatch"]>>[1]
@@ -141,7 +147,10 @@ describe("UI plugin and prompt", () => {
     renderer.push("}\n```")
     const invalid = render(nodes[0]) as RenderOutput
     expect(invalid.kind).toBe("html")
-    if (invalid.kind === "html") expect(invalid.html).toBe('<div data-aigui-ui-invalid="" role="alert">Invalid UI.</div>')
+    // The reason is a validator sentence about the document's shape — a JSON
+    // path and a rule, never a value the model wrote — so it is safe to show
+    // and is the only way to tell a typo from a limit.
+    if (invalid.kind === "html") expect(invalid.html).toBe('<div data-aigui-ui-invalid="" role="alert">This interface could not be displayed: $.id must be a non-empty bounded string.</div>')
     expect(render(nodes[0])).toBe(invalid)
   })
 
@@ -309,5 +318,105 @@ describe("public surface", () => {
     expect(uiCss).toContain("[data-aigui-ui]")
     expect(uiCss).not.toContain("url(")
     expect(typeof mountUIDocument).toBe("function")
+  })
+})
+
+describe("UI plugin locale, action failures and theme", () => {
+  const buttonDoc = {
+    version: 1, id: "act", state: {},
+    root: { kind: "stack", id: "root", children: [
+      { kind: "button", id: "button", label: "Go", action: { type: "save" } },
+    ] },
+  }
+
+  /** A runtime that fails on demand, to reach each branch through the real DOM. */
+  function failingRuntime(error: unknown) {
+    return {
+      hasAction: () => true,
+      listActionTypes: () => ["save"] as readonly string[],
+      dispatch: () => Promise.reject(error),
+    }
+  }
+
+  async function clickAndRead(error: unknown, locale?: string) {
+    const { registry, actionRuntime } = setup()
+    const runtime = failingRuntime(error)
+    const host = document.createElement("div")
+    mountUIDocument(host, validateUIDocument(buttonDoc, { registry, actionRuntime }), {
+      actionRuntime: runtime, locale,
+    })
+    host.querySelector<HTMLButtonElement>('[data-aigui-ui-id="button"]')!.click()
+    await Promise.resolve(); await Promise.resolve()
+    return host.querySelector('[data-aigui-ui-action-error="button"]')?.textContent
+  }
+
+  // The whole point of the split: a mistyped field and a dead backend used to
+  // produce the same sentence, so a reader could not tell whether to retry.
+  it("tells the runtime failures apart", async () => {
+    expect(await clickAndRead(new ActionValidationError("save", ["bad"]))).toBe("Check the values and try again.")
+    expect(await clickAndRead(new ActionTimeoutError("save", 100))).toBe("The action took too long. Try again.")
+    expect(await clickAndRead(new ActionAbortedError("save"))).toBe("Action cancelled.")
+    expect(await clickAndRead(new ActionNotFoundError("save"))).toBe("That action is not available.")
+    expect(await clickAndRead(new ActionDestroyedError())).toBe("This interface is no longer active.")
+  })
+
+  // Only the class is ever read. An error from host code carries stacks, ids and
+  // database text, on a surface the model chose the shape of.
+  it("never repeats what the host's own action threw", async () => {
+    expect(await clickAndRead(new Error("connection to 10.0.0.4 refused"))).toBe("Action failed.")
+    expect(await clickAndRead(new ActionExecutionError("save", new Error("secret")))).toBe("Action failed.")
+    expect(await clickAndRead("db: password authentication failed")).toBe("Action failed.")
+  })
+
+  it("draws its own strings in the host's language", async () => {
+    expect(await clickAndRead(new ActionTimeoutError("save", 100), "zh-CN")).toBe("操作超时，请重试。")
+    // resolveMessages goes region -> language -> English, and only "zh-CN" is
+    // translated, so a tag that is not that one lands on English.
+    expect(await clickAndRead(new ActionTimeoutError("save", 100), "de")).toBe("The action took too long. Try again.")
+  })
+
+  it("localizes field validation", () => {
+    const { registry, actionRuntime } = setup()
+    const value = { version: 1, id: "form-ui", state: { name: "" },
+      root: { kind: "stack", id: "root", children: [
+        { kind: "form", id: "form", submit: { type: "save" }, children: [
+          { kind: "field", id: "f", bind: "name", fieldType: "text", label: "名字", required: true },
+        ] },
+      ] } }
+    const host = document.createElement("div")
+    mountUIDocument(host, validateUIDocument(value, { registry, actionRuntime }), { actionRuntime, locale: "zh-CN" })
+    host.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+    expect(host.querySelector('[data-aigui-ui-field-error="f"]')?.textContent).toBe("此项必填。")
+  })
+
+  it("renders the refusal and the duplicate notice in the host's language", () => {
+    const { registry, actionRuntime } = setup()
+    const plugin = ui({ registry, actionRuntime, locale: "zh-CN" })
+    const render = collectNodeRenderers([plugin]).ui
+    const node = { key: "k", type: "ui", complete: true, content: '{"version":1}' }
+    const output = render(node as never) as RenderOutput
+    if (output.kind === "html") expect(output.html).toContain("这个界面无法显示")
+  })
+
+  // The tone colours are the only thing that cannot be derived from the
+  // inherited text colour, so the container has to carry the scheme.
+  it("passes the host's theme to the block", () => {
+    const { registry, actionRuntime } = setup()
+    const host = document.createElement("div")
+    mountUIDocument(host, validateUIDocument(buttonDoc, { registry, actionRuntime }), { actionRuntime, theme: "dark" })
+    expect(host.querySelector("[data-aigui-ui]")?.getAttribute("data-aigui-ui-theme")).toBe("dark")
+    const bare = document.createElement("div")
+    mountUIDocument(bare, validateUIDocument(buttonDoc, { registry, actionRuntime }), { actionRuntime })
+    expect(bare.querySelector("[data-aigui-ui]")?.hasAttribute("data-aigui-ui-theme")).toBe(false)
+  })
+
+  it("writes the model's rules in the product's language", () => {
+    const { registry, actionRuntime } = setup()
+    expect(uiPromptSpec(registry, actionRuntime, undefined, "zh-CN")).toContain("声明式界面")
+    expect(uiPromptSpec(registry, actionRuntime, undefined, "en")).toContain("Declarative UI")
+    // Action names are identifiers the model must reproduce, never translated.
+    expect(uiPromptSpec(registry, actionRuntime, undefined, "zh-CN")).toContain("save")
+    // The rule that stops a model inventing an action name and losing the block.
+    expect(uiPromptSpec(registry, actionRuntime, undefined, "zh-CN")).toContain("整个块被丢弃")
   })
 })

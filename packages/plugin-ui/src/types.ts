@@ -66,9 +66,30 @@ export interface UIValidationOptions {
 export interface UIMountOptions {
   actionRuntime: UIActionRuntime
   mountContext?: RenderMountContext
+  /**
+   * The locale for the handful of strings this plugin draws itself — a field's
+   * "required" line, an action's failure line. The plugin renderer takes it
+   * from NodeRenderContext, so a host that already tells the renderer its
+   * locale does not pass it again here.
+   */
+  locale?: string
+  /**
+   * The host's colour scheme, "light" or "dark". Only the tone colours depend
+   * on it; everything else is derived from the inherited text colour. Absent,
+   * the OS preference decides.
+   */
+  theme?: string
 }
 
-export interface UIPluginOptions extends UIValidationOptions {}
+export interface UIPluginOptions extends UIValidationOptions {
+  /**
+   * Falls back to the locale the renderer reports per node. Set this only to
+   * pin the plugin's own strings to one language regardless of the host.
+   */
+  locale?: string
+  /** Falls back to the theme the renderer reports per node. */
+  theme?: string
+}
 
 export interface UICardRegistry {
   get(type: string): Readonly<CardDef> | undefined
