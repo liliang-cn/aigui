@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/vue",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "description": "Vue 3 adapter for AIGUI — stream LLM output into live Vue components with cards and plugins.",
   "keywords": [
     "llm",

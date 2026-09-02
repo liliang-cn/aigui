@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-quote",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "description": "Candlestick and indicator figures for AIGUI — the host or a tool supplies the prices, the renderer computes every indicator.",
   "keywords": [
     "llm",

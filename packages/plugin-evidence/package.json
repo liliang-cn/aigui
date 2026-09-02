@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-evidence",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "description": "Host-owned query provenance fences for AIGUI: show which queries produced the numbers.",
   "keywords": [
     "llm",

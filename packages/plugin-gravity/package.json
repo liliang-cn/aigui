@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-gravity",
-  "version": "0.34.0",
+  "version": "0.35.0",
   "description": "Gravity and collision figures for AIGUI — orbits, binaries, comets and colliding discs, integrated from the conditions the model states.",
   "keywords": [
     "llm",

@@ -1,5 +1,11 @@
 # @ai-gui/plugin-chart
 
+## 0.35.0
+
+### Patch Changes
+
+- @ai-gui/core@0.35.0
+
 ## 0.34.0
 
 ### Patch Changes

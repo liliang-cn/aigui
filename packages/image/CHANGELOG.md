@@ -1,5 +1,24 @@
 # @ai-gui/image
 
+## 0.35.0
+
+### Minor Changes
+
+- e0c759a: `@ai-gui/image` now draws four more block families — ` ```scene `, ` ```gravity `, ` ```bigscreen ` and ` ```molecule ` — so a picture-only channel gets the 3D scene, the orbit, the data wall and the molecule as PNGs. The WebGL ones render through SwiftShader in headless Chromium (the launcher now passes the flags that enable it), the animated ones are drawn at their finished state, and the page waits for a canvas to paint before it screenshots. `@ai-gui/openclaw` accepts the four new names in `blocks` and draws them by default.
+
+### Patch Changes
+
+- @ai-gui/core@0.35.0
+- @ai-gui/vanilla@0.35.0
+- @ai-gui/plugin-katex@0.35.0
+- @ai-gui/plugin-mermaid@0.35.0
+- @ai-gui/plugin-chart@0.35.0
+- @ai-gui/plugin-molecule@0.35.0
+- @ai-gui/plugin-scene@0.35.0
+- @ai-gui/plugin-gravity@0.35.0
+- @ai-gui/plugin-dashboard@0.35.0
+- @ai-gui/plugin-bigscreen@0.35.0
+
 ## 0.34.0
 
 ### Patch Changes
