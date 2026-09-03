@@ -35,7 +35,7 @@ export const functionCss = [
   "[data-aigui-function-figure] svg{display:block;max-width:100%;height:auto}",
   "[data-aigui-function-caption]{margin-top:0.35rem;font-size:0.875rem;opacity:0.75;text-align:center}",
   "[data-aigui-function-loading]{min-height:6rem;border-radius:0.5rem;background:currentColor;opacity:0.06}",
-  "[data-aigui-function-error]{padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.875rem;opacity:0.8;background:currentColor}",
+  ":where([data-aigui-function-error]){padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.875rem;background:color-mix(in srgb,currentColor 8%,transparent);border:1px solid color-mix(in srgb,currentColor 25%,transparent)}",
 ].join("")
 
 /**

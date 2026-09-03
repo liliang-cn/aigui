@@ -19,7 +19,7 @@ export const opticsCss = [
   "[data-aigui-optics-conclusion]{margin-top:0.3rem;font-size:0.9rem;text-align:center;font-weight:600}",
   "[data-aigui-optics-caption]{margin-top:0.2rem;font-size:0.875rem;opacity:0.7;text-align:center}",
   "[data-aigui-optics-loading]{min-height:6rem;border-radius:0.5rem;background:currentColor;opacity:0.06}",
-  "[data-aigui-optics-error]{padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.875rem;opacity:0.8;background:currentColor}",
+  ":where([data-aigui-optics-error]){padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.875rem;background:color-mix(in srgb,currentColor 8%,transparent);border:1px solid color-mix(in srgb,currentColor 25%,transparent)}",
 ].join("")
 
 /**

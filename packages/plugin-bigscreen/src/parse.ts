@@ -21,6 +21,20 @@ const bad = (message: string): BigscreenResult<never> => ({ ok: false, error: { 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value)
 const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value)
 const text = (value: unknown, max = 120): value is string => typeof value === "string" && value.length <= max
+
+/**
+ * Why a string was rejected, with the number in it.
+ *
+ * "must be a short string" is true and useless: it does not say how short, so
+ * neither a model rewriting its own block nor a person reading the message can
+ * tell whether they are two characters over or twenty. Observed in the wild —
+ * a KPI caption of 54 characters against a limit of 40, twice in a row, from a
+ * model that had never been told there was a limit.
+ */
+const tooLong = (at: string, max: number, value: unknown): string =>
+  typeof value === "string"
+    ? `${at} must be at most ${max} characters (got ${value.length})`
+    : `${at} must be a string of at most ${max} characters`
 const lngLat = (value: unknown): value is [number, number] =>
   Array.isArray(value) && value.length === 2 && value.every(finite) && Math.abs(value[0]) <= 180 && Math.abs(value[1]) <= 90
 
@@ -28,11 +42,11 @@ function parseKpi(raw: Record<string, unknown>, at: string): BigscreenResult<Kpi
   if (!finite(raw.value)) return bad(`${at}.value must be a number`)
   const panel: KpiPanel = { kind: "kpi", value: raw.value }
   if (raw.unit !== undefined) {
-    if (!text(raw.unit, 16)) return bad(`${at}.unit must be a short string`)
+    if (!text(raw.unit, 16)) return bad(tooLong(`${at}.unit`, 16, raw.unit))
     panel.unit = raw.unit
   }
   if (raw.prefix !== undefined) {
-    if (!text(raw.prefix, 8)) return bad(`${at}.prefix must be a short string`)
+    if (!text(raw.prefix, 8)) return bad(tooLong(`${at}.prefix`, 8, raw.prefix))
     panel.prefix = raw.prefix
   }
   if (raw.decimals !== undefined) {
@@ -52,7 +66,7 @@ function parseKpi(raw: Record<string, unknown>, at: string): BigscreenResult<Kpi
     panel.trend = raw.trend as number[]
   }
   if (raw.label !== undefined) {
-    if (!text(raw.label, 40)) return bad(`${at}.label must be a short string`)
+    if (!text(raw.label, 40)) return bad(tooLong(`${at}.label`, 40, raw.label))
     panel.label = raw.label
   }
   return { ok: true, value: panel }
@@ -66,7 +80,7 @@ function parseGauge(raw: Record<string, unknown>, at: string): BigscreenResult<G
     panel.max = raw.max
   }
   if (raw.unit !== undefined) {
-    if (!text(raw.unit, 16)) return bad(`${at}.unit must be a short string`)
+    if (!text(raw.unit, 16)) return bad(tooLong(`${at}.unit`, 16, raw.unit))
     panel.unit = raw.unit
   }
   if (raw.style !== undefined) {
@@ -93,7 +107,7 @@ function parseRank(raw: Record<string, unknown>, at: string): BigscreenResult<Ra
   }
   const panel: RankPanel = { kind: "rank", items }
   if (raw.unit !== undefined) {
-    if (!text(raw.unit, 16)) return bad(`${at}.unit must be a short string`)
+    if (!text(raw.unit, 16)) return bad(tooLong(`${at}.unit`, 16, raw.unit))
     panel.unit = raw.unit
   }
   if (raw.top !== undefined) {
@@ -134,7 +148,7 @@ function parseGlobe(raw: Record<string, unknown>, at: string): BigscreenResult<G
       if (!isRecord(arc) || !lngLat(arc.from) || !lngLat(arc.to)) return bad(`${at}.arcs[${index}] must be {from: [lng, lat], to: [lng, lat]}`)
       const entry: NonNullable<GlobePanel["arcs"]>[number] = { from: arc.from, to: arc.to }
       if (arc.label !== undefined) {
-        if (!text(arc.label, 40)) return bad(`${at}.arcs[${index}].label must be a short string`)
+        if (!text(arc.label, 40)) return bad(tooLong(`${at}.arcs[${index}].label`, 40, arc.label))
         entry.label = arc.label
       }
       panel.arcs.push(entry)
@@ -147,7 +161,7 @@ function parseGlobe(raw: Record<string, unknown>, at: string): BigscreenResult<G
       if (!isRecord(point) || !lngLat(point.coord)) return bad(`${at}.points[${index}] must be {coord: [lng, lat]}`)
       const entry: NonNullable<GlobePanel["points"]>[number] = { coord: point.coord }
       if (point.label !== undefined) {
-        if (!text(point.label, 40)) return bad(`${at}.points[${index}].label must be a short string`)
+        if (!text(point.label, 40)) return bad(tooLong(`${at}.points[${index}].label`, 40, point.label))
         entry.label = point.label
       }
       if (point.value !== undefined) {
@@ -201,7 +215,7 @@ function parsePanel(raw: unknown, index: number, columns: number): BigscreenResu
   if (!parsed.ok) return parsed
   const panel = parsed.value
   if (raw.title !== undefined) {
-    if (!text(raw.title, 80)) return bad(`${at}.title must be a short string`)
+    if (!text(raw.title, 80)) return bad(tooLong(`${at}.title`, 80, raw.title))
     panel.title = raw.title
   }
   if (raw.span !== undefined) {
@@ -237,11 +251,11 @@ export function parseBigscreen(
   }
   const definition: ScreenDefinition = { theme: options.theme ?? "dark", columns: 12, panels: [] }
   if (raw.title !== undefined) {
-    if (!text(raw.title, 80)) return bad("title must be a short string")
+    if (!text(raw.title, 80)) return bad(tooLong("title", 80, raw.title))
     definition.title = raw.title
   }
   if (raw.subtitle !== undefined) {
-    if (!text(raw.subtitle, 120)) return bad("subtitle must be a short string")
+    if (!text(raw.subtitle, 120)) return bad(tooLong("subtitle", 120, raw.subtitle))
     definition.subtitle = raw.subtitle
   }
   if (raw.theme !== undefined) {

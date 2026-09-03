@@ -89,6 +89,20 @@ describe("bigscreenPromptSpec", () => {
     expect(spec).not.toMatch(/目标完成率[^}]*thresholds/)
     expect(spec.match(/```bigscreen\n\{/g) ?? []).toHaveLength(1)
   })
+  it("names every length limit, in both locales", () => {
+    // The limits are enforced and were never stated, which is the whole of this
+    // bug: a model asked for a portfolio wall wrote a 54-character caption into
+    // `label`, twice, and lost the entire screen to a rule it had not been
+    // given. A limit the parser checks and the spec does not mention is a trap.
+    for (const locale of ["zh-CN", "en"]) {
+      const spec = bigscreenPromptSpec(locale)
+      for (const max of ["40", "16", "8", "80", "120"]) expect(spec).toContain(max)
+    }
+    // And that overrunning one costs the whole block, not just that string —
+    // without which "at most 40" reads like a field that will be trimmed.
+    expect(bigscreenPromptSpec("zh-CN")).toContain("整个块就作废")
+    expect(bigscreenPromptSpec("en")).toContain("throws the whole block away")
+  })
   it("points real BI boards at the dashboard block", () => {
     expect(bigscreenPromptSpec("zh-CN")).toContain("用 dashboard 块")
   })

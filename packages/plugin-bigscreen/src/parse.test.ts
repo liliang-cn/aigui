@@ -33,6 +33,27 @@ describe("parseBigscreen", () => {
     expect(fail(screen([{ kind: "gauge", value: 1, items: [] }]))).toContain("items is not a field of a gauge panel")
     expect(fail(screen([kpi], { refresh: 5 }))).toContain("refresh is not a field")
   })
+  it("says how long a string was allowed to be, and how long it was", () => {
+    // The message a model has to act on. "must be a short string" says the
+    // block was refused and nothing about what to change; observed in the wild
+    // as a KPI caption of 54 characters against a limit of 40, written twice in
+    // a row by a model that had never been told there was a limit at all.
+    const caption = "持仓 14股 | 成本 $699.19 | 现价 $703.41 | 盈亏 +$59.07 (+0.60%)"
+    const message = fail(screen([{ ...kpi, label: caption }]))
+    expect(message).toContain("panels[0].label must be at most 40 characters")
+    expect(message).toContain(`(got ${caption.length})`)
+
+    // A field of the wrong type has no length to report, so it says the limit
+    // and stops rather than printing "got undefined".
+    expect(fail(screen([{ ...kpi, label: 12 }]))).toContain("panels[0].label must be a string of at most 40 characters")
+
+    // Every length-checked field, so none of them drifts back to the useless
+    // wording on its own.
+    expect(fail(screen([{ ...kpi, unit: "x".repeat(17) }]))).toContain("at most 16 characters")
+    expect(fail(screen([{ ...kpi, prefix: "x".repeat(9) }]))).toContain("at most 8 characters")
+    expect(fail(screen([{ ...kpi, title: "x".repeat(81) }]))).toContain("at most 80 characters")
+    expect(fail(screen([kpi], { subtitle: "x".repeat(121) }))).toContain("at most 120 characters")
+  })
   it("checks the kpi's numbers", () => {
     expect(fail(screen([{ kind: "kpi" }]))).toContain("value must be a number")
     expect(fail(screen([{ ...kpi, decimals: 9 }]))).toContain("decimals must be a whole number from 0 to 6")

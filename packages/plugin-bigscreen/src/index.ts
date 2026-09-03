@@ -58,7 +58,7 @@ export const bigscreenCss = [
   ".aigui-bs-rank-value{color:var(--aigui-bs-muted);font-variant-numeric:tabular-nums}",
   ".aigui-bs-note{display:flex;align-items:center;justify-content:center;height:100%;min-height:4rem;font-size:.85rem;color:var(--aigui-bs-muted)}",
   "[data-aigui-bigscreen-loading]{min-height:8rem;border-radius:14px;background:currentColor;opacity:.06}",
-  "[data-aigui-bigscreen-error]{padding:.5rem .75rem;border-radius:.5rem;font-size:.875rem;opacity:.8;background:currentColor}",
+  ":where([data-aigui-bigscreen-error]){padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.875rem;background:color-mix(in srgb,currentColor 8%,transparent);border:1px solid color-mix(in srgb,currentColor 25%,transparent)}",
   "@media (max-width:640px){.aigui-bs-grid{grid-template-columns:1fr!important}.aigui-bs-panel{grid-column:span 1!important}}",
 ].join("")
 
