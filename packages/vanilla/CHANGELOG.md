@@ -1,5 +1,11 @@
 # @ai-gui/vanilla
 
+## 0.36.1
+
+### Patch Changes
+
+- @ai-gui/core@0.36.1
+
 ## 0.36.0
 
 ### Patch Changes
