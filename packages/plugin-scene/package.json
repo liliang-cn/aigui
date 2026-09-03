@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-scene",
-  "version": "0.36.2",
+  "version": "0.36.3",
   "description": "3D scenes for AIGUI — boxes, spheres, cylinders and glTF models the model places in space, drawn with three.js.",
   "keywords": [
     "llm",

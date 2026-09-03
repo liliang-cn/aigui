@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/image",
-  "version": "0.36.2",
+  "version": "0.36.3",
   "description": "Render AIGUI markdown blocks (charts, diagrams, math, tables, cards) to PNG in a headless browser.",
   "keywords": [
     "llm",

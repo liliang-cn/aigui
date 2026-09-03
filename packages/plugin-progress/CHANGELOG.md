@@ -1,5 +1,11 @@
 # @ai-gui/plugin-progress
 
+## 0.36.3
+
+### Patch Changes
+
+- @ai-gui/core@0.36.3
+
 ## 0.36.2
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-mermaid",
-  "version": "0.36.2",
+  "version": "0.36.3",
   "description": "Mermaid diagram plugin for AIGUI.",
   "keywords": [
     "llm",
