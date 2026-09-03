@@ -71,7 +71,89 @@ export interface GlobePanel extends PanelBase {
   rotate?: boolean
 }
 
-export type Panel = KpiPanel | GaugePanel | RankPanel | ChartPanel | Chart3dPanel | GlobePanel
+/** One swim-lane of a timeline: a source, an outlet, a system — whatever the rows stand for. */
+export interface TimelineLane {
+  id: string
+  /** The name written down the left. At most 40 characters. */
+  name: string
+  /** The lane's colour, as a hex string. Default: from the palette, by lane order. */
+  color?: string
+}
+
+/** One point on a timeline. `id` is only needed for a lane an item is linked from or to. */
+export interface TimelineItem {
+  id?: string
+  /** The `id` of the lane the point sits on. */
+  lane: string
+  /** When it happened, as ISO 8601. */
+  at: string
+  /** The one line beside the point. At most 120 characters. */
+  label: string
+  /** What the tooltip adds. At most 400 characters. */
+  detail?: string
+  /** Opened on click, unless the host took the click. `http` or `https` only. */
+  url?: string
+  /** How big the point is drawn, relative to the other points. */
+  value?: number
+}
+
+/**
+ * A line drawn between two points.
+ *
+ * `contradicts` is the one this panel exists for: two claims that cannot both be true, drawn in
+ * the palette's danger red across the lanes that made them.
+ */
+export interface TimelineLink {
+  from: string
+  to: string
+  /** Default `follows`. */
+  kind?: "contradicts" | "follows" | "same"
+}
+
+/** Lanes down the side, time across, one point per thing that happened, links between them. */
+export interface TimelinePanel extends PanelBase {
+  kind: "timeline"
+  lanes: TimelineLane[]
+  items: TimelineItem[]
+  links?: TimelineLink[]
+  /** The window drawn, as ISO 8601. Default: the items' own range with 5% on each side. */
+  from?: string
+  to?: string
+}
+
+/** One entity in a knowledge graph. */
+export interface Graph3dNode {
+  id: string
+  /** At most 80 characters. */
+  name: string
+  /** What kind of thing it is; the colour follows from this. At most 32 characters. */
+  type?: string
+  /** How big it is drawn. Default: its degree. */
+  value?: number
+}
+
+/** One typed edge. Both ends must be node ids. */
+export interface Graph3dEdge {
+  from: string
+  to: string
+  /** At most 32 characters. */
+  type?: string
+}
+
+/** Entities and typed edges, laid out by force-atlas2 on the GPU. */
+export interface Graph3dPanel extends PanelBase {
+  kind: "graph3d"
+  nodes: Graph3dNode[]
+  edges: Graph3dEdge[]
+  /** Type name to hex colour, overriding the palette's own assignment. At most 32 entries. */
+  types?: Record<string, string>
+  /** The id of the node to highlight and always label. */
+  focus?: string
+  /** Whether the layout settles in front of the reader. Default true. */
+  rotate?: boolean
+}
+
+export type Panel = KpiPanel | GaugePanel | RankPanel | ChartPanel | Chart3dPanel | GlobePanel | TimelinePanel | Graph3dPanel
 export type PanelKind = Panel["kind"]
 
 export interface ScreenDefinition {
@@ -139,6 +221,19 @@ export interface GlobeSkin {
   light?: { intensity?: number; time?: Date | string }
 }
 
+/**
+ * What the host wants to happen when a reader clicks something.
+ *
+ * A timeline item carries a `url`, and without a handler the plugin opens it in a new tab. A host
+ * that has its own idea of what a claim is — a drawer, a route, a second panel — passes
+ * `onItemClick` and takes the click instead, `url` and all. There is no default for a graph node:
+ * a node is not a link, so a host that wants a click to mean something has to say so.
+ */
+export interface BigscreenEvents {
+  onItemClick?: (item: TimelineItem) => void
+  onNodeClick?: (node: Graph3dNode) => void
+}
+
 export interface BigscreenOptions {
   /** Refuse a screen with more panels than this. Default 24. */
   maxPanels?: number
@@ -150,6 +245,8 @@ export interface BigscreenOptions {
   theme?: ScreenTheme
   /** Host override for what a globe panel's planet looks like. Unset draws the graticule. */
   globe?: GlobeSkin
+  /** What a click on a timeline item or a graph node does. */
+  events?: BigscreenEvents
 }
 
 export interface BigscreenError {

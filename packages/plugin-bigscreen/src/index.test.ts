@@ -118,10 +118,18 @@ describe("bigscreenPromptSpec", () => {
   })
   it("shows every panel kind in the worked example, because that is what a model copies", () => {
     const spec = bigscreenPromptSpec("zh-CN")
-    for (const kind of ["kpi", "gauge", "rank", "chart", "chart3d", "globe"]) expect(spec).toContain(`"kind": "${kind}"`)
+    for (const kind of ["kpi", "gauge", "rank", "chart", "chart3d", "globe", "timeline", "graph3d"]) expect(spec).toContain(`"kind": "${kind}"`)
     // A completion rate coloured amber at 82% taught the wrong lesson; thresholds are alarm lines.
     expect(spec).not.toMatch(/目标完成率[^}]*thresholds/)
-    expect(spec.match(/```bigscreen\n\{/g) ?? []).toHaveLength(1)
+    // The sales wall, plus one example each for the two panels whose shape nothing else shows:
+    // a timeline's lanes-and-links and a graph's nodes-and-edges are not guessable from prose.
+    expect(spec.match(/```bigscreen\n\{/g) ?? []).toHaveLength(3)
+  })
+  it("names the timeline's and the graph's limits, which are the ones big enough to be hit", () => {
+    for (const locale of ["zh-CN", "en"]) {
+      const spec = bigscreenPromptSpec(locale)
+      for (const max of ["24", "500", "2000", "5000", "400"]) expect(spec).toContain(max)
+    }
   })
   it("names every length limit, in both locales", () => {
     // The limits are enforced and were never stated, which is the whole of this

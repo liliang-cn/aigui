@@ -8,12 +8,13 @@ model lays out.
 
 ```sh
 pnpm add @ai-gui/plugin-bigscreen echarts
-# for the chart3d and globe panels
+# for the chart3d, globe and graph3d panels
 pnpm add echarts-gl
 ```
 
-`echarts-gl` is an optional peer: without it the 3D and globe panels show a one-line note and the
-rest of the wall is unaffected. It is imported lazily, once, the first time such a panel mounts.
+`echarts-gl` is an optional peer: without it the `chart3d`, `globe` and `graph3d` panels show a
+one-line note and the rest of the wall is unaffected. It is imported lazily, once, the first time
+such a panel mounts.
 
 ## Usage
 
@@ -54,9 +55,25 @@ The model then emits:
 | `chart` | any ECharts option in the wall's palette, with entrance animation | `option` |
 | `chart3d` | `bar3D`, `scatter3D`, `surface` or `line3D`, slowly turning | `type`, `data`, `xAxis`, `yAxis`, `rotate` |
 | `globe` | a globe with arcing routes and sized points | `arcs`, `points`, `rotate` |
+| `timeline` | a swim-lane per source, a point per claim, lines between claims — `contradicts` in danger red | `lanes`, `items`, `links`, `from`, `to` |
+| `graph3d` | entities and typed edges, laid out by force-atlas2 on the GPU, coloured by type | `nodes`, `edges`, `types`, `focus`, `rotate` |
 
 Every panel takes `title`, `span` (columns of the grid, default 4 of 12) and `height`. The screen
 takes `title`, `subtitle`, `theme` (`dark` by default, or `light`), `accent` (hex) and `columns`.
+
+## Clicks
+
+A `timeline` claim with a `url` opens it in a new tab, opener cut off. A host that has its own
+idea of what a claim is takes the click instead, and a graph entity has no default at all:
+
+```ts
+bigscreen({
+  events: {
+    onItemClick: (item) => openClaim(item.id),
+    onNodeClick: (node) => selectEntity(node.id),
+  },
+})
+```
 
 ## Why the protocol looks like this
 

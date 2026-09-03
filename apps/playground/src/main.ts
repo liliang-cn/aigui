@@ -80,6 +80,18 @@ flowchart LR
 {"title":"华东区销售大屏","subtitle":"2026 年 8 月","panels":[{"kind":"kpi","title":"本月营收","value":12843000,"prefix":"¥","delta":0.124,"trend":[8.1,8.6,9.2,9.0,10.4,11.9,12.8],"span":3},{"kind":"kpi","title":"订单数","value":48210,"unit":"单","delta":0.051,"span":3},{"kind":"kpi","title":"客单价","value":266.4,"prefix":"¥","decimals":1,"delta":-0.018,"span":3},{"kind":"gauge","title":"目标完成率","value":82,"unit":"%","span":3},{"kind":"chart","title":"月度趋势","span":8,"option":{"xAxis":{"type":"category","data":["3月","4月","5月","6月","7月","8月"]},"yAxis":{"type":"value"},"series":[{"type":"line","smooth":true,"areaStyle":{},"data":[820,932,901,934,1290,1330]}]}},{"kind":"rank","title":"门店排行","span":4,"unit":"万","items":[{"name":"上海","value":320},{"name":"杭州","value":245},{"name":"南京","value":198},{"name":"苏州","value":176},{"name":"宁波","value":121}]},{"kind":"chart3d","title":"品类 × 月份","span":6,"type":"bar3D","xAxis":["6月","7月","8月"],"yAxis":["家电","服饰","食品"],"data":[[0,0,120],[1,0,150],[2,0,180],[0,1,90],[1,1,110],[2,1,140],[0,2,60],[1,2,75],[2,2,95]]},{"kind":"globe","title":"出口流向","span":6,"arcs":[{"from":[121.47,31.23],"to":[8.68,50.11],"label":"上海→法兰克福"},{"from":[121.47,31.23],"to":[-74.01,40.71],"label":"上海→纽约"},{"from":[121.47,31.23],"to":[151.21,-33.87],"label":"上海→悉尼"},{"from":[121.47,31.23],"to":[55.27,25.2],"label":"上海→迪拜"}],"points":[{"coord":[121.47,31.23],"label":"上海","value":320},{"coord":[-74.01,40.71],"label":"纽约","value":120},{"coord":[8.68,50.11],"label":"法兰克福","value":90}]}]}
 \`\`\`
 
+## Claim timeline
+
+\`\`\`bigscreen
+{"title":"Border convoy","subtitle":"who said what, and where they disagree","panels":[{"kind":"timeline","title":"Claims by outlet","span":12,"lanes":[{"id":"reuters","name":"Reuters"},{"id":"tass","name":"TASS"},{"id":"ap","name":"AP"},{"id":"afp","name":"AFP"}],"items":[{"id":"c1","lane":"reuters","at":"2026-09-01T08:12:00Z","label":"Convoy crossed at dawn","detail":"Two sources on the ground.","url":"https://example.com/reuters-1","value":3},{"id":"c2","lane":"tass","at":"2026-09-01T09:30:00Z","label":"No convoy crossed","detail":"Ministry statement.","value":2},{"id":"c3","lane":"ap","at":"2026-09-01T11:05:00Z","label":"Crossing confirmed by satellite","value":4},{"id":"c4","lane":"reuters","at":"2026-09-01T14:40:00Z","label":"A second convoy"},{"id":"c5","lane":"afp","at":"2026-09-01T16:20:00Z","label":"Border post closed"},{"id":"c6","lane":"tass","at":"2026-09-01T18:00:00Z","label":"Border post open as usual"}],"links":[{"from":"c1","to":"c2","kind":"contradicts"},{"from":"c5","to":"c6","kind":"contradicts"},{"from":"c1","to":"c4","kind":"follows"},{"from":"c1","to":"c3","kind":"same"}]}]}
+\`\`\`
+
+## Knowledge graph
+
+\`\`\`bigscreen
+{"title":"Entity graph","panels":[{"kind":"graph3d","title":"Who reported what","span":12,"focus":"convoy","nodes":[{"id":"kyiv","name":"Kyiv","type":"place"},{"id":"moscow","name":"Moscow","type":"place"},{"id":"reuters","name":"Reuters","type":"outlet"},{"id":"tass","name":"TASS","type":"outlet"},{"id":"afp","name":"AFP","type":"outlet"},{"id":"convoy","name":"Convoy crossing","type":"event"},{"id":"denial","name":"Denial of crossing","type":"event"},{"id":"closure","name":"Border post closure","type":"event"}],"edges":[{"from":"reuters","to":"convoy","type":"reported"},{"from":"tass","to":"denial","type":"reported"},{"from":"afp","to":"closure","type":"reported"},{"from":"convoy","to":"kyiv","type":"located"},{"from":"denial","to":"moscow","type":"located"},{"from":"closure","to":"kyiv","type":"located"},{"from":"convoy","to":"denial","type":"contradicts"},{"from":"reuters","to":"kyiv","type":"located"},{"from":"tass","to":"moscow","type":"located"}]}]}
+\`\`\`
+
 ## Gravity
 
 \`\`\`gravity

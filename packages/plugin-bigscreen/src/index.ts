@@ -9,8 +9,29 @@ export { palette, withAlpha } from "./palette"
 export { chart3dOption, chartOption, formatNumber, gaugeColour, gaugeOption, globeOption, globeTexture } from "./options"
 export { countriesTexture, earthColours, earthTexture } from "./earth"
 export type { EarthColours } from "./earth"
+export { spacedItems, timelineHeight, timelineOption, timelineWindow, TIMELINE_LABELS } from "./timeline"
+export { degrees, graph3dOption, graphLegend, typeColour, GRAPH_LABELS, GRAPH_LEGEND_ROWS, GRAPH_MAX_STEPS, GRAPH_SETTLE_STEPS } from "./graph3d"
+export type { GraphLegendEntry } from "./graph3d"
+export {
+  MAX_ARCS,
+  MAX_EDGES,
+  MAX_ITEMS,
+  MAX_ITEM_DETAIL,
+  MAX_ITEM_LABEL,
+  MAX_LANES,
+  MAX_LANE_NAME,
+  MAX_LINKS,
+  MAX_NODES,
+  MAX_NODE_NAME,
+  MAX_POINTS,
+  MAX_TIMELINE_ITEMS,
+  MAX_TYPES,
+  MAX_TYPE_NAME,
+  MAX_URL,
+} from "./parse"
 export type {
   BigscreenError,
+  BigscreenEvents,
   BigscreenOptions,
   BigscreenResult,
   Chart3dPanel,
@@ -20,12 +41,19 @@ export type {
   GlobeGeometry,
   GlobePanel,
   GlobeSkin,
+  Graph3dEdge,
+  Graph3dNode,
+  Graph3dPanel,
   KpiPanel,
   Panel,
   PanelKind,
   RankPanel,
   ScreenDefinition,
   ScreenTheme,
+  TimelineItem,
+  TimelineLane,
+  TimelineLink,
+  TimelinePanel,
 } from "./types"
 
 const escapeHtml = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -40,7 +68,7 @@ export const bigscreenCss = [
   ".aigui-bs-subtitle{margin:.25rem 0 0;font-size:.85rem;color:var(--aigui-bs-muted);letter-spacing:.12em}",
   ".aigui-bs-rule{height:1px;margin:.8rem auto 0;width:70%}",
   ".aigui-bs-grid{display:grid;gap:.9rem}",
-  ".aigui-bs-panel{display:flex;flex-direction:column;min-width:0;border:1px solid;border-radius:10px;padding:.7rem .85rem .85rem;backdrop-filter:blur(6px)}",
+  ".aigui-bs-panel{position:relative;display:flex;flex-direction:column;min-width:0;border:1px solid;border-radius:10px;padding:.7rem .85rem .85rem;backdrop-filter:blur(6px)}",
   "[data-aigui-bigscreen='dark'] .aigui-bs-panel{background:linear-gradient(180deg,rgba(17,27,50,.82),rgba(10,18,36,.82));box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 10px 30px rgba(0,0,0,.35)}",
   "[data-aigui-bigscreen='light'] .aigui-bs-panel{background:rgba(255,255,255,.9);box-shadow:0 6px 20px rgba(15,23,42,.06)}",
   ".aigui-bs-panel-title{display:flex;align-items:center;gap:.5rem;margin:0 0 .5rem;font-size:.8rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--aigui-bs-muted)}",
@@ -61,6 +89,12 @@ export const bigscreenCss = [
   ".aigui-bs-rank-track{display:block;height:8px;border-radius:4px;overflow:hidden}",
   ".aigui-bs-rank-fill{display:block;height:100%;border-radius:4px;transition:width 1.2s cubic-bezier(.22,1,.36,1)}",
   ".aigui-bs-rank-value{color:var(--aigui-bs-muted);font-variant-numeric:tabular-nums}",
+  // Over the canvas, never in front of a click meant for the graph behind it. `z-index` because
+  // ECharts' own container is positioned too and is appended after this one.
+  ".aigui-bs-graph-legend{position:absolute;right:.6rem;bottom:.6rem;z-index:2;display:flex;flex-direction:column;gap:.15rem;max-width:48%;padding:.3rem .45rem;border-radius:6px;background:color-mix(in srgb,currentColor 8%,transparent);font-size:.68rem;line-height:1.5;letter-spacing:.02em;color:var(--aigui-bs-muted);pointer-events:none}",
+  ".aigui-bs-graph-legend-row{display:flex;align-items:center;gap:.35rem;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}",
+  ".aigui-bs-graph-legend-dot{flex:none;width:8px;height:8px;border-radius:50%}",
+  ".aigui-bs-graph-legend-line{flex:none;width:12px;height:2px;border-radius:1px}",
   ".aigui-bs-note{display:flex;align-items:center;justify-content:center;height:100%;min-height:4rem;font-size:.85rem;color:var(--aigui-bs-muted)}",
   "[data-aigui-bigscreen-loading]{min-height:8rem;border-radius:14px;background:currentColor;opacity:.06}",
   ":where([data-aigui-bigscreen-error]){padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.875rem;background:color-mix(in srgb,currentColor 8%,transparent);border:1px solid color-mix(in srgb,currentColor 25%,transparent)}",
@@ -104,7 +138,7 @@ export function bigscreen(options: BigscreenOptions = {}): AIGuiPlugin {
         void import("./mount")
           .then(({ mountScreen }) => {
             if (disposed) return
-            destroy = mountScreen(el, definition, options.animate !== false, options.globe)
+            destroy = mountScreen(el, definition, options.animate !== false, options.globe, options.events)
           })
           .catch(() => {
             const error = document.createElement("div")

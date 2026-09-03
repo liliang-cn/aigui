@@ -3,9 +3,11 @@ import { DatasetComponent, GridComponent, LegendComponent, PolarComponent, Radar
 import { init, use, type ECharts, type EChartsCoreOption } from "echarts/core"
 import { CanvasRenderer } from "echarts/renderers"
 import { earthTexture } from "./earth"
+import { graph3dOption, graphLegend } from "./graph3d"
 import { chart3dOption, chartOption, formatNumber, gaugeOption, globeOption } from "./options"
 import { palette, withAlpha, type Palette } from "./palette"
-import type { GlobeSkin, KpiPanel, Panel, RankPanel, ScreenDefinition } from "./types"
+import { timelineHeight, timelineOption } from "./timeline"
+import type { BigscreenEvents, GlobeSkin, Graph3dNode, Graph3dPanel, KpiPanel, Panel, RankPanel, ScreenDefinition, TimelineItem, TimelinePanel } from "./types"
 
 use([
   BarChart, LineChart, PieChart, ScatterChart, GaugeChart, RadarChart, EffectScatterChart, LinesChart, FunnelChart, HeatmapChart,
@@ -18,7 +20,7 @@ use([
 let glReady: Promise<unknown> | null = null
 const loadGl = () => (glReady ??= import("echarts-gl"))
 
-const DEFAULT_HEIGHT: Record<Panel["kind"], number> = { kpi: 0, gauge: 180, rank: 220, chart: 240, chart3d: 280, globe: 300 }
+const DEFAULT_HEIGHT: Record<Panel["kind"], number> = { kpi: 0, gauge: 180, rank: 220, chart: 240, chart3d: 280, globe: 300, timeline: 320, graph3d: 320 }
 
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
 
@@ -159,12 +161,13 @@ function whenSized(body: HTMLElement, fn: () => void): () => void {
   return () => cancelAnimationFrame(handle)
 }
 
-function mountChart(body: HTMLElement, option: EChartsCoreOption, theme: "dark" | "light"): () => void {
+function mountChart(body: HTMLElement, option: EChartsCoreOption, theme: "dark" | "light", ready?: (chart: ECharts) => void): () => void {
   let chart: ECharts | undefined
   let unfollow: (() => void) | undefined
   const cancel = whenSized(body, () => {
     chart = init(body, theme === "dark" ? "dark" : undefined, { renderer: "canvas" })
     chart.setOption(option)
+    ready?.(chart)
     unfollow = follow(body, chart)
   })
   return () => {
@@ -174,7 +177,7 @@ function mountChart(body: HTMLElement, option: EChartsCoreOption, theme: "dark" 
   }
 }
 
-function mountGl(body: HTMLElement, build: () => EChartsCoreOption, theme: "dark" | "light", fallback: () => void): () => void {
+function mountGl(body: HTMLElement, build: () => EChartsCoreOption, theme: "dark" | "light", fallback: () => void, ready?: (chart: ECharts) => void): () => void {
   let chart: ECharts | undefined
   let unfollow: (() => void) | undefined
   let cancel: (() => void) | undefined
@@ -186,6 +189,7 @@ function mountGl(body: HTMLElement, build: () => EChartsCoreOption, theme: "dark
         if (disposed) return
         chart = init(body, theme === "dark" ? "dark" : undefined, { renderer: "canvas" })
         chart.setOption(build())
+        ready?.(chart)
         unfollow = follow(body, chart)
       })
     })
@@ -207,7 +211,74 @@ function note(body: HTMLElement, text: string): void {
   body.replaceChildren(el("div", { class: "aigui-bs-note" }, text))
 }
 
-function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, animate: boolean, earth: GlobeSkin | undefined): { node: HTMLElement; destroy: () => void } {
+/**
+ * What a click on a claim does.
+ *
+ * The host wins. A page that passed `onItemClick` has its own idea of what a claim is — a drawer,
+ * a route, a second panel — and must not also get a tab it never asked for. With no handler the
+ * claim's own `url` opens in a new tab with the opener cut off; the parser has already refused
+ * anything that is not `http` or `https`, because this argument reaches `window.open`.
+ */
+export function openTimelineItem(item: TimelineItem, events?: BigscreenEvents): void {
+  if (events?.onItemClick) {
+    events.onItemClick(item)
+    return
+  }
+  if (item.url && typeof window !== "undefined") window.open(item.url, "_blank", "noopener,noreferrer")
+}
+
+function bindTimeline(chart: ECharts, events: BigscreenEvents | undefined): void {
+  chart.on("click", (params: unknown) => {
+    const item = (params as { data?: { item?: TimelineItem } }).data?.item
+    if (item) openTimelineItem(item, events)
+  })
+}
+
+function bindGraph(chart: ECharts, events: BigscreenEvents | undefined): void {
+  chart.on("click", (params: unknown) => {
+    const event = params as { dataType?: string; data?: { node?: Graph3dNode } }
+    if (event.dataType === "edge") return
+    const node = event.data?.node
+    if (node) events?.onNodeClick?.(node)
+  })
+}
+
+/**
+ * The key to a graph's colours, in HTML over the canvas.
+ *
+ * HTML rather than an ECharts legend: the graph is a WebGL series with no categories for a legend
+ * component to read, and a corner of text a reader can select beats a row of chart furniture. It
+ * is `pointer-events:none` so it never eats a click meant for the graph behind it, and an untyped
+ * graph gets nothing at all rather than an empty box.
+ *
+ * It hangs off the panel rather than off the chart's own element, because ECharts empties the
+ * element it is initialised on — a legend appended there is gone the moment the graph appears,
+ * which is exactly what happened the first time this was drawn.
+ */
+function graphLegendNode(panel: Graph3dPanel, c: Palette): HTMLElement | undefined {
+  const entries = graphLegend(panel, c)
+  if (!entries.length) return undefined
+  const box = el("div", { class: "aigui-bs-graph-legend" })
+  for (const entry of entries) {
+    const row = el("div", { class: "aigui-bs-graph-legend-row" })
+    const swatch = el("i", { class: `aigui-bs-graph-legend-${entry.shape === "node" ? "dot" : "line"}` })
+    swatch.style.background = entry.colour
+    row.append(swatch, document.createTextNode(entry.label))
+    box.appendChild(row)
+  }
+  return box
+}
+
+/** The body height a panel gets when it did not ask for one. */
+function bodyHeight(panel: Panel): number {
+  // A timeline is the one panel whose height is a function of its content: below 28 pixels a lane
+  // the points of two neighbouring sources touch, and the line between two contradicting claims
+  // stops being a line between two rows.
+  if (panel.kind === "timeline") return timelineHeight(panel.lanes.length)
+  return DEFAULT_HEIGHT[panel.kind]
+}
+
+function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, animate: boolean, earth: GlobeSkin | undefined, events: BigscreenEvents | undefined): { node: HTMLElement; destroy: () => void } {
   const node = el("section", { class: "aigui-bs-panel", "data-aigui-bigscreen-panel": panel.kind })
   const span = Math.min(panel.span ?? 4, definition.columns)
   node.style.gridColumn = `span ${span}`
@@ -226,7 +297,7 @@ function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, anim
     node.appendChild(head)
   }
   const body = el("div", { class: "aigui-bs-panel-body" })
-  const height = panel.height ?? DEFAULT_HEIGHT[panel.kind]
+  const height = panel.height ?? bodyHeight(panel)
   if (height) body.style.height = `${height}px`
   node.appendChild(body)
   let destroy: () => void = () => {}
@@ -250,6 +321,24 @@ function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, anim
       case "globe":
         destroy = mountGl(body, () => globeOption(panel, c, animate, earthTexture(c, definition.theme, earth), earth), definition.theme, () => note(body, "Globe panels need echarts-gl and WebGL."))
         break
+      case "timeline":
+        destroy = mountChart(body, timelineOption(panel, c, animate), definition.theme, (chart) => bindTimeline(chart, events))
+        break
+      case "graph3d": {
+        const legend = graphLegendNode(panel, c)
+        if (legend) node.appendChild(legend)
+        destroy = mountGl(
+          body,
+          () => graph3dOption(panel, c, animate),
+          definition.theme,
+          () => {
+            legend?.remove()
+            note(body, "Knowledge graph panels need echarts-gl and WebGL.")
+          },
+          (chart) => bindGraph(chart, events),
+        )
+        break
+      }
     }
   } catch {
     note(body, "Panel could not be drawn.")
@@ -261,9 +350,10 @@ function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, anim
  * Build the whole screen into `host`, returning the teardown the reconciler will call.
  *
  * `earth` is the host's globe configuration, passed through untouched: what the planet looks like
- * is the page's decision, not the fence's.
+ * is the page's decision, not the fence's. `events` is the same bargain for clicks: what a claim
+ * or an entity does when it is clicked is the page's decision too.
  */
-export function mountScreen(host: HTMLElement, definition: ScreenDefinition, animate: boolean, earth?: GlobeSkin): () => void {
+export function mountScreen(host: HTMLElement, definition: ScreenDefinition, animate: boolean, earth?: GlobeSkin, events?: BigscreenEvents): () => void {
   const c = palette(definition)
   host.setAttribute("data-aigui-bigscreen", definition.theme)
   host.style.setProperty("--aigui-bs-accent", c.accent)
@@ -285,7 +375,7 @@ export function mountScreen(host: HTMLElement, definition: ScreenDefinition, ani
   const grid = el("div", { class: "aigui-bs-grid" })
   grid.style.gridTemplateColumns = `repeat(${definition.columns}, minmax(0, 1fr))`
   host.appendChild(grid)
-  const mounted = definition.panels.map((panel) => mountPanel(panel, definition, c, animate, earth))
+  const mounted = definition.panels.map((panel) => mountPanel(panel, definition, c, animate, earth, events))
   for (const { node } of mounted) grid.appendChild(node)
   return () => {
     for (const { destroy } of mounted) destroy()

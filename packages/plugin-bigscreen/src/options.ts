@@ -10,7 +10,8 @@ import type { Chart3dPanel, ChartPanel, GaugePanel, GlobePanel, GlobeSkin } from
  * the same panel draws the same chart on every screen.
  */
 
-const FONT = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Noto Sans CJK SC', sans-serif"
+/** The one font every panel writes in, exported so the panels in their own files share it. */
+export const FONT = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Noto Sans CJK SC', sans-serif"
 
 /** Format a number for a label: thousands grouped, up to `decimals` places. */
 export function formatNumber(value: number, decimals = 0): string {

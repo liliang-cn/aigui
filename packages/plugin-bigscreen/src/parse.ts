@@ -1,4 +1,22 @@
-import type { BigscreenResult, Chart3dPanel, GaugePanel, GlobePanel, KpiPanel, Panel, PanelKind, RankPanel, ScreenDefinition, ScreenTheme } from "./types"
+import type {
+  BigscreenResult,
+  Chart3dPanel,
+  GaugePanel,
+  GlobePanel,
+  Graph3dEdge,
+  Graph3dNode,
+  Graph3dPanel,
+  KpiPanel,
+  Panel,
+  PanelKind,
+  RankPanel,
+  ScreenDefinition,
+  ScreenTheme,
+  TimelineItem,
+  TimelineLane,
+  TimelineLink,
+  TimelinePanel,
+} from "./types"
 
 const SCREEN_FIELDS = new Set(["title", "subtitle", "theme", "accent", "columns", "panels"])
 const COMMON = ["kind", "title", "span", "height"]
@@ -9,13 +27,43 @@ const FIELDS: Record<PanelKind, string[]> = {
   chart: ["option"],
   chart3d: ["type", "data", "xAxis", "yAxis", "rotate"],
   globe: ["arcs", "points", "rotate"],
+  timeline: ["lanes", "items", "links", "from", "to"],
+  graph3d: ["nodes", "edges", "types", "focus", "rotate"],
 }
-const KINDS = new Set<PanelKind>(["kpi", "gauge", "rank", "chart", "chart3d", "globe"])
+const KINDS = new Set<PanelKind>(["kpi", "gauge", "rank", "chart", "chart3d", "globe", "timeline", "graph3d"])
 const CHART3D_TYPES = new Set(["bar3D", "scatter3D", "surface", "line3D"])
+const LINK_KINDS = new Set(["contradicts", "follows", "same"])
+const LANE_FIELDS = new Set(["id", "name", "color"])
+const TIMELINE_ITEM_FIELDS = new Set(["id", "lane", "at", "label", "detail", "url", "value"])
+const LINK_FIELDS = new Set(["from", "to", "kind"])
+const NODE_FIELDS = new Set(["id", "name", "type", "value"])
+const EDGE_FIELDS = new Set(["from", "to", "type"])
 const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i
-const MAX_POINTS = 5000
-const MAX_ITEMS = 50
-const MAX_ARCS = 300
+/**
+ * Every limit the parser enforces, named.
+ *
+ * Exported because a limit the parser checks and nothing states is a trap: the prompt spec has to
+ * name the same numbers, and a host building a fence of its own needs to know where the cliff is.
+ * Overrunning any of them voids the whole block, so they are all deliberately generous — generous
+ * enough that the biggest of them are not reachable under the default 64 KiB source cap: five
+ * thousand edges is around a hundred kilobytes of JSON, so a host that really wants a graph that
+ * size has to raise `maxSourceBytes` as well.
+ */
+export const MAX_POINTS = 5000
+export const MAX_ITEMS = 50
+export const MAX_ARCS = 300
+export const MAX_LANES = 24
+export const MAX_TIMELINE_ITEMS = 500
+export const MAX_LINKS = 500
+export const MAX_NODES = 2000
+export const MAX_EDGES = 5000
+export const MAX_TYPES = 32
+export const MAX_LANE_NAME = 40
+export const MAX_ITEM_LABEL = 120
+export const MAX_ITEM_DETAIL = 400
+export const MAX_URL = 400
+export const MAX_NODE_NAME = 80
+export const MAX_TYPE_NAME = 32
 
 const bad = (message: string): BigscreenResult<never> => ({ ok: false, error: { code: "invalid-definition", message } })
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value)
@@ -35,6 +83,26 @@ const tooLong = (at: string, max: number, value: unknown): string =>
   typeof value === "string"
     ? `${at} must be at most ${max} characters (got ${value.length})`
     : `${at} must be a string of at most ${max} characters`
+/**
+ * A moment, as far as `Date.parse` is concerned — which is what the chart will read it with.
+ *
+ * Deliberately the platform's own parser rather than a stricter regular expression: a model that
+ * writes `2026-09-01T08:00:00+02:00` or `2026-09-01` has said something a timeline can place, and
+ * refusing the whole block over the shape of a suffix helps nobody.
+ */
+const instant = (value: unknown): value is string => typeof value === "string" && value.length <= 40 && Number.isFinite(Date.parse(value))
+
+/**
+ * A link a click may follow.
+ *
+ * Only `http` and `https`: this URL ends up in `window.open`, and `javascript:` there is script
+ * the page runs because a model asked it to.
+ */
+const httpUrl = (value: unknown): value is string => typeof value === "string" && value.length <= MAX_URL && /^https?:\/\/\S+$/i.test(value)
+
+/** The first key that is not in `allowed`, or undefined. */
+const stray = (raw: Record<string, unknown>, allowed: Set<string>): string | undefined => Object.keys(raw).find((key) => !allowed.has(key))
+
 const lngLat = (value: unknown): value is [number, number] =>
   Array.isArray(value) && value.length === 2 && value.every(finite) && Math.abs(value[0]) <= 180 && Math.abs(value[1]) <= 90
 
@@ -179,6 +247,159 @@ function parseGlobe(raw: Record<string, unknown>, at: string): BigscreenResult<G
   return { ok: true, value: panel }
 }
 
+/**
+ * A timeline, checked against itself.
+ *
+ * The references are the part worth the code: a claim on a lane nobody declared, or a
+ * contradiction between an id and nothing, is dropped silently by every charting library there
+ * is — and a timeline missing the very link it was drawn for is worse than no timeline at all.
+ */
+function parseTimeline(raw: Record<string, unknown>, at: string): BigscreenResult<TimelinePanel> {
+  if (!Array.isArray(raw.lanes) || raw.lanes.length === 0 || raw.lanes.length > MAX_LANES) return bad(`${at}.lanes must be 1 to ${MAX_LANES} entries`)
+  const lanes: TimelineLane[] = []
+  const laneIds = new Set<string>()
+  for (const [index, lane] of raw.lanes.entries()) {
+    const where = `${at}.lanes[${index}]`
+    if (!isRecord(lane) || !text(lane.id, 64) || typeof lane.name !== "string") return bad(`${where} must be {id, name}`)
+    const key = stray(lane, LANE_FIELDS)
+    if (key) return bad(`${where}.${key} is not a field of a timeline lane`)
+    if (!text(lane.name, MAX_LANE_NAME)) return bad(tooLong(`${where}.name`, MAX_LANE_NAME, lane.name))
+    if (laneIds.has(lane.id)) return bad(`${where}.id is a duplicate lane id`)
+    laneIds.add(lane.id)
+    const entry: TimelineLane = { id: lane.id, name: lane.name }
+    if (lane.color !== undefined) {
+      if (typeof lane.color !== "string" || !HEX.test(lane.color)) return bad(`${where}.color must be a hex colour like #22d3ee`)
+      entry.color = lane.color
+    }
+    lanes.push(entry)
+  }
+
+  if (!Array.isArray(raw.items) || raw.items.length === 0 || raw.items.length > MAX_TIMELINE_ITEMS) return bad(`${at}.items must be 1 to ${MAX_TIMELINE_ITEMS} entries`)
+  const items: TimelineItem[] = []
+  const itemIds = new Set<string>()
+  for (const [index, item] of raw.items.entries()) {
+    const where = `${at}.items[${index}]`
+    if (!isRecord(item) || typeof item.lane !== "string" || typeof item.label !== "string" || item.at === undefined) return bad(`${where} must be {lane, at, label}`)
+    const key = stray(item, TIMELINE_ITEM_FIELDS)
+    if (key) return bad(`${where}.${key} is not a field of a timeline item`)
+    if (!laneIds.has(item.lane)) return bad(`${where}.lane is not one of the panel's lane ids`)
+    if (!instant(item.at)) return bad(`${where}.at must be an ISO 8601 date-time, like 2026-09-01T08:00:00Z`)
+    if (!text(item.label, MAX_ITEM_LABEL)) return bad(tooLong(`${where}.label`, MAX_ITEM_LABEL, item.label))
+    const entry: TimelineItem = { lane: item.lane, at: item.at, label: item.label }
+    if (item.id !== undefined) {
+      if (!text(item.id, 64)) return bad(tooLong(`${where}.id`, 64, item.id))
+      if (itemIds.has(item.id)) return bad(`${where}.id is a duplicate item id`)
+      itemIds.add(item.id)
+      entry.id = item.id
+    }
+    if (item.detail !== undefined) {
+      if (!text(item.detail, MAX_ITEM_DETAIL)) return bad(tooLong(`${where}.detail`, MAX_ITEM_DETAIL, item.detail))
+      entry.detail = item.detail
+    }
+    if (item.url !== undefined) {
+      if (!httpUrl(item.url)) return bad(`${where}.url must be an http or https URL`)
+      entry.url = item.url
+    }
+    if (item.value !== undefined) {
+      if (!finite(item.value) || item.value < 0) return bad(`${where}.value must be zero or a positive number`)
+      entry.value = item.value
+    }
+    items.push(entry)
+  }
+
+  const panel: TimelinePanel = { kind: "timeline", lanes, items }
+  if (raw.links !== undefined) {
+    if (!Array.isArray(raw.links) || raw.links.length > MAX_LINKS) return bad(`${at}.links must be up to ${MAX_LINKS} entries`)
+    panel.links = []
+    for (const [index, link] of raw.links.entries()) {
+      const where = `${at}.links[${index}]`
+      if (!isRecord(link) || typeof link.from !== "string" || typeof link.to !== "string") return bad(`${where} must be {from, to}`)
+      const key = stray(link, LINK_FIELDS)
+      if (key) return bad(`${where}.${key} is not a field of a timeline link`)
+      for (const end of ["from", "to"] as const) {
+        if (!itemIds.has(link[end] as string)) return bad(`${where}.${end} is not an item id`)
+      }
+      const entry: TimelineLink = { from: link.from, to: link.to }
+      if (link.kind !== undefined) {
+        if (typeof link.kind !== "string" || !LINK_KINDS.has(link.kind)) return bad(`${where}.kind must be contradicts, follows or same`)
+        entry.kind = link.kind as TimelineLink["kind"]
+      }
+      panel.links.push(entry)
+    }
+  }
+  for (const edge of ["from", "to"] as const) {
+    if (raw[edge] === undefined) continue
+    if (!instant(raw[edge])) return bad(`${at}.${edge} must be an ISO 8601 date-time, like 2026-09-01T08:00:00Z`)
+    panel[edge] = raw[edge]
+  }
+  return { ok: true, value: panel }
+}
+
+/** A knowledge graph, checked against itself: every edge and the focus must land on a real node. */
+function parseGraph3d(raw: Record<string, unknown>, at: string): BigscreenResult<Graph3dPanel> {
+  if (!Array.isArray(raw.nodes) || raw.nodes.length === 0 || raw.nodes.length > MAX_NODES) return bad(`${at}.nodes must be 1 to ${MAX_NODES} entries`)
+  const nodes: Graph3dNode[] = []
+  const ids = new Set<string>()
+  for (const [index, node] of raw.nodes.entries()) {
+    const where = `${at}.nodes[${index}]`
+    if (!isRecord(node) || !text(node.id, 64) || typeof node.name !== "string") return bad(`${where} must be {id, name}`)
+    const key = stray(node, NODE_FIELDS)
+    if (key) return bad(`${where}.${key} is not a field of a graph3d node`)
+    if (!text(node.name, MAX_NODE_NAME)) return bad(tooLong(`${where}.name`, MAX_NODE_NAME, node.name))
+    if (ids.has(node.id)) return bad(`${where}.id is a duplicate node id`)
+    ids.add(node.id)
+    const entry: Graph3dNode = { id: node.id, name: node.name }
+    if (node.type !== undefined) {
+      if (!text(node.type, MAX_TYPE_NAME)) return bad(tooLong(`${where}.type`, MAX_TYPE_NAME, node.type))
+      entry.type = node.type
+    }
+    if (node.value !== undefined) {
+      if (!finite(node.value) || node.value < 0) return bad(`${where}.value must be zero or a positive number`)
+      entry.value = node.value
+    }
+    nodes.push(entry)
+  }
+
+  if (!Array.isArray(raw.edges) || raw.edges.length > MAX_EDGES) return bad(`${at}.edges must be up to ${MAX_EDGES} entries`)
+  const edges: Graph3dEdge[] = []
+  for (const [index, edge] of raw.edges.entries()) {
+    const where = `${at}.edges[${index}]`
+    if (!isRecord(edge) || typeof edge.from !== "string" || typeof edge.to !== "string") return bad(`${where} must be {from, to}`)
+    const key = stray(edge, EDGE_FIELDS)
+    if (key) return bad(`${where}.${key} is not a field of a graph3d edge`)
+    for (const end of ["from", "to"] as const) {
+      if (!ids.has(edge[end] as string)) return bad(`${where}.${end} is not a node id`)
+    }
+    const entry: Graph3dEdge = { from: edge.from, to: edge.to }
+    if (edge.type !== undefined) {
+      if (!text(edge.type, MAX_TYPE_NAME)) return bad(tooLong(`${where}.type`, MAX_TYPE_NAME, edge.type))
+      entry.type = edge.type
+    }
+    edges.push(entry)
+  }
+
+  const panel: Graph3dPanel = { kind: "graph3d", nodes, edges }
+  if (raw.types !== undefined) {
+    if (!isRecord(raw.types) || Object.keys(raw.types).length > MAX_TYPES) return bad(`${at}.types must be up to ${MAX_TYPES} entries`)
+    const types: Record<string, string> = {}
+    for (const [name, colour] of Object.entries(raw.types)) {
+      if (!text(name, MAX_TYPE_NAME)) return bad(tooLong(`${at}.types key`, MAX_TYPE_NAME, name))
+      if (typeof colour !== "string" || !HEX.test(colour)) return bad(`${at}.types.${name} must be a hex colour like #22d3ee`)
+      types[name] = colour
+    }
+    panel.types = types
+  }
+  if (raw.focus !== undefined) {
+    if (typeof raw.focus !== "string" || !ids.has(raw.focus)) return bad(`${at}.focus is not a node id`)
+    panel.focus = raw.focus
+  }
+  if (raw.rotate !== undefined) {
+    if (typeof raw.rotate !== "boolean") return bad(`${at}.rotate must be true or false`)
+    panel.rotate = raw.rotate
+  }
+  return { ok: true, value: panel }
+}
+
 function parsePanel(raw: unknown, index: number, columns: number): BigscreenResult<Panel> {
   const at = `panels[${index}]`
   if (!isRecord(raw)) return bad(`${at} must be an object`)
@@ -210,6 +431,12 @@ function parsePanel(raw: unknown, index: number, columns: number): BigscreenResu
       break
     case "globe":
       parsed = parseGlobe(raw, at)
+      break
+    case "timeline":
+      parsed = parseTimeline(raw, at)
+      break
+    case "graph3d":
+      parsed = parseGraph3d(raw, at)
       break
   }
   if (!parsed.ok) return parsed
