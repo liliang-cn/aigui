@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest"
 import { buildSystemPrompt, collectNodeRenderers, type ASTNode, type RenderOutput } from "@ai-gui/core"
 import { bigscreen, bigscreenCss, bigscreenPromptSpec } from "./index"
+import { mountScreen } from "./mount"
 
 const renderNode = (content: string, complete = true, options?: Parameters<typeof bigscreen>[0]): RenderOutput =>
   collectNodeRenderers([bigscreen(options)]).bigscreen({ key: "0:0", type: "bigscreen", content, complete } as ASTNode) as RenderOutput
@@ -74,6 +75,33 @@ describe("isBlockComplete", () => {
   it("waits for the whole JSON object", () => {
     expect(complete("bigscreen", '{"panels":[{"kind":"kpi"')).toBe(false)
     expect(complete("bigscreen", '{"panels":[{"kind":"kpi","value":1}]}')).toBe(true)
+  })
+})
+
+describe("a wall narrower than its window", () => {
+  it("folds on its own width, not the window's", () => {
+    // The failure this replaces: dropped into a 330px side panel of a 1900px
+    // window, `@media (max-width:640px)` never fired and four KPI cards shared
+    // three hundred pixels, one character per line. The query has to ask how
+    // wide the wall is, which means the wall has to be a container.
+    expect(bigscreenCss).toContain("container-type:inline-size")
+    expect(bigscreenCss).toContain("@container (max-width:900px)")
+    expect(bigscreenCss).toContain("@container (max-width:520px)")
+    expect(bigscreenCss).not.toContain("@media (max-width:640px)")
+  })
+  it("keeps a wide panel wide when it folds to two columns", () => {
+    // A chart given more than half the grid is wide because it needs to be.
+    const host = document.createElement("div")
+    mountScreen(host, {
+      theme: "dark", columns: 12,
+      panels: [
+        { kind: "kpi", value: 1, span: 3 },
+        { kind: "chart", span: 8, option: { series: [] } },
+      ],
+    } as never, false)
+    const panels = host.querySelectorAll(".aigui-bs-panel")
+    expect(panels[0].hasAttribute("data-aigui-bigscreen-wide")).toBe(false)
+    expect(panels[1].hasAttribute("data-aigui-bigscreen-wide")).toBe(true)
   })
 })
 

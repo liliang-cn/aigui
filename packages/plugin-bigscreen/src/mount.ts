@@ -208,7 +208,13 @@ function note(body: HTMLElement, text: string): void {
 
 function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, animate: boolean): { node: HTMLElement; destroy: () => void } {
   const node = el("section", { class: "aigui-bs-panel", "data-aigui-bigscreen-panel": panel.kind })
-  node.style.gridColumn = `span ${Math.min(panel.span ?? 4, definition.columns)}`
+  const span = Math.min(panel.span ?? 4, definition.columns)
+  node.style.gridColumn = `span ${span}`
+  // Marked so a narrowed wall can keep the wide panels wide. A chart the model
+  // gave more than half the grid to is wide because it needs to be; collapsing
+  // it to the same width as a KPI card is how a two-column fallback turns a
+  // readable chart into a smear.
+  if (span * 2 > definition.columns) node.setAttribute("data-aigui-bigscreen-wide", "")
   node.style.borderColor = withAlpha(c.accent, definition.theme === "dark" ? 0.22 : 0.18)
   if (panel.title) {
     const head = el("header", { class: "aigui-bs-panel-title" }, panel.title)

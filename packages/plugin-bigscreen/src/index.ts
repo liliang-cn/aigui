@@ -26,7 +26,7 @@ export type {
 const escapeHtml = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
 export const bigscreenCss = [
-  "[data-aigui-bigscreen]{--aigui-bs-accent:#22d3ee;--aigui-bs-text:#e2e8f0;--aigui-bs-muted:#94a3b8;box-sizing:border-box;margin-block:1rem;padding:1.1rem 1.2rem 1.3rem;border-radius:14px;color:var(--aigui-bs-text);font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'PingFang SC','Noto Sans CJK SC',sans-serif;font-variant-numeric:tabular-nums}",
+  "[data-aigui-bigscreen]{--aigui-bs-accent:#22d3ee;--aigui-bs-text:#e2e8f0;--aigui-bs-muted:#94a3b8;box-sizing:border-box;margin-block:1rem;padding:1.1rem 1.2rem 1.3rem;border-radius:14px;color:var(--aigui-bs-text);font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'PingFang SC','Noto Sans CJK SC',sans-serif;font-variant-numeric:tabular-nums;container-type:inline-size}",
   "[data-aigui-bigscreen] *{box-sizing:border-box}",
   "[data-aigui-bigscreen='dark']{background:radial-gradient(120% 90% at 50% 0%,#0f1f3d 0%,#0a1428 45%,#050b18 100%);box-shadow:inset 0 0 0 1px rgba(56,189,248,.12),0 20px 60px rgba(0,0,0,.45)}",
   "[data-aigui-bigscreen='light']{background:linear-gradient(180deg,#f8fafc,#eef2f7);box-shadow:inset 0 0 0 1px rgba(15,23,42,.06)}",
@@ -59,7 +59,13 @@ export const bigscreenCss = [
   ".aigui-bs-note{display:flex;align-items:center;justify-content:center;height:100%;min-height:4rem;font-size:.85rem;color:var(--aigui-bs-muted)}",
   "[data-aigui-bigscreen-loading]{min-height:8rem;border-radius:14px;background:currentColor;opacity:.06}",
   ":where([data-aigui-bigscreen-error]){padding:0.5rem 0.75rem;border-radius:0.5rem;font-size:0.875rem;background:color-mix(in srgb,currentColor 8%,transparent);border:1px solid color-mix(in srgb,currentColor 25%,transparent)}",
-  "@media (max-width:640px){.aigui-bs-grid{grid-template-columns:1fr!important}.aigui-bs-panel{grid-column:span 1!important}}",
+  // Twelve columns need room. The wall used to fold at a *window* narrower than
+  // 640px, which is the wrong thing to measure: dropped into a 330px side panel
+  // of a 1900px window the query never fired, and four KPI cards shared three
+  // hundred pixels — one character per line. A container query asks the only
+  // question that matters, how wide is the wall.
+  "@container (max-width:900px){.aigui-bs-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.aigui-bs-panel{grid-column:span 1!important}.aigui-bs-panel[data-aigui-bigscreen-wide]{grid-column:span 2!important}}",
+  "@container (max-width:520px){.aigui-bs-grid{grid-template-columns:1fr!important}.aigui-bs-panel,.aigui-bs-panel[data-aigui-bigscreen-wide]{grid-column:span 1!important}}",
 ].join("")
 
 function failed(message: string): RenderOutput {
