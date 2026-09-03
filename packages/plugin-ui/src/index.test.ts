@@ -152,8 +152,27 @@ describe("UI plugin and prompt", () => {
     // The reason is a validator sentence about the document's shape — a JSON
     // path and a rule, never a value the model wrote — so it is safe to show
     // and is the only way to tell a typo from a limit.
-    if (invalid.kind === "html") expect(invalid.html).toBe('<div data-aigui-ui-invalid="" role="alert">This interface could not be displayed: $.id must be a non-empty bounded string.</div>')
+    if (invalid.kind === "html") expect(invalid.html).toBe('<div data-aigui-ui-invalid="" role="alert">This interface could not be displayed: $.id is required and must be a string.</div>')
     expect(render(nodes[0])).toBe(invalid)
+  })
+
+  it("lets a table go without a caption, and says which rule a string broke", () => {
+    const { registry, actionRuntime } = setup()
+    const doc = (table: Record<string, unknown>) =>
+      JSON.stringify({ version: 1, id: "d", root: { kind: "stack", id: "s", children: [{ kind: "table", id: "t", ...table }] } })
+    const parse = (src: string) => parseUIDocument(src, { registry, actionRuntime })
+
+    // The failure this fixes: a schedule board whose table had headers and rows
+    // and no caption lost the entire interface. Every other optional string in
+    // the validator is guarded; this one was not.
+    expect(() => parse(doc({ headers: ["a"], rows: [["1"]] }))).not.toThrow()
+
+    // And when a string is wrong, the sentence says how — missing, mistyped,
+    // empty or over length used to be one indistinguishable message.
+    const reason = (src: string) => { try { parse(src); return "" } catch (e) { return String((e as Error).message) } }
+    expect(reason(doc({ caption: 42, headers: ["a"], rows: [["1"]] }))).toContain("must be a string, not number")
+    expect(reason(doc({ caption: ["x"], headers: ["a"], rows: [["1"]] }))).toContain("must be a string, not an array")
+    expect(reason(JSON.stringify({ version: 1, root: { kind: "stack", id: "s", children: [] } }))).toContain("$.id is required")
   })
 
   it("accepts at most one UI fence per renderer generation", () => {

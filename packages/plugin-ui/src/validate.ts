@@ -153,7 +153,12 @@ function validateChildren(value: unknown, path: string, depth: number, insideFor
 }
 
 function validateTable(value: Record<string, unknown>, path: string, ctx: Context): void {
-  readString(value.caption, `${path}.caption`, ctx.issues, ctx.limits, true)
+  // Optional, like every other decorative string in this file — submitLabel and
+  // pattern are both guarded the same way. It was the one that was not, so a
+  // table written without a caption failed the whole document, and a model that
+  // read "table: caption, headers[], rows[][]" as a list of fields it may use
+  // had no way to know the first one was compulsory.
+  if (value.caption !== undefined) readString(value.caption, `${path}.caption`, ctx.issues, ctx.limits, true)
   if (!Array.isArray(value.headers) || value.headers.length > ctx.limits.tableColumns) ctx.issues.push(`${path}.headers must contain at most ${ctx.limits.tableColumns} strings.`)
   else value.headers.forEach((header, index) => readString(header, `${path}.headers[${index}]`, ctx.issues, ctx.limits, true))
   if (!Array.isArray(value.rows) || value.rows.length > ctx.limits.tableRows) ctx.issues.push(`${path}.rows must contain at most ${ctx.limits.tableRows} rows.`)
@@ -298,7 +303,13 @@ function rejectKeys(value: Record<string, unknown>, allowed: Set<string>, path: 
   for (const key of Object.keys(value)) if (DANGEROUS_KEYS.has(key) || !allowed.has(key)) issues.push(`${path}.${key} is not allowed.`)
 }
 function readString(value: unknown, path: string, issues: string[], limits: Pick<UILimits, "string">, allowEmpty = false): string | undefined {
-  if (typeof value !== "string" || (!allowEmpty && value.trim() === "") || value.length > limits.string) { issues.push(`${path} must be ${allowEmpty ? "a" : "a non-empty"} bounded string.`); return undefined }
+  // Three different failures used to share one sentence — missing, wrong type,
+  // and too long all read "must be a bounded string", which tells a model
+  // rewriting its own document nothing about what to change. Each says which.
+  if (value === undefined || value === null) { issues.push(`${path} is required and must be a string.`); return undefined }
+  if (typeof value !== "string") { issues.push(`${path} must be a string, not ${Array.isArray(value) ? "an array" : typeof value}.`); return undefined }
+  if (!allowEmpty && value.trim() === "") { issues.push(`${path} must not be empty.`); return undefined }
+  if (value.length > limits.string) { issues.push(`${path} must be at most ${limits.string} characters (got ${value.length}).`); return undefined }
   return value
 }
 function countString(value: string, ctx: Context, path: string): void {
