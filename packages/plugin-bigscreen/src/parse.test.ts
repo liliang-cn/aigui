@@ -177,6 +177,22 @@ describe("a graph3d panel", () => {
       expect(panel.rotate).toBe(false)
     }
   })
+  it("draws a graph as a 3D model unless it is asked for the flat one", () => {
+    // The default is the thing the panel is for. A knowledge graph laid out on a plane is a
+    // hairball with a camera pointed at it; the mode a host has to opt into is the old one.
+    const mode = (raw: Record<string, unknown>): string => {
+      const result = parseBigscreen(screen([graph(raw)]))
+      if (!result.ok) throw new Error(result.error.message)
+      const panel = result.value.panels[0]
+      if (panel.kind !== "graph3d") throw new Error("expected a graph3d panel")
+      return panel.mode ?? "(unset)"
+    }
+    expect(mode({})).toBe("orbit")
+    expect(mode({ mode: "orbit" })).toBe("orbit")
+    expect(mode({ mode: "flat" })).toBe("flat")
+    expect(fail(screen([graph({ mode: "globe" })]))).toContain("panels[0].mode must be orbit or flat")
+    expect(fail(screen([graph({ mode: true })]))).toContain("panels[0].mode must be orbit or flat")
+  })
   it("counts the nodes, the edges and the type colours", () => {
     expect(fail(screen([graph({ nodes: [] })]))).toContain("panels[0].nodes must be 1 to 2000 entries")
     const nodes = Array.from({ length: 2001 }, (_, i) => ({ id: `n${i}`, name: `n${i}` }))

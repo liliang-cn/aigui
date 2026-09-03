@@ -140,7 +140,15 @@ export interface Graph3dEdge {
   type?: string
 }
 
-/** Entities and typed edges, laid out by force-atlas2 on the GPU. */
+/**
+ * Entities and typed edges as a knowledge graph.
+ *
+ * `orbit`, the default, is a real three-dimensional model: the entities are laid out in space by
+ * a spring-electrical simulation and the camera turns around them. `flat` is echarts-gl's own
+ * `graphGL` — force-atlas2 on the GPU, drawn on a plane with an orthographic camera — which draws
+ * more nodes at once and is the mode to reach for when a graph is big enough that the third
+ * dimension costs more than it shows.
+ */
 export interface Graph3dPanel extends PanelBase {
   kind: "graph3d"
   nodes: Graph3dNode[]
@@ -149,7 +157,9 @@ export interface Graph3dPanel extends PanelBase {
   types?: Record<string, string>
   /** The id of the node to highlight and always label. */
   focus?: string
-  /** Whether the layout settles in front of the reader. Default true. */
+  /** How it is drawn: a turning 3D model, or the flat GPU layout. Default "orbit". */
+  mode?: "orbit" | "flat"
+  /** Whether the graph moves at all — settling, and turning. Default true. */
   rotate?: boolean
 }
 

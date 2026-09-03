@@ -1,0 +1,256 @@
+{
+  "backgroundColor": "transparent",
+  "textStyle": {
+    "color": "#e2e8f0",
+    "fontFamily": "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Noto Sans CJK SC', sans-serif"
+  },
+  "tooltip": {
+    "trigger": "item",
+    "confine": true
+  },
+  "series": [
+    {
+      "type": "graphGL",
+      "layout": "forceAtlas2",
+      "forceAtlas2": {
+        "GPU": true,
+        "steps": 8,
+        "maxSteps": 1000,
+        "gravity": 0.6,
+        "scaling": 5,
+        "gravityCenter": [
+          -27.23632614803888,
+          0
+        ],
+        "edgeWeightInfluence": 0,
+        "repulsionByDegree": true,
+        "preventOverlap": true
+      },
+      "roam": true,
+      "focusNodeAdjacency": true,
+      "zoom": 1,
+      "label": {
+        "show": false,
+        "position": "right",
+        "distance": 4,
+        "color": "#e2e8f0",
+        "fontSize": 11,
+        "fontFamily": "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'PingFang SC', 'Noto Sans CJK SC', sans-serif",
+        "formatter": "{b}"
+      },
+      "emphasis": {
+        "label": {
+          "show": true
+        }
+      },
+      "lineStyle": {
+        "color": "rgba(148,163,184,0.16)",
+        "width": 1,
+        "opacity": 0.35
+      },
+      "nodes": [
+        {
+          "id": "kyiv",
+          "name": "Kyiv",
+          "x": 170.227038425243,
+          "y": 0,
+          "nodeType": "place",
+          "degree": 2,
+          "node": {
+            "id": "kyiv",
+            "name": "Kyiv",
+            "type": "place"
+          },
+          "symbolSize": 19.063945294843617,
+          "itemStyle": {
+            "color": "#34d399",
+            "opacity": 0.95
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "moscow",
+          "name": "Moscow",
+          "x": 85.11351921262151,
+          "y": 147.4209396872502,
+          "nodeType": "place",
+          "degree": 2,
+          "node": {
+            "id": "moscow",
+            "name": "Moscow",
+            "type": "place"
+          },
+          "symbolSize": 19.063945294843617,
+          "itemStyle": {
+            "color": "#34d399",
+            "opacity": 0.95
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "reuters",
+          "name": "Reuters",
+          "x": -85.11351921262145,
+          "y": 147.42093968725024,
+          "nodeType": "outlet",
+          "degree": 2,
+          "node": {
+            "id": "reuters",
+            "name": "Reuters",
+            "type": "outlet"
+          },
+          "symbolSize": 19.063945294843617,
+          "itemStyle": {
+            "color": "#a78bfa",
+            "opacity": 0.95
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "tass",
+          "name": "TASS",
+          "x": -170.227038425243,
+          "y": 2.0846799773580732e-14,
+          "nodeType": "outlet",
+          "degree": 2,
+          "node": {
+            "id": "tass",
+            "name": "TASS",
+            "type": "outlet"
+          },
+          "symbolSize": 19.063945294843617,
+          "itemStyle": {
+            "color": "#a78bfa",
+            "opacity": 0.95
+          },
+          "label": {
+            "show": true
+          }
+        },
+        {
+          "id": "convoy",
+          "name": "Convoy crossing",
+          "x": -85.11351921262157,
+          "y": -147.42093968725018,
+          "nodeType": "event",
+          "degree": 3,
+          "node": {
+            "id": "convoy",
+            "name": "Convoy crossing",
+            "type": "event"
+          },
+          "symbolSize": 28,
+          "itemStyle": {
+            "color": "#22d3ee",
+            "opacity": 0.95
+          },
+          "label": {
+            "show": true,
+            "fontSize": 13,
+            "fontWeight": "bold",
+            "color": "#22d3ee"
+          }
+        },
+        {
+          "id": "denial",
+          "name": "Denial of crossing",
+          "x": 85.11351921262151,
+          "y": -147.4209396872502,
+          "nodeType": "event",
+          "degree": 3,
+          "node": {
+            "id": "denial",
+            "name": "Denial of crossing",
+            "type": "event"
+          },
+          "symbolSize": 22,
+          "itemStyle": {
+            "color": "#fb7185",
+            "opacity": 0.95
+          },
+          "label": {
+            "show": true
+          }
+        }
+      ],
+      "edges": [
+        {
+          "source": "reuters",
+          "target": "convoy",
+          "edgeType": "reported",
+          "lineStyle": {
+            "color": "#34d399",
+            "opacity": 0.55,
+            "width": 1.5
+          }
+        },
+        {
+          "source": "tass",
+          "target": "denial",
+          "edgeType": "reported",
+          "lineStyle": {
+            "color": "#34d399",
+            "opacity": 0.55,
+            "width": 1.5
+          }
+        },
+        {
+          "source": "convoy",
+          "target": "kyiv",
+          "edgeType": "located",
+          "lineStyle": {
+            "color": "#f472b6",
+            "opacity": 0.55,
+            "width": 1.5
+          }
+        },
+        {
+          "source": "denial",
+          "target": "moscow",
+          "edgeType": "located",
+          "lineStyle": {
+            "color": "#f472b6",
+            "opacity": 0.55,
+            "width": 1.5
+          }
+        },
+        {
+          "source": "convoy",
+          "target": "denial",
+          "edgeType": "contradicts",
+          "lineStyle": {
+            "color": "#fbbf24",
+            "opacity": 0.55,
+            "width": 1.5
+          }
+        },
+        {
+          "source": "reuters",
+          "target": "kyiv",
+          "edgeType": "located",
+          "lineStyle": {
+            "color": "#f472b6",
+            "opacity": 0.55,
+            "width": 1.5
+          }
+        },
+        {
+          "source": "tass",
+          "target": "moscow",
+          "edgeType": "located",
+          "lineStyle": {
+            "color": "#f472b6",
+            "opacity": 0.55,
+            "width": 1.5
+          }
+        }
+      ]
+    }
+  ]
+}

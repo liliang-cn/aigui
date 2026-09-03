@@ -145,6 +145,18 @@ describe("bigscreenPromptSpec", () => {
     expect(bigscreenPromptSpec("zh-CN")).toContain("整个块就作废")
     expect(bigscreenPromptSpec("en")).toContain("throws the whole block away")
   })
+  it("names both graph modes and which one it gets without asking, in both locales", () => {
+    // A default nobody states is a default nobody can override on purpose. The panel draws a
+    // turning 3D model now; a model that wanted the flat hairball has to know it can ask.
+    for (const locale of ["zh-CN", "en"]) {
+      const spec = bigscreenPromptSpec(locale)
+      expect(spec).toContain('"orbit"')
+      expect(spec).toContain('"flat"')
+      expect(spec).toContain("mode")
+    }
+    expect(bigscreenPromptSpec("en")).toContain('mode ("orbit", the default, or "flat")')
+    expect(bigscreenPromptSpec("zh-CN")).toContain('mode（"orbit" 默认 | "flat"）')
+  })
   it("points real BI boards at the dashboard block", () => {
     expect(bigscreenPromptSpec("zh-CN")).toContain("用 dashboard 块")
   })

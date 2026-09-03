@@ -1,15 +1,17 @@
 import type { EChartsCoreOption } from "echarts/core"
+import { hash } from "./layout3d"
 import { FONT } from "./options"
 import type { Palette } from "./palette"
 import type { Graph3dNode, Graph3dPanel } from "./types"
 
 /**
- * A knowledge graph of entities and typed edges, laid out by force-atlas2 on the GPU.
+ * The vocabulary every knowledge graph panel is drawn in, and the flat mode's own option.
  *
- * `graphGL` rather than a plain `graph` series: a graph of a few hundred entities is a smear in
- * SVG and a slideshow in canvas, and the WebGL series draws thousands of nodes while the layout
- * is still moving. The layout it runs is force-atlas2, the same one Gephi made the default reading
- * of "what is near what" in a citation graph.
+ * A type's colour, a node's degree, the legend in the corner and the tooltip are the same in both
+ * modes and live here. `orbit.ts` — the default — turns the entities into a model in space;
+ * `graph3dOption` below is `flat`, echarts-gl's `graphGL`: force-atlas2 on the GPU, drawn on a
+ * plane with an orthographic camera. It draws more nodes at once than the model does, which is
+ * the reason it is still here.
  *
  * Pure: the option is a function of the panel and the palette.
  */
@@ -54,19 +56,6 @@ const GRAPH_COLOURS = 7
  */
 const SEED_RADIUS = 45
 const SEED_OFFSET = 0.16
-
-const FNV_OFFSET = 2166136261
-const FNV_PRIME = 16777619
-
-/** FNV-1a, for a colour that depends on the name of a type and on nothing else. */
-function hash(value: string): number {
-  let h = FNV_OFFSET
-  for (let i = 0; i < value.length; i++) {
-    h ^= value.charCodeAt(i)
-    h = Math.imul(h, FNV_PRIME)
-  }
-  return h >>> 0
-}
 
 /**
  * The colour of a type.
@@ -131,6 +120,29 @@ export function graphLegend(panel: Graph3dPanel, c: Palette): GraphLegendEntry[]
 
 const escapeHtml = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 
+/**
+ * What an entity or an edge says on hover, in both modes.
+ *
+ * Escaped by hand: ECharts renders a formatter's return as HTML and every name here was written
+ * by a model. An edge is told apart by `dataType` in the flat series and by carrying its own
+ * `coords` in the orbit one, which is the only thing the two series disagree about.
+ */
+export function graphTooltip(params: { dataType?: string; data?: unknown }): string {
+  const data = (params.data ?? {}) as { name?: string; nodeType?: string; degree?: number; edgeType?: string; coords?: unknown }
+  if (params.dataType === "edge" || data.coords !== undefined) return escapeHtml(data.edgeType ?? "linked to")
+  const rows = [`<b>${escapeHtml(data.name ?? "")}</b>`]
+  if (data.nodeType) rows.push(`<span style="opacity:.7">${escapeHtml(data.nodeType)}</span>`)
+  rows.push(`<span style="opacity:.7">${data.degree ?? 0} connections</span>`)
+  return rows.join("<br/>")
+}
+
+/**
+ * The `flat` mode: `graphGL`, laid out by force-atlas2 on the GPU.
+ *
+ * Unchanged since it was written, byte for byte, and pinned by a test that says so — a panel that
+ * asked for this mode asked for exactly this picture. The 3D model is `graphOrbitOption`, which
+ * takes positions rather than computing them, because it is stepped in front of the reader.
+ */
 export function graph3dOption(panel: Graph3dPanel, c: Palette, animate: boolean): EChartsCoreOption {
   const degree = degrees(panel)
   const weight = (node: Graph3dNode): number => node.value ?? degree.get(node.id) ?? 0
@@ -178,20 +190,7 @@ export function graph3dOption(panel: Graph3dPanel, c: Palette, animate: boolean)
   return {
     backgroundColor: "transparent",
     textStyle: { color: c.text, fontFamily: FONT },
-    tooltip: {
-      trigger: "item",
-      confine: true,
-      // Escaped by hand: ECharts renders a formatter's return as HTML and every name here was
-      // written by a model.
-      formatter: (params: { dataType?: string; data?: unknown }) => {
-        const data = (params.data ?? {}) as { name?: string; nodeType?: string; degree?: number; edgeType?: string }
-        if (params.dataType === "edge") return escapeHtml(data.edgeType ?? "linked to")
-        const rows = [`<b>${escapeHtml(data.name ?? "")}</b>`]
-        if (data.nodeType) rows.push(`<span style="opacity:.7">${escapeHtml(data.nodeType)}</span>`)
-        rows.push(`<span style="opacity:.7">${data.degree ?? 0} connections</span>`)
-        return rows.join("<br/>")
-      },
-    },
+    tooltip: { trigger: "item", confine: true, formatter: graphTooltip },
     series: [
       {
         type: "graphGL",

@@ -10,8 +10,13 @@ export { chart3dOption, chartOption, formatNumber, gaugeColour, gaugeOption, glo
 export { countriesTexture, earthColours, earthTexture } from "./earth"
 export type { EarthColours } from "./earth"
 export { spacedItems, timelineHeight, timelineOption, timelineWindow, TIMELINE_LABELS } from "./timeline"
-export { degrees, graph3dOption, graphLegend, typeColour, GRAPH_LABELS, GRAPH_LEGEND_ROWS, GRAPH_MAX_STEPS, GRAPH_SETTLE_STEPS } from "./graph3d"
+export { degrees, graph3dOption, graphLegend, graphTooltip, typeColour, GRAPH_LABELS, GRAPH_LEGEND_ROWS, GRAPH_MAX_STEPS, GRAPH_SETTLE_STEPS } from "./graph3d"
 export type { GraphLegendEntry } from "./graph3d"
+export { createLayout, hash, layoutChunk, layoutRadius, layoutSteps, seedPositions, LAYOUT_GRAVITY, LAYOUT_SPRING } from "./layout3d"
+export type { Layout, Vec3 } from "./layout3d"
+export { graphOrbitData, graphOrbitOption, orbitFrame, EDGE_VERTICES, ORBIT_BOX, ORBIT_DISTANCE, ORBIT_EXTENT, ORBIT_FOV } from "./orbit"
+export type { OrbitData, OrbitEdgePoint, OrbitFrame, OrbitNode } from "./orbit"
+export { forgetPositions, graphKey, recallPositions, rememberPositions, REMEMBERED_GRAPHS } from "./positions"
 export {
   MAX_ARCS,
   MAX_EDGES,

@@ -4,8 +4,11 @@ import { init, use, type ECharts, type EChartsCoreOption } from "echarts/core"
 import { CanvasRenderer } from "echarts/renderers"
 import { earthTexture } from "./earth"
 import { graph3dOption, graphLegend } from "./graph3d"
+import { createLayout, layoutChunk, type Layout } from "./layout3d"
+import { graphOrbitData, graphOrbitOption } from "./orbit"
 import { chart3dOption, chartOption, formatNumber, gaugeOption, globeOption } from "./options"
 import { palette, withAlpha, type Palette } from "./palette"
+import { graphKey, recallPositions, rememberPositions } from "./positions"
 import { timelineHeight, timelineOption } from "./timeline"
 import type { BigscreenEvents, GlobeSkin, Graph3dNode, Graph3dPanel, KpiPanel, Panel, RankPanel, ScreenDefinition, TimelineItem, TimelinePanel } from "./types"
 
@@ -177,10 +180,17 @@ function mountChart(body: HTMLElement, option: EChartsCoreOption, theme: "dark" 
   }
 }
 
-function mountGl(body: HTMLElement, build: () => EChartsCoreOption, theme: "dark" | "light", fallback: () => void, ready?: (chart: ECharts) => void): () => void {
+/**
+ * A chart that needs WebGL, with an optional loop running against it.
+ *
+ * `ready` may hand back a teardown of its own — the settling loop does — and it is run before the
+ * chart is disposed, because a frame that lands on a disposed chart throws.
+ */
+function mountGl(body: HTMLElement, build: () => EChartsCoreOption, theme: "dark" | "light", fallback: () => void, ready?: (chart: ECharts) => (() => void) | void): () => void {
   let chart: ECharts | undefined
   let unfollow: (() => void) | undefined
   let cancel: (() => void) | undefined
+  let stop: (() => void) | undefined
   let disposed = false
   loadGl()
     .then(() => {
@@ -189,7 +199,7 @@ function mountGl(body: HTMLElement, build: () => EChartsCoreOption, theme: "dark
         if (disposed) return
         chart = init(body, theme === "dark" ? "dark" : undefined, { renderer: "canvas" })
         chart.setOption(build())
-        ready?.(chart)
+        stop = ready?.(chart) ?? undefined
         unfollow = follow(body, chart)
       })
     })
@@ -202,6 +212,7 @@ function mountGl(body: HTMLElement, build: () => EChartsCoreOption, theme: "dark
   return () => {
     disposed = true
     cancel?.()
+    stop?.()
     unfollow?.()
     chart?.dispose()
   }
@@ -241,6 +252,44 @@ function bindGraph(chart: ECharts, events: BigscreenEvents | undefined): void {
     const node = event.data?.node
     if (node) events?.onNodeClick?.(node)
   })
+}
+
+/**
+ * Step the layout in front of the reader, and stop.
+ *
+ * A knowledge graph pulling itself apart is the panel telling you what it found: the clusters
+ * arrive one after another and you watch which entities go with which. So the layout is stepped a
+ * few steps per frame rather than run to convergence behind a promise, and only the two series'
+ * data is pushed each time — merged, not replaced, so the camera and the lights survive the
+ * update and the graph does not jump back to its opening pose sixty times a second.
+ *
+ * When it has settled the loop ends for good and the positions are remembered, which is what lets
+ * the next render of the same fence resume rather than reshuffle. The camera keeps turning after:
+ * that is echarts-gl's own animation, not this one.
+ */
+function settleGraph(chart: ECharts, panel: Graph3dPanel, c: Palette, layout: Layout, key: string): () => void {
+  const ids = panel.nodes.map((node) => node.id)
+  const remember = (): void => rememberPositions(key, ids, layout.positions())
+  if (layout.done || typeof requestAnimationFrame !== "function") {
+    remember()
+    return () => {}
+  }
+  const chunk = layoutChunk(panel.nodes.length)
+  const tick = (): void => {
+    layout.step(chunk)
+    const data = graphOrbitData(panel, c, layout.positions())
+    // Merged rather than replaced, so the camera, the lights and the box survive the update —
+    // and applied now rather than lazily, because this already runs once per animation frame and
+    // deferring it to ECharts' own next one only puts the picture a frame behind the layout.
+    chart.setOption({ series: [{ data: data.edges }, { data: data.nodes }] }, { notMerge: false, lazyUpdate: false })
+    if (layout.done) {
+      remember()
+      return
+    }
+    handle = requestAnimationFrame(tick)
+  }
+  let handle = requestAnimationFrame(tick)
+  return () => cancelAnimationFrame(handle)
 }
 
 /**
@@ -327,16 +376,23 @@ function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, anim
       case "graph3d": {
         const legend = graphLegendNode(panel, c)
         if (legend) node.appendChild(legend)
-        destroy = mountGl(
-          body,
-          () => graph3dOption(panel, c, animate),
-          definition.theme,
-          () => {
-            legend?.remove()
-            note(body, "Knowledge graph panels need echarts-gl and WebGL.")
-          },
-          (chart) => bindGraph(chart, events),
-        )
+        const missing = (): void => {
+          legend?.remove()
+          note(body, "Knowledge graph panels need echarts-gl and WebGL.")
+        }
+        if (panel.mode === "flat") {
+          destroy = mountGl(body, () => graph3dOption(panel, c, animate), definition.theme, missing, (chart) => bindGraph(chart, events))
+          break
+        }
+        const key = graphKey(panel)
+        const layout = createLayout(panel.nodes, panel.edges, recallPositions(key))
+        // Nothing is meant to move: spend the whole layout before the first paint and hand over
+        // the settled model, which is the bargain every other panel makes with `animate: false`.
+        if (!animate) layout.step(layout.steps)
+        destroy = mountGl(body, () => graphOrbitOption(panel, c, animate, layout.positions()), definition.theme, missing, (chart) => {
+          bindGraph(chart, events)
+          return settleGraph(chart, panel, c, layout, key)
+        })
         break
       }
     }

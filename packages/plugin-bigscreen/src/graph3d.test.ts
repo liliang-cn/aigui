@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 import { describe, expect, it } from "vitest"
 import { degrees, graph3dOption, graphLegend, typeColour, GRAPH_LABELS, GRAPH_MAX_STEPS, GRAPH_SETTLE_STEPS } from "./graph3d"
 import { palette } from "./palette"
@@ -138,5 +141,17 @@ describe("graph3dOption", () => {
       const s = (still as Record<string, any>).series[0]
       expect(s.forceAtlas2.steps).toBeGreaterThan(GRAPH_SETTLE_STEPS * 10)
     }
+  })
+
+  it("is the same option it was before there was a second mode, byte for byte", () => {
+    // `flat` is now something a panel opts into, and a panel that opts into it asked for exactly
+    // the picture this used to draw. The fixture is the option as it was serialised the day the
+    // 3D model landed; a diff here means the flat mode moved under a fence that pinned it.
+    const pinned = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "graph3d-flat.json"), "utf8"))
+    const built = graph3dOption({ ...PANEL, mode: "flat" }, dark, true)
+    expect(JSON.parse(JSON.stringify(built))).toEqual(pinned)
+    expect(JSON.stringify(built)).toBe(JSON.stringify(pinned))
+    // And the mode itself changes nothing about it: this builder only ever draws the flat one.
+    expect(JSON.stringify(graph3dOption(PANEL, dark, true))).toBe(JSON.stringify(built))
   })
 })

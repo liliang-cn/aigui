@@ -28,7 +28,7 @@ const FIELDS: Record<PanelKind, string[]> = {
   chart3d: ["type", "data", "xAxis", "yAxis", "rotate"],
   globe: ["arcs", "points", "rotate"],
   timeline: ["lanes", "items", "links", "from", "to"],
-  graph3d: ["nodes", "edges", "types", "focus", "rotate"],
+  graph3d: ["nodes", "edges", "types", "focus", "mode", "rotate"],
 }
 const KINDS = new Set<PanelKind>(["kpi", "gauge", "rank", "chart", "chart3d", "globe", "timeline", "graph3d"])
 const CHART3D_TYPES = new Set(["bar3D", "scatter3D", "surface", "line3D"])
@@ -393,6 +393,10 @@ function parseGraph3d(raw: Record<string, unknown>, at: string): BigscreenResult
     if (typeof raw.focus !== "string" || !ids.has(raw.focus)) return bad(`${at}.focus is not a node id`)
     panel.focus = raw.focus
   }
+  // Written down rather than left undefined: the default is a decision, and a host reading the
+  // parsed screen back should not have to know which way it went.
+  if (raw.mode !== undefined && raw.mode !== "orbit" && raw.mode !== "flat") return bad(`${at}.mode must be orbit or flat`)
+  panel.mode = (raw.mode as Graph3dPanel["mode"]) ?? "orbit"
   if (raw.rotate !== undefined) {
     if (typeof raw.rotate !== "boolean") return bad(`${at}.rotate must be true or false`)
     panel.rotate = raw.rotate
