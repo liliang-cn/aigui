@@ -1,5 +1,11 @@
 # @ai-gui/plugin-gravity
 
+## 0.36.2
+
+### Patch Changes
+
+- @ai-gui/core@0.36.2
+
 ## 0.36.1
 
 ### Patch Changes

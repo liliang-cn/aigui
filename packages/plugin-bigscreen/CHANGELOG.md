@@ -1,5 +1,29 @@
 # @ai-gui/plugin-bigscreen
 
+## 0.36.2
+
+### Patch Changes
+
+- c57eae2: A data wall now folds on its own width, not the window's.
+
+  The wall laid out twelve columns and fell back to one at `@media
+(max-width: 640px)` — a query about the _viewport_. Put the same wall in a
+  330px side panel of a 1900px window and the query never fires: four KPI cards
+  share three hundred pixels and the numbers wrap one character per line.
+
+  The wall is now a container (`container-type: inline-size`) and the fallbacks
+  are `@container` queries, so what decides the layout is the only thing that was
+  ever relevant — how wide the wall is. That also covers the case the old query
+  was written for, since a full-width wall in a small window has a small
+  container.
+
+  Two steps rather than one. At 900px it folds to two columns; at 520px to one.
+  And a panel the model gave more than half the grid to keeps both columns in the
+  two-column state — a chart is wide because it needs to be, and collapsing it to
+  the width of a KPI card is how a readable chart becomes a smear.
+
+  - @ai-gui/core@0.36.2
+
 ## 0.36.1
 
 ### Patch Changes
