@@ -1,7 +1,7 @@
 import type { EChartsCoreOption } from "echarts/core"
 import type { Palette } from "./palette"
 import { withAlpha } from "./palette"
-import type { Chart3dPanel, ChartPanel, GaugePanel, GlobePanel } from "./types"
+import type { Chart3dPanel, ChartPanel, GaugePanel, GlobePanel, GlobeSkin } from "./types"
 
 /**
  * ECharts options built from panels.
@@ -154,7 +154,8 @@ export function chart3dOption(panel: Chart3dPanel, c: Palette, animate: boolean)
  *
  * ECharts' globe wants a texture, and the usual one is an image fetched from somewhere — which a
  * page must not do on a model's say-so. So the texture is painted here: a deep sphere with a
- * graticule, which is what a data wall's globe looks like anyway. Arcs get a moving trail.
+ * graticule, which is what a data wall's globe looks like anyway. A host that wants a real earth
+ * says so in `BigscreenOptions.globe` and `earth.ts` takes over; this stays the fallback.
  */
 export function globeTexture(c: Palette, theme: "dark" | "light"): string | undefined {
   if (typeof document === "undefined") return undefined
@@ -193,25 +194,65 @@ export function globeTexture(c: Palette, theme: "dark" | "light"): string | unde
   return canvas.toDataURL("image/png")
 }
 
-export function globeOption(panel: GlobePanel, c: Palette, animate: boolean, texture: string | undefined): EChartsCoreOption {
+/** How many of a globe's points carry a written label; the rest are on the tooltip. */
+const GLOBE_LABELS = 8
+
+/**
+ * The sphere itself, with and without a host-supplied earth.
+ *
+ * Without one, everything below the `skin` branch is the globe this plugin has always drawn: a
+ * flat-lit ball with a graticule on it, every point labelled. A wire grid needs no sun — there is
+ * nothing on it a shadow would tell you about — and `shading: "color"` with the light turned down
+ * is what keeps it evenly readable while it turns.
+ *
+ * With one, the ball is a planet: lambert (or the host's choice) so the terminator falls where the
+ * sun actually is, an atmosphere at the rim, and labels only on the points worth reading from
+ * across a room. `postEffect` stays off — bloom and depth of field on one of six panels is a
+ * frame budget spent on the wrong thing.
+ */
+export function globeOption(panel: GlobePanel, c: Palette, animate: boolean, texture: string | undefined, skin?: GlobeSkin): EChartsCoreOption {
   const arcs = (panel.arcs ?? []).map((arc) => ({ coords: [arc.from, arc.to], name: arc.label }))
   // On a globe the third value is altitude, so the size lives in a fourth: a point worth 320
   // must still sit on the surface, not 320 units above it.
   const points = (panel.points ?? []).map((point) => ({ name: point.label, value: [point.coord[0], point.coord[1], 0, point.value ?? 1] }))
   const maxValue = Math.max(1, ...points.map((p) => p.value[3] as number))
+  const shading = skin ? (skin.shading ?? "lambert") : "color"
+  const globe: Record<string, unknown> = {
+    baseTexture: texture,
+    shading,
+    environment: "none",
+    globeRadius: 78,
+    atmosphere: { show: skin ? skin.atmosphere !== false : true, color: c.accent, glowPower: 5, innerGlowPower: 2, offset: 4 },
+    // Ambient half up, not the tenth a renderer would pick: the terminator is
+    // the point of lighting a planet, but a wall is read from across a room and
+    // the night side still has to show its coastlines and its dots. Half the
+    // world being unreadable for twelve hours a day is not realism, it is a
+    // panel that works in the morning.
+    light: skin
+      ? { ambient: { intensity: 0.5 }, main: { intensity: skin.light?.intensity ?? 1.1, shadow: false, time: skin.light?.time ?? new Date() } }
+      : { ambient: { intensity: 1 }, main: { intensity: 0.2 } },
+    // Close enough that a continent fills a good part of the panel, and slow enough that the
+    // route it opened on stays in view for a while.
+    viewControl: { autoRotate: animate && panel.rotate !== false, autoRotateSpeed: 3, distance: 150, targetCoord: arcs[0]?.coords[0] ?? points[0]?.value.slice(0, 2) },
+  }
+  if (skin) {
+    globe.postEffect = { enable: false }
+    if (skin.heightTexture) globe.heightTexture = skin.heightTexture
+    // Rock, not chrome: a metallic earth mirrors the (absent) environment and goes black.
+    if (shading === "realistic") globe.realisticMaterial = { roughness: 0.85, metalness: 0 }
+  }
+  const named = new Set(
+    [...points]
+      .sort((a, b) => (b.value[3] as number) - (a.value[3] as number))
+      .slice(0, GLOBE_LABELS)
+      .map((p) => p.name),
+  )
   return {
     backgroundColor: "transparent",
-    globe: {
-      baseTexture: texture,
-      shading: "color",
-      environment: "none",
-      globeRadius: 78,
-      atmosphere: { show: true, color: c.accent, glowPower: 5, innerGlowPower: 2, offset: 4 },
-      light: { ambient: { intensity: 1 }, main: { intensity: 0.2 } },
-      // Close enough that a continent fills a good part of the panel, and slow enough that the
-      // route it opened on stays in view for a while.
-      viewControl: { autoRotate: animate && panel.rotate !== false, autoRotateSpeed: 3, distance: 150, targetCoord: arcs[0]?.coords[0] ?? points[0]?.value.slice(0, 2) },
-    },
+    // A label per point is unreadable past a dozen of them, so on a host earth the rest of the
+    // names live on hover instead of on the sphere.
+    ...(skin ? { tooltip: { trigger: "item", confine: true, formatter: "{b}" } } : {}),
+    globe,
     series: [
       {
         type: "lines3D",
@@ -226,7 +267,15 @@ export function globeOption(panel: GlobePanel, c: Palette, animate: boolean, tex
         coordinateSystem: "globe",
         symbolSize: (value: number[]) => 6 + 10 * Math.sqrt((value[3] ?? 1) / maxValue),
         itemStyle: { color: c.series[1], opacity: 0.9 },
-        label: { show: true, formatter: "{b}", color: c.text, fontSize: 11, fontFamily: FONT, backgroundColor: "transparent", distance: 6 },
+        label: {
+          show: true,
+          formatter: skin ? (params: { name?: string }) => (params.name && named.has(params.name) ? params.name : "") : "{b}",
+          color: c.text,
+          fontSize: 11,
+          fontFamily: FONT,
+          backgroundColor: "transparent",
+          distance: 6,
+        },
         data: points,
       },
     ],

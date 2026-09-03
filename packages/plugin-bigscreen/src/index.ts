@@ -6,7 +6,9 @@ import type { BigscreenOptions, ScreenTheme } from "./types"
 export { bigscreenPromptSpec } from "./prompt"
 export { parseBigscreen } from "./parse"
 export { palette, withAlpha } from "./palette"
-export { chart3dOption, chartOption, formatNumber, gaugeColour, gaugeOption, globeOption } from "./options"
+export { chart3dOption, chartOption, formatNumber, gaugeColour, gaugeOption, globeOption, globeTexture } from "./options"
+export { countriesTexture, earthColours, earthTexture } from "./earth"
+export type { EarthColours } from "./earth"
 export type {
   BigscreenError,
   BigscreenOptions,
@@ -14,7 +16,10 @@ export type {
   Chart3dPanel,
   ChartPanel,
   GaugePanel,
+  GlobeFeatureCollection,
+  GlobeGeometry,
   GlobePanel,
+  GlobeSkin,
   KpiPanel,
   Panel,
   PanelKind,
@@ -99,7 +104,7 @@ export function bigscreen(options: BigscreenOptions = {}): AIGuiPlugin {
         void import("./mount")
           .then(({ mountScreen }) => {
             if (disposed) return
-            destroy = mountScreen(el, definition, options.animate !== false)
+            destroy = mountScreen(el, definition, options.animate !== false, options.globe)
           })
           .catch(() => {
             const error = document.createElement("div")

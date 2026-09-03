@@ -2,9 +2,10 @@ import { BarChart, EffectScatterChart, FunnelChart, GaugeChart, HeatmapChart, Li
 import { DatasetComponent, GridComponent, LegendComponent, PolarComponent, RadarComponent, TitleComponent, TooltipComponent, VisualMapComponent } from "echarts/components"
 import { init, use, type ECharts, type EChartsCoreOption } from "echarts/core"
 import { CanvasRenderer } from "echarts/renderers"
-import { chart3dOption, chartOption, formatNumber, gaugeOption, globeOption, globeTexture } from "./options"
+import { earthTexture } from "./earth"
+import { chart3dOption, chartOption, formatNumber, gaugeOption, globeOption } from "./options"
 import { palette, withAlpha, type Palette } from "./palette"
-import type { KpiPanel, Panel, RankPanel, ScreenDefinition } from "./types"
+import type { GlobeSkin, KpiPanel, Panel, RankPanel, ScreenDefinition } from "./types"
 
 use([
   BarChart, LineChart, PieChart, ScatterChart, GaugeChart, RadarChart, EffectScatterChart, LinesChart, FunnelChart, HeatmapChart,
@@ -206,7 +207,7 @@ function note(body: HTMLElement, text: string): void {
   body.replaceChildren(el("div", { class: "aigui-bs-note" }, text))
 }
 
-function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, animate: boolean): { node: HTMLElement; destroy: () => void } {
+function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, animate: boolean, earth: GlobeSkin | undefined): { node: HTMLElement; destroy: () => void } {
   const node = el("section", { class: "aigui-bs-panel", "data-aigui-bigscreen-panel": panel.kind })
   const span = Math.min(panel.span ?? 4, definition.columns)
   node.style.gridColumn = `span ${span}`
@@ -247,7 +248,7 @@ function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, anim
         destroy = mountGl(body, () => chart3dOption(panel, c, animate), definition.theme, () => note(body, "3D panels need echarts-gl and WebGL."))
         break
       case "globe":
-        destroy = mountGl(body, () => globeOption(panel, c, animate, globeTexture(c, definition.theme)), definition.theme, () => note(body, "Globe panels need echarts-gl and WebGL."))
+        destroy = mountGl(body, () => globeOption(panel, c, animate, earthTexture(c, definition.theme, earth), earth), definition.theme, () => note(body, "Globe panels need echarts-gl and WebGL."))
         break
     }
   } catch {
@@ -256,8 +257,13 @@ function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, anim
   return { node, destroy }
 }
 
-/** Build the whole screen into `host`, returning the teardown the reconciler will call. */
-export function mountScreen(host: HTMLElement, definition: ScreenDefinition, animate: boolean): () => void {
+/**
+ * Build the whole screen into `host`, returning the teardown the reconciler will call.
+ *
+ * `earth` is the host's globe configuration, passed through untouched: what the planet looks like
+ * is the page's decision, not the fence's.
+ */
+export function mountScreen(host: HTMLElement, definition: ScreenDefinition, animate: boolean, earth?: GlobeSkin): () => void {
   const c = palette(definition)
   host.setAttribute("data-aigui-bigscreen", definition.theme)
   host.style.setProperty("--aigui-bs-accent", c.accent)
@@ -279,7 +285,7 @@ export function mountScreen(host: HTMLElement, definition: ScreenDefinition, ani
   const grid = el("div", { class: "aigui-bs-grid" })
   grid.style.gridTemplateColumns = `repeat(${definition.columns}, minmax(0, 1fr))`
   host.appendChild(grid)
-  const mounted = definition.panels.map((panel) => mountPanel(panel, definition, c, animate))
+  const mounted = definition.panels.map((panel) => mountPanel(panel, definition, c, animate, earth))
   for (const { node } of mounted) grid.appendChild(node)
   return () => {
     for (const { destroy } of mounted) destroy()

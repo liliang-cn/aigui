@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { chart3dOption, chartOption, formatNumber, gaugeColour, gaugeOption, globeOption } from "./options"
+import type { GlobeSkin } from "./types"
 import { palette } from "./palette"
 
 const dark = palette({ theme: "dark" })
@@ -83,5 +84,66 @@ describe("globeOption", () => {
     // Altitude 0 so the point sits on the surface; the value rides in the fourth slot.
     expect(option.series[1].data[0]).toEqual({ name: "SH", value: [121.5, 31.2, 0, 4] })
     expect(option.series[1].symbolSize([0, 0, 0, 4])).toBeCloseTo(16)
+  })
+})
+
+describe("globeOption with a host earth", () => {
+  const panel = { kind: "globe", points: [{ coord: [0, 0] as [number, number], label: "small", value: 1 }, { coord: [10, 10] as [number, number], label: "big", value: 9 }] } as const
+
+  it("changes nothing at all when the host supplied no earth", () => {
+    // The graticule globe is what every consumer that never heard of a `globe` option gets, so
+    // the fifth argument being absent has to be byte-for-byte the fourth-argument call.
+    const before = globeOption({ ...panel }, dark, true, "data:image/png;base64,x") as Record<string, any>
+    const after = globeOption({ ...panel }, dark, true, "data:image/png;base64,x", undefined) as Record<string, any>
+    // JSON rather than toEqual: symbolSize is a closure, so two correct options are never the
+    // same object. Everything a globe is configured by survives the round trip.
+    expect(JSON.stringify(after)).toBe(JSON.stringify(before))
+    expect(before.globe).toEqual({
+      baseTexture: "data:image/png;base64,x",
+      shading: "color",
+      environment: "none",
+      globeRadius: 78,
+      atmosphere: { show: true, color: dark.accent, glowPower: 5, innerGlowPower: 2, offset: 4 },
+      light: { ambient: { intensity: 1 }, main: { intensity: 0.2 } },
+      viewControl: { autoRotate: true, autoRotateSpeed: 3, distance: 150, targetCoord: [0, 0] },
+    })
+    expect(before.tooltip).toBeUndefined()
+    expect(before.series[1].label.formatter).toBe("{b}")
+  })
+
+  it("lights a photographic earth: lambert by default, a sun at a real time, an atmosphere", () => {
+    const skin: GlobeSkin = { baseTexture: "/earth/blue-marble.jpg" }
+    const option = globeOption({ ...panel }, dark, true, skin.baseTexture, skin) as Record<string, any>
+    expect(option.globe.baseTexture).toBe("/earth/blue-marble.jpg")
+    expect(option.globe.shading).toBe("lambert")
+    expect(option.globe.light.main.intensity).toBeGreaterThan(0.5)
+    expect(option.globe.light.main.time).toBeInstanceOf(Date)
+    expect(option.globe.atmosphere.show).toBe(true)
+    // The heavy passes stay off: a globe panel is one of six on a wall.
+    expect(option.globe.postEffect).toEqual({ enable: false })
+  })
+
+  it("takes the shading, the sun, the height map and the atmosphere the host asked for", () => {
+    const time = new Date("2026-09-03T06:00:00Z")
+    const skin: GlobeSkin = { baseTexture: "x", heightTexture: "/earth/bump.jpg", shading: "realistic", atmosphere: false, light: { intensity: 2.4, time } }
+    const option = globeOption({ ...panel }, dark, false, "x", skin) as Record<string, any>
+    expect(option.globe.shading).toBe("realistic")
+    expect(option.globe.realisticMaterial).toMatchObject({ metalness: 0 })
+    expect(option.globe.realisticMaterial.roughness).toBeGreaterThan(0)
+    expect(option.globe.heightTexture).toBe("/earth/bump.jpg")
+    expect(option.globe.atmosphere.show).toBe(false)
+    expect(option.globe.light.main).toMatchObject({ intensity: 2.4, time })
+  })
+
+  it("labels only the biggest points and leaves the rest to the tooltip", () => {
+    const many = Array.from({ length: 12 }, (_, i) => ({ coord: [i, i] as [number, number], label: `p${i}`, value: i }))
+    const option = globeOption({ kind: "globe", points: many }, dark, false, "x", { baseTexture: "x" }) as Record<string, any>
+    expect(option.tooltip).toMatchObject({ trigger: "item" })
+    const formatter = option.series[1].label.formatter as (p: { name: string }) => string
+    // The four smallest are drawn but not written on.
+    expect(formatter({ name: "p11" })).toBe("p11")
+    expect(formatter({ name: "p4" })).toBe("p4")
+    expect(formatter({ name: "p3" })).toBe("")
+    expect(formatter({ name: "p0" })).toBe("")
   })
 })
