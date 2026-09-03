@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-figure",
-  "version": "0.36.3",
+  "version": "0.37.0",
   "description": "Labelled figures — regions with leader-line callouts — rendered as SVG from a declarative block.",
   "keywords": [
     "llm",

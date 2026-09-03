@@ -1,5 +1,11 @@
 # @ai-gui/plugin-scene
 
+## 0.37.0
+
+### Patch Changes
+
+- @ai-gui/core@0.37.0
+
 ## 0.36.3
 
 ### Patch Changes

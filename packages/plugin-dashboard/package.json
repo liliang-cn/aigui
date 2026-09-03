@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-dashboard",
-  "version": "0.36.3",
+  "version": "0.37.0",
   "description": "BI dashboard plugin for AIGUI — a grid of panels, each a table + ECharts chart + provenance, with per-panel refusals. The host writes every number; the model only proposes the layout.",
   "keywords": [
     "llm",
