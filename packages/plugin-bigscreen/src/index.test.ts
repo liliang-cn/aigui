@@ -91,12 +91,18 @@ describe("a wall narrower than its window", () => {
   })
   it("keeps a wide panel wide when it folds to two columns", () => {
     // A chart given more than half the grid is wide because it needs to be.
+    // Two KPIs rather than a KPI and a chart: a chart panel loads ECharts
+    // through a dynamic import, and the callback lands after the test has
+    // finished and the host is gone — an unhandled "cannot set dpr of null"
+    // that fails the whole run while every assertion passes. The attribute
+    // under test is set by mountPanel from the span alone, so the kind is
+    // beside the point.
     const host = document.createElement("div")
     mountScreen(host, {
       theme: "dark", columns: 12,
       panels: [
         { kind: "kpi", value: 1, span: 3 },
-        { kind: "chart", span: 8, option: { series: [] } },
+        { kind: "kpi", value: 2, span: 8 },
       ],
     } as never, false)
     const panels = host.querySelectorAll(".aigui-bs-panel")
