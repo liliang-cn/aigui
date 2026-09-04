@@ -123,6 +123,15 @@ describe("globeOption with a host earth", () => {
     expect(option.globe.postEffect).toEqual({ enable: false })
   })
 
+  it("lets the host raise the night side: a photograph with dark oceans is unreadable at half ambient", () => {
+    const skin: GlobeSkin = { baseTexture: "x", light: { intensity: 1.3, ambient: 0.9 } }
+    const option = globeOption({ ...panel }, dark, true, skin.baseTexture, skin) as Record<string, any>
+    expect(option.globe.light.ambient.intensity).toBe(0.9)
+    expect(option.globe.light.main.intensity).toBe(1.3)
+    const plain = globeOption({ ...panel }, dark, true, "x", { baseTexture: "x" }) as Record<string, any>
+    expect(plain.globe.light.ambient.intensity).toBe(0.5)
+  })
+
   it("takes the shading, the sun, the height map and the atmosphere the host asked for", () => {
     const time = new Date("2026-09-03T06:00:00Z")
     const skin: GlobeSkin = { baseTexture: "x", heightTexture: "/earth/bump.jpg", shading: "realistic", atmosphere: false, light: { intensity: 2.4, time } }

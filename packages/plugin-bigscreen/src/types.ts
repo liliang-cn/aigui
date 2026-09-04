@@ -226,9 +226,11 @@ export interface GlobeSkin {
    * The sun.
    *
    * `time` is what echarts-gl puts the main light at, so the terminator falls where the sun
-   * actually is; the default is now.
+   * actually is; the default is now. `ambient` is how much the night side still shows,
+   * 0–1; the default 0.5 keeps coastlines readable, a host whose photograph has dark oceans
+   * raises it.
    */
-  light?: { intensity?: number; time?: Date | string }
+  light?: { intensity?: number; ambient?: number; time?: Date | string }
 }
 
 /**

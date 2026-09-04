@@ -230,7 +230,7 @@ export function globeOption(panel: GlobePanel, c: Palette, animate: boolean, tex
     // world being unreadable for twelve hours a day is not realism, it is a
     // panel that works in the morning.
     light: skin
-      ? { ambient: { intensity: 0.5 }, main: { intensity: skin.light?.intensity ?? 1.1, shadow: false, time: skin.light?.time ?? new Date() } }
+      ? { ambient: { intensity: skin.light?.ambient ?? 0.5 }, main: { intensity: skin.light?.intensity ?? 1.1, shadow: false, time: skin.light?.time ?? new Date() } }
       : { ambient: { intensity: 1 }, main: { intensity: 0.2 } },
     // Close enough that a continent fills a good part of the panel, and slow enough that the
     // route it opened on stays in view for a while.
