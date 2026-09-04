@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-function",
-  "version": "0.37.0",
+  "version": "0.37.1",
   "description": "Function and calculus figures for AIGUI — curves, tangents, areas, Riemann sums, computed from an expression rather than from sampled points.",
   "keywords": [
     "llm",

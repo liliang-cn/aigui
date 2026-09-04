@@ -1,5 +1,12 @@
 # @ai-gui/plugin-bigscreen
 
+## 0.37.1
+
+### Patch Changes
+
+- 829bc82: A `GlobeSkin` can set `light.ambient`, how much the night side still shows. The default stays 0.5; a host whose photograph has dark oceans raises it instead of watching half the planet go black at dusk.
+  - @ai-gui/core@0.37.1
+
 ## 0.37.0
 
 ### Minor Changes

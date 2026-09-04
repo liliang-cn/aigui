@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-ui",
-  "version": "0.37.0",
+  "version": "0.37.1",
   "description": "Bounded declarative AI-generated interfaces for AIGUI.",
   "keywords": [
     "llm",
