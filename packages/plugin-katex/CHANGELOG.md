@@ -1,5 +1,12 @@
 # @ai-gui/plugin-katex
 
+## 0.39.1
+
+### Patch Changes
+
+- Updated dependencies [25740cc]
+  - @ai-gui/core@0.39.1
+
 ## 0.39.0
 
 ### Patch Changes
