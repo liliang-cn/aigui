@@ -298,6 +298,19 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/plugin-graph:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+      three:
+        specifier: ^0.185.1
+        version: 0.185.1
+    devDependencies:
+      '@types/three':
+        specifier: ^0.185.3
+        version: 0.185.3
+
   packages/plugin-gravity:
     dependencies:
       '@ai-gui/core':
