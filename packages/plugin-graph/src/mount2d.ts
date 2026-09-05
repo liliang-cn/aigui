@@ -1,6 +1,7 @@
-import { ancestors, ontologyGraph } from "./ontology"
+import { ontologyGraph } from "./ontology"
 import type { Palette } from "./palette"
 import { renderGraphSVG } from "./render2d"
+import { createTooltip } from "./tooltip"
 import type { EntityDef, GraphDefinition, GraphLayer } from "./types"
 
 /**
@@ -29,77 +30,6 @@ const ZOOM_STEP = 0.9
 const MIN_ZOOM = 0.2
 const MAX_ZOOM = 6
 
-const text = (tag: string, content: string, attrs: Record<string, string> = {}): HTMLElement => {
-  const el = document.createElement(tag)
-  el.textContent = content
-  for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, value)
-  return el
-}
-
-/** What the tooltip says about an entity: its class, its description, its facts, its edges. */
-function describeEntity(def: GraphDefinition, id: string): HTMLElement[] {
-  const entity = def.entities.find((e) => e.id === id)
-  if (!entity) return []
-  const classes = new Map(def.classes.map((cls) => [cls.id, cls]))
-  const properties = new Map(def.properties.map((p) => [p.id, p]))
-  const out: HTMLElement[] = [text("strong", entity.name)]
-  if (entity.type !== undefined) {
-    const chain = [entity.type, ...ancestors(def, entity.type)].map((c) => classes.get(c)?.name ?? c)
-    out.push(text("div", chain.join(" ⊂ "), { "data-graph-tip-class": "" }))
-    // The class's own description is often the only sentence anyone wrote about what this is.
-    const about = classes.get(entity.type)?.description
-    if (about) out.push(text("div", about, { "data-graph-tip-description": "" }))
-  }
-  if (entity.description) out.push(text("div", entity.description, { "data-graph-tip-description": "" }))
-  if (entity.attrs) {
-    const table = document.createElement("dl")
-    for (const [key, value] of Object.entries(entity.attrs)) {
-      table.appendChild(text("dt", key))
-      table.appendChild(text("dd", String(value)))
-    }
-    out.push(table)
-  }
-  const edges: string[] = []
-  for (const relation of def.relations) {
-    if (relation.from !== id && relation.to !== id) continue
-    const other = relation.from === id ? relation.to : relation.from
-    const otherName = def.entities.find((e) => e.id === other)?.name ?? other
-    const label = relation.name ?? (relation.type !== undefined ? properties.get(relation.type)?.name ?? relation.type : "—")
-    edges.push(relation.from === id ? `→ ${label} ${otherName}` : `← ${label} ${otherName}`)
-    if (edges.length >= 8) break
-  }
-  if (edges.length > 0) {
-    const list = document.createElement("ul")
-    for (const edge of edges) list.appendChild(text("li", edge))
-    out.push(list)
-  }
-  return out
-}
-
-/** What the tooltip says about a class: its parents, its description, its properties, its instances. */
-function describeClass(def: GraphDefinition, id: string): HTMLElement[] {
-  const cls = def.classes.find((c) => c.id === id)
-  if (!cls) return []
-  const classes = new Map(def.classes.map((c) => [c.id, c]))
-  const out: HTMLElement[] = [text("strong", cls.name)]
-  const chain = ancestors(def, id).map((c) => classes.get(c)?.name ?? c)
-  if (chain.length > 0) out.push(text("div", `⊂ ${chain.join(" ⊂ ")}`, { "data-graph-tip-class": "" }))
-  if (cls.description) out.push(text("div", cls.description, { "data-graph-tip-description": "" }))
-  const lines: string[] = []
-  for (const property of def.properties) {
-    if (property.domain === id) lines.push(`${property.name} → ${property.range !== undefined ? classes.get(property.range)?.name ?? property.range : "*"}`)
-    if (property.range === id && property.domain !== id) lines.push(`${property.domain !== undefined ? classes.get(property.domain)?.name ?? property.domain : "*"} → ${property.name}`)
-  }
-  if (lines.length > 0) {
-    const list = document.createElement("ul")
-    for (const line of lines.slice(0, 8)) list.appendChild(text("li", line))
-    out.push(list)
-  }
-  const instances = def.entities.filter((e) => e.type === id).length
-  if (instances > 0) out.push(text("div", `× ${instances}`, { "data-graph-tip-count": "" }))
-  return out
-}
-
 /** Neighbours by id and the edges touching each id, for the layer being shown. */
 function adjacency(def: GraphDefinition, layer: GraphLayer): { neighbours: Map<string, Set<string>>; edges: Map<string, Set<number>> } {
   const links = layer === "ontology" ? ontologyGraph(def).links : def.relations
@@ -123,11 +53,7 @@ export function mount2d(host: HTMLElement, def: GraphDefinition, layer: GraphLay
   holder.setAttribute("data-aigui-graph-canvas", "")
   holder.innerHTML = rendered.svg
   const svg = holder.querySelector("svg")!
-  const tip = document.createElement("div")
-  tip.setAttribute("data-aigui-graph-tip", "")
-  tip.setAttribute("role", "tooltip")
-  tip.hidden = true
-  holder.appendChild(tip)
+  const tip = createTooltip(holder, def, layer)
   host.appendChild(holder)
 
   const { neighbours, edges } = adjacency(def, layer)
@@ -148,7 +74,7 @@ export function mount2d(host: HTMLElement, def: GraphDefinition, layer: GraphLay
       item.removeAttribute("data-neighbour")
     }
     for (const edge of edgeElements) edge.removeAttribute("data-neighbour")
-    tip.hidden = true
+    tip.hide()
   }
 
   const activate = (id: string, event: Event): void => {
@@ -157,15 +83,8 @@ export function mount2d(host: HTMLElement, def: GraphDefinition, layer: GraphLay
     items.get(id)?.setAttribute("data-active", "")
     for (const other of neighbours.get(id) ?? []) items.get(other)?.setAttribute("data-neighbour", "")
     for (const index of edges.get(id) ?? []) edgeElements[index]?.setAttribute("data-neighbour", "")
-    tip.replaceChildren(...(layer === "ontology" ? describeClass(def, id) : describeEntity(def, id)))
-    tip.hidden = false
     const pointer = event as PointerEvent
-    const box = holder.getBoundingClientRect()
-    const x = (pointer.clientX ?? 0) - box.left
-    const y = (pointer.clientY ?? 0) - box.top
-    // To the right of the pointer unless that would run off the figure, then to the left.
-    tip.style.left = x + 220 > box.width && x > 220 ? `${x - 212}px` : `${x + 12}px`
-    tip.style.top = `${y + 12}px`
+    tip.show(id, pointer.clientX ?? 0, pointer.clientY ?? 0)
   }
 
   const onOver = (event: Event): void => {
