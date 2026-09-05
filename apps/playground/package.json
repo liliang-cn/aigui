@@ -21,6 +21,7 @@
     "@ai-gui/plugin-solid": "workspace:*",
     "@ai-gui/plugin-scene": "workspace:*",
     "@ai-gui/plugin-gravity": "workspace:*",
+    "@ai-gui/plugin-graph": "workspace:*",
     "@ai-gui/plugin-bigscreen": "workspace:*",
     "echarts-gl": "^2.0.9",
     "@ai-gui/react": "workspace:*",

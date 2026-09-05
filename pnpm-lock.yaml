@@ -47,6 +47,9 @@ importers:
       '@ai-gui/plugin-citation':
         specifier: workspace:*
         version: link:../../packages/plugin-citation
+      '@ai-gui/plugin-graph':
+        specifier: workspace:*
+        version: link:../../packages/plugin-graph
       '@ai-gui/plugin-gravity':
         specifier: workspace:*
         version: link:../../packages/plugin-gravity

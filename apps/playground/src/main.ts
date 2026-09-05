@@ -15,6 +15,7 @@ import { map } from "@ai-gui/plugin-map"
 import { solid } from "@ai-gui/plugin-solid"
 import { scene } from "@ai-gui/plugin-scene"
 import { gravity } from "@ai-gui/plugin-gravity"
+import { graph } from "@ai-gui/plugin-graph"
 import { bigscreen } from "@ai-gui/plugin-bigscreen"
 import { AIRenderer as ReactAIRenderer, type AIRendererHandle as ReactHandle } from "@ai-gui/react"
 import { AIRenderer as VueAIRenderer } from "@ai-gui/vue"
@@ -90,6 +91,12 @@ flowchart LR
 
 \`\`\`bigscreen
 {"title":"Entity graph","panels":[{"kind":"graph3d","title":"Who reported what","span":12,"focus":"convoy","nodes":[{"id":"kyiv","name":"Kyiv","type":"place"},{"id":"moscow","name":"Moscow","type":"place"},{"id":"reuters","name":"Reuters","type":"outlet"},{"id":"tass","name":"TASS","type":"outlet"},{"id":"afp","name":"AFP","type":"outlet"},{"id":"convoy","name":"Convoy crossing","type":"event"},{"id":"denial","name":"Denial of crossing","type":"event"},{"id":"closure","name":"Border post closure","type":"event"}],"edges":[{"from":"reuters","to":"convoy","type":"reported"},{"from":"tass","to":"denial","type":"reported"},{"from":"afp","to":"closure","type":"reported"},{"from":"convoy","to":"kyiv","type":"located"},{"from":"denial","to":"moscow","type":"located"},{"from":"closure","to":"kyiv","type":"located"},{"from":"convoy","to":"denial","type":"contradicts"},{"from":"reuters","to":"kyiv","type":"located"},{"from":"tass","to":"moscow","type":"located"}]}]}
+\`\`\`
+
+## Knowledge graph & ontology
+
+\`\`\`graph
+{"classes":[{"id":"Agent","name":"主体"},{"id":"Person","name":"人","subClassOf":"Agent","description":"自然人"},{"id":"Organization","name":"组织","subClassOf":"Agent"},{"id":"Project","name":"项目"}],"properties":[{"id":"worksAt","name":"任职于","domain":"Person","range":"Organization"},{"id":"leads","name":"负责","domain":"Person","range":"Project"},{"id":"funds","name":"资助","domain":"Organization","range":"Project"},{"id":"knows","name":"认识","domain":"Person","range":"Person"}],"entities":[{"id":"alice","name":"Alice","type":"Person","attrs":{"title":"CTO","since":2019}},{"id":"bob","name":"Bob","type":"Person","attrs":{"title":"Engineer"}},{"id":"carol","name":"Carol","type":"Person"},{"id":"acme","name":"Acme","type":"Organization","attrs":{"city":"Wien"}},{"id":"globex","name":"Globex","type":"Organization"},{"id":"atlas","name":"Atlas 项目","type":"Project"},{"id":"borealis","name":"Borealis 项目","type":"Project"}],"relations":[{"from":"alice","to":"acme","type":"worksAt"},{"from":"bob","to":"acme","type":"worksAt"},{"from":"carol","to":"globex","type":"worksAt"},{"from":"bob","to":"alice","type":"worksAt"},{"from":"alice","to":"atlas","type":"leads"},{"from":"carol","to":"borealis","type":"leads"},{"from":"acme","to":"atlas","type":"funds"},{"from":"globex","to":"borealis","type":"funds"},{"from":"globex","to":"atlas","type":"funds"},{"from":"alice","to":"bob","type":"knows"},{"from":"alice","to":"carol","type":"knows"}],"focus":"alice","caption":"Acme 与 Globex 的人、组织和项目——Bob 任职于 Alice 违反了 range"}
 \`\`\`
 
 ## Gravity
@@ -219,7 +226,7 @@ function mount(kind: PlaygroundAdapter): void {
   timeline = []
   adapterBadge.textContent = kind.toUpperCase()
   const registry = createRegistry(kind)
-  const plugins: AIGuiPlugin[] = [citation(), ui({ registry, actionRuntime }), mermaid({ theme: "neutral" }), molecule(), map(), solid(), scene(), gravity(), bigscreen(), artifact({ store: artifactStore })]
+  const plugins: AIGuiPlugin[] = [citation(), ui({ registry, actionRuntime }), mermaid({ theme: "neutral" }), molecule(), map(), solid(), scene(), gravity(), graph(), bigscreen(), artifact({ store: artifactStore })]
   const mounted = kind === "react" ? mountReact(registry, plugins) : kind === "vue" ? mountVue(registry, plugins) : mountVanilla(registry, plugins)
   handle = mounted.handle
   cleanupRenderer = mounted.cleanup

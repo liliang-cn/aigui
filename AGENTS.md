@@ -22,7 +22,7 @@ AIGUI renders a streaming LLM response as live UI. A headless core (`@ai-gui/cor
 | Vue | `@ai-gui/vue` | `pnpm add @ai-gui/core @ai-gui/vue` |
 | vanilla DOM | `@ai-gui/vanilla` | `pnpm add @ai-gui/core @ai-gui/vanilla` |
 
-Add any plugins you need: `@ai-gui/plugin-solid`, `@ai-gui/plugin-scene`, `@ai-gui/plugin-function`, `@ai-gui/plugin-optics`, `@ai-gui/plugin-motion`, `@ai-gui/plugin-gravity`, `@ai-gui/plugin-physics`, `@ai-gui/plugin-quote`, `@ai-gui/plugin-figure`, `@ai-gui/plugin-progress`, `@ai-gui/plugin-flashcard`, `@ai-gui/plugin-ui`, `@ai-gui/plugin-katex`, `@ai-gui/plugin-highlight`, `@ai-gui/plugin-mermaid`, `@ai-gui/plugin-molecule`, `@ai-gui/plugin-map`, `@ai-gui/plugin-primitives`, `@ai-gui/plugin-chart`, `@ai-gui/plugin-bigscreen`, `@ai-gui/plugin-form`, `@ai-gui/plugin-citation`, `@ai-gui/plugin-artifact`, plus `@ai-gui/plugin-evidence` and `@ai-gui/plugin-resultset` for the two fences the host writes rather than the model.
+Add any plugins you need: `@ai-gui/plugin-solid`, `@ai-gui/plugin-scene`, `@ai-gui/plugin-function`, `@ai-gui/plugin-optics`, `@ai-gui/plugin-motion`, `@ai-gui/plugin-gravity`, `@ai-gui/plugin-graph`, `@ai-gui/plugin-physics`, `@ai-gui/plugin-quote`, `@ai-gui/plugin-figure`, `@ai-gui/plugin-progress`, `@ai-gui/plugin-flashcard`, `@ai-gui/plugin-ui`, `@ai-gui/plugin-katex`, `@ai-gui/plugin-highlight`, `@ai-gui/plugin-mermaid`, `@ai-gui/plugin-molecule`, `@ai-gui/plugin-map`, `@ai-gui/plugin-primitives`, `@ai-gui/plugin-chart`, `@ai-gui/plugin-bigscreen`, `@ai-gui/plugin-form`, `@ai-gui/plugin-citation`, `@ai-gui/plugin-artifact`, plus `@ai-gui/plugin-evidence` and `@ai-gui/plugin-resultset` for the two fences the host writes rather than the model.
 
 ### 2. Register cards
 
@@ -105,13 +105,14 @@ import { fn } from "@ai-gui/plugin-function"
 import { optics } from "@ai-gui/plugin-optics"
 import { motion } from "@ai-gui/plugin-motion"
 import { gravity } from "@ai-gui/plugin-gravity"
+import { graph } from "@ai-gui/plugin-graph"
 import { physics } from "@ai-gui/plugin-physics"
 import { quote } from "@ai-gui/plugin-quote"
 import { figure } from "@ai-gui/plugin-figure"
 import { progress } from "@ai-gui/plugin-progress"
 
 const artifactStore = new ArtifactStore()
-const plugins = [ui({ registry, actionRuntime }), katex(), highlight(), mermaid(), molecule(), map(), chart({ interactive: true }), primitives(), citation(), solid(), fn(), optics(), motion(), physics(), quote(), figure(), progress(), artifact({ store: artifactStore })]
+const plugins = [ui({ registry, actionRuntime }), katex(), highlight(), mermaid(), molecule(), map(), chart({ interactive: true }), primitives(), citation(), solid(), fn(), optics(), motion(), gravity(), graph(), physics(), quote(), figure(), progress(), artifact({ store: artifactStore })]
 ```
 
 Diagrams, maths and charts are the heaviest thing a page carrying them loads. To keep them out of the first load, pass a loader instead of an array — the answer renders as plain markdown until it resolves, and the renderer then reparses the text it has buffered:

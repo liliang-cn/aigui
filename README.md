@@ -37,7 +37,7 @@ pnpm add @ai-gui/core @ai-gui/vue
 pnpm add @ai-gui/core @ai-gui/vanilla
 
 # plugins (optional)
-pnpm add @ai-gui/plugin-solid @ai-gui/plugin-scene @ai-gui/plugin-function @ai-gui/plugin-optics @ai-gui/plugin-motion @ai-gui/plugin-gravity @ai-gui/plugin-physics @ai-gui/plugin-quote @ai-gui/plugin-figure @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-dashboard @ai-gui/plugin-bigscreen @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact @ai-gui/plugin-progress @ai-gui/plugin-flashcard @ai-gui/plugin-evidence @ai-gui/plugin-resultset
+pnpm add @ai-gui/plugin-solid @ai-gui/plugin-scene @ai-gui/plugin-function @ai-gui/plugin-optics @ai-gui/plugin-motion @ai-gui/plugin-gravity @ai-gui/plugin-graph @ai-gui/plugin-physics @ai-gui/plugin-quote @ai-gui/plugin-figure @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-dashboard @ai-gui/plugin-bigscreen @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact @ai-gui/plugin-progress @ai-gui/plugin-flashcard @ai-gui/plugin-evidence @ai-gui/plugin-resultset
 
 # plugin authoring helpers (optional)
 pnpm add @ai-gui/plugin-sdk
@@ -192,6 +192,7 @@ await r.feed(res.body!)
 | `@ai-gui/plugin-optics` | `optics(options?)` | ` ```optics ` blocks for ray optics — lenses, mirrors and refraction, with the image and the conclusion computed |
 | `@ai-gui/plugin-motion` | `motion(options?)` | ` ```motion ` blocks for mechanics — projectiles, collisions and oscillation, drawn stroboscopically from the initial conditions |
 | `@ai-gui/plugin-gravity` | `gravity(options?)` | ` ```gravity ` blocks for gravity and collisions — orbits, binaries, comets and colliding discs, integrated from the masses and orbits the model states |
+| `@ai-gui/plugin-graph` | `graph(options?)` | ` ```graph ` blocks for knowledge graphs and ontologies — entities and typed relations, classes with `subClassOf` and properties with `domain`/`range`, drawn in 2D or 3D with the relations that break the ontology marked |
 | `@ai-gui/plugin-physics` | `physics(options?)` | ` ```physics ` blocks for force and vector diagrams — bodies, surfaces, labelled arrows and angles, drawn not simulated |
 | `@ai-gui/plugin-quote` | `quote(options?)` | ` ```quote ` blocks for candlestick charts — the host supplies the prices, the renderer computes every indicator |
 | `@ai-gui/plugin-figure` | `figure(options?)` | ` ```figure ` blocks for labelled figures — regions with leader-line callouts naming each part |
@@ -521,6 +522,7 @@ LLM stream ──▶ @ai-gui/core (headless)
 | [`@ai-gui/plugin-optics`](./packages/plugin-optics/README.md) | Ray-optics figures (` ```optics `). |
 | [`@ai-gui/plugin-motion`](./packages/plugin-motion/README.md) | Mechanics motion figures (` ```motion `). |
 | [`@ai-gui/plugin-gravity`](./packages/plugin-gravity/README.md) | Orbits and collisions, integrated (` ```gravity `). |
+| [`@ai-gui/plugin-graph`](./packages/plugin-graph/README.md) | Knowledge graphs and ontologies, 2D and 3D, checked (` ```graph `). |
 | [`@ai-gui/plugin-physics`](./packages/plugin-physics/README.md) | Force and vector diagrams (` ```physics `). |
 | [`@ai-gui/plugin-quote`](./packages/plugin-quote/README.md) | Candlestick charts with computed indicators (` ```quote `). |
 | [`@ai-gui/plugin-figure`](./packages/plugin-figure/README.md) | Labelled figures with leader-line callouts (` ```figure `). |
