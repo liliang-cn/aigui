@@ -53,7 +53,7 @@ export function mount2d(host: HTMLElement, def: GraphDefinition, layer: GraphLay
   holder.setAttribute("data-aigui-graph-canvas", "")
   holder.innerHTML = rendered.svg
   const svg = holder.querySelector("svg")!
-  const tip = createTooltip(holder, def, layer)
+  const tip = createTooltip(holder, def, layer, options.palette)
   host.appendChild(holder)
 
   const { neighbours, edges } = adjacency(def, layer)

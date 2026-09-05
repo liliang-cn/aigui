@@ -50,7 +50,7 @@ export const graphCss = [
   "[data-aigui-graph-canvas] svg[data-graph-active] [data-graph-edge][data-neighbour]{opacity:1;stroke-width:2.5}",
   "[data-aigui-graph-canvas] [data-graph-item],[data-aigui-graph-canvas] [data-graph-edge]{transition:opacity 120ms ease}",
   "[data-aigui-graph-canvas] canvas{display:block;width:100%;height:100%;touch-action:none}",
-  "[data-aigui-graph-tip]{position:absolute;z-index:2;max-width:220px;padding:0.4rem 0.55rem;border-radius:0.4rem;font-size:0.75rem;line-height:1.35;pointer-events:none;background:color-mix(in srgb,canvas 92%,currentColor 8%);border:1px solid color-mix(in srgb,currentColor 25%,transparent);box-shadow:0 4px 14px rgba(0,0,0,0.12)}",
+  "[data-aigui-graph-tip]{position:absolute;z-index:2;max-width:220px;padding:0.4rem 0.55rem;border-radius:0.4rem;font-size:0.75rem;line-height:1.35;pointer-events:none;border:1px solid;box-shadow:0 4px 14px rgba(0,0,0,0.12)}",
   "[data-aigui-graph-tip] strong{display:block;font-size:0.8rem}",
   "[data-aigui-graph-tip] [data-graph-tip-class]{opacity:0.7}",
   "[data-aigui-graph-tip] dl{display:grid;grid-template-columns:auto 1fr;gap:0 0.5rem;margin:0.3rem 0 0}",

@@ -1,4 +1,5 @@
 import { ancestors } from "./ontology"
+import type { Palette } from "./palette"
 import type { GraphDefinition, GraphLayer } from "./types"
 
 /**
@@ -85,11 +86,14 @@ export interface Tooltip {
   hide(): void
 }
 
-/** A tooltip inside `holder`, which must be positioned. */
-export function createTooltip(holder: HTMLElement, def: GraphDefinition, layer: GraphLayer): Tooltip {
+/** A tooltip inside `holder`, which must be positioned. Coloured from the palette, not the page. */
+export function createTooltip(holder: HTMLElement, def: GraphDefinition, layer: GraphLayer, c: Palette): Tooltip {
   const el = document.createElement("div")
   el.setAttribute("data-aigui-graph-tip", "")
   el.setAttribute("role", "tooltip")
+  el.style.background = c.surface
+  el.style.color = c.text
+  el.style.borderColor = c.border
   el.hidden = true
   holder.appendChild(el)
   return {

@@ -35,8 +35,8 @@ export interface Mounted3d {
 /** The radius the normalised layout is scaled to, in world units. Everything else follows from it. */
 const RADIUS = 10
 const FOV = 45
-const MIN_NODE = 0.18
-const MAX_NODE = 0.6
+const MIN_NODE = 0.28
+const MAX_NODE = 0.85
 
 /** How many layout steps are spent per frame: fewer as the graph grows, so drawing keeps its share. */
 function chunk(n: number): number {
@@ -71,7 +71,7 @@ function labelSprite(three: typeof THREE, text: string, colour: string, disposab
   const material = new three.SpriteMaterial({ map: texture, depthTest: false, transparent: true })
   disposables.push(texture, material)
   const sprite = new three.Sprite(material)
-  const scale = 0.9
+  const scale = 1.3
   sprite.scale.set((scale * width) / height, scale, 1)
   sprite.renderOrder = 10
   return sprite
@@ -206,7 +206,9 @@ export async function mount3d(host: HTMLElement, def: GraphDefinition, layer: Gr
   scene.add(key)
 
   const camera = new three.PerspectiveCamera(FOV, width / height, 0.1, RADIUS * 20)
-  const distance = (RADIUS * 1.35) / Math.tan((FOV / 2) * (Math.PI / 180))
+  // Framed on the near face rather than the middle: as the model turns, its furthest node comes
+  // round to the camera's side, and a camera fitted to the centre crops it twice a revolution.
+  const distance = (RADIUS * 1.1) / Math.tan((FOV / 2) * (Math.PI / 180)) + RADIUS * 0.6
   camera.position.set(distance * 0.45, distance * 0.35, distance * 0.82)
   const renderer = new three.WebGLRenderer({ antialias: true, alpha: true })
   renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2))
@@ -220,7 +222,7 @@ export async function mount3d(host: HTMLElement, def: GraphDefinition, layer: Gr
   controls.minDistance = RADIUS * 0.5
   controls.maxDistance = distance * 3
 
-  const tip = createTooltip(holder, def, layer)
+  const tip = createTooltip(holder, def, layer, c)
   const raycaster = new three.Raycaster()
   const pointer = new three.Vector2()
   let hovered: THREE.Mesh | undefined
@@ -288,7 +290,7 @@ export async function mount3d(host: HTMLElement, def: GraphDefinition, layer: Gr
     if (broken.length > 0) brokenLines.computeLineDistances()
     for (const [i, sprite] of sprites) {
       const mesh = meshes[i]
-      sprite.position.set(mesh.position.x, mesh.position.y + radiusOf(ids[i]) + 0.55, mesh.position.z)
+      sprite.position.set(mesh.position.x, mesh.position.y + radiusOf(ids[i]) + 0.8, mesh.position.z)
     }
     placedOnce = true
   }

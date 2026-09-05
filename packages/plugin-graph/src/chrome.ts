@@ -146,11 +146,27 @@ export function mountGraph(el: HTMLElement, def: GraphDefinition, options: Chrom
   let current: Mounted2d | undefined
   let pending = 0
   let disposed = false
+  let drawnAt = 0
   const width = () => stage.clientWidth || 640
 
   const show2d = (): void => {
-    current = mount2d(stage, def, layer, { palette: colours, width: width(), height: options.height, labelBudget: options.labelBudget, onEntityClick: options.onEntityClick })
+    drawnAt = width()
+    current = mount2d(stage, def, layer, { palette: colours, width: drawnAt, height: options.height, labelBudget: options.labelBudget, onEntityClick: options.onEntityClick })
   }
+
+  // The figure is usually mounted before it is in the document, when the stage has no width and
+  // the fallback is used; the first real measurement redraws it to fit. Later changes redraw only
+  // when they are large — a resize that keeps the layout legible should not throw away the
+  // reader's zoom.
+  const onResize = (): void => {
+    if (disposed || view !== "2d" || !current) return
+    const now = stage.clientWidth
+    if (now === 0 || Math.abs(now - drawnAt) / drawnAt < 0.2) return
+    current.destroy()
+    show2d()
+  }
+  const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(onResize)
+  observer?.observe(stage)
 
   const show = (): void => {
     current?.destroy()
@@ -205,6 +221,7 @@ export function mountGraph(el: HTMLElement, def: GraphDefinition, options: Chrom
     if (disposed) return
     disposed = true
     pending++
+    observer?.disconnect()
     current?.destroy()
     current = undefined
     root.remove()
