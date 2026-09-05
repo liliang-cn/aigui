@@ -56,6 +56,9 @@ openclaw plugins install "@ai-gui/openclaw"
 
 # server-driven cards over a WebSocket, for a backend with no frontend project (optional)
 pnpm add @ai-gui/live
+
+# the system prompt as a file, for a Go / Rust / Python / Java backend (optional)
+npx @ai-gui/cli prompt --plugins katex,mermaid,graph --locale zh-CN -o prompt.txt
 ```
 
 ## Quick start — React
@@ -468,6 +471,8 @@ Don't hand-write generation rules — call `buildSystemPrompt({ base, registry, 
 
 **Pass `plugins`, not just `registry`.** Installing `mermaid()` teaches the renderer to draw a diagram; it does not teach the model that it may ask for one. A product that omits `plugins` here ships a chart, maths and diagram stack the model never uses. When the plugins are deferred behind a loader, build the prompt from the same list the loader resolves to — the prompt is assembled on the server or before the request, where the import cost does not apply.
 
+**Backends in other languages.** A Go, Rust, Python or Java server cannot call `buildSystemPrompt`. Either have the browser build it and send it with each request, or run `npx @ai-gui/cli prompt --config aigui.prompt.json -o prompt.txt` at build time and read the file at startup — it is the same function fed the same plugins and cards from JSON, so the string is identical. See [`@ai-gui/cli`](./packages/cli/README.md).
+
 The fence conventions it may use (only for **registered / enabled** block types):
 
 - Cards: a ` ```card:<type> ` fence with JSON inside (data only).
@@ -523,6 +528,7 @@ LLM stream ──▶ @ai-gui/core (headless)
 | [`@ai-gui/plugin-motion`](./packages/plugin-motion/README.md) | Mechanics motion figures (` ```motion `). |
 | [`@ai-gui/plugin-gravity`](./packages/plugin-gravity/README.md) | Orbits and collisions, integrated (` ```gravity `). |
 | [`@ai-gui/plugin-graph`](./packages/plugin-graph/README.md) | Knowledge graphs and ontologies, 2D and 3D, checked (` ```graph `). |
+| [`@ai-gui/cli`](./packages/cli/README.md) | `aigui prompt`: the system prompt from a JSON config, for backends that are not Node. |
 | [`@ai-gui/plugin-physics`](./packages/plugin-physics/README.md) | Force and vector diagrams (` ```physics `). |
 | [`@ai-gui/plugin-quote`](./packages/plugin-quote/README.md) | Candlestick charts with computed indicators (` ```quote `). |
 | [`@ai-gui/plugin-figure`](./packages/plugin-figure/README.md) | Labelled figures with leader-line callouts (` ```figure `). |

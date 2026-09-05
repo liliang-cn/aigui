@@ -137,6 +137,8 @@ const system = buildSystemPrompt({ base: "You are a helpful assistant.", registr
 
 The backend is language-agnostic: it just streams text with this prompt prepended. Nothing about AIGUI needs to live server-side.
 
+A backend that is not Node and does not want the browser to send the prompt with every request can generate it once: `npx @ai-gui/cli prompt --config aigui.prompt.json -o prompt.txt` builds the same string from a JSON list of plugins and cards (see `packages/cli/README.md`).
+
 ### 7. Stream the response into the renderer
 
 `feed` accepts an `AsyncIterable<string>` or a `ReadableStream` (e.g. `fetch().body`). Reset before a new turn.

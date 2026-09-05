@@ -1,4 +1,5 @@
 import { readFile, writeFile } from "node:fs/promises"
+import { fileURLToPath } from "node:url"
 import { parseArgs } from "node:util"
 import { buildPrompt } from "./build"
 import { PLUGIN_CATALOG, pluginNames } from "./catalog"
@@ -45,7 +46,7 @@ Examples:
 `
 
 async function version(io: CliIO): Promise<string> {
-  const manifest = JSON.parse(await io.readFile(new URL("../package.json", import.meta.url).pathname)) as { version: string }
+  const manifest = JSON.parse(await io.readFile(fileURLToPath(new URL("../package.json", import.meta.url)))) as { version: string }
   return manifest.version
 }
 
