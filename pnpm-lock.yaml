@@ -112,6 +112,97 @@ importers:
         specifier: workspace:*
         version: link:../core
 
+  packages/cli:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+      '@ai-gui/plugin-artifact':
+        specifier: workspace:*
+        version: link:../plugin-artifact
+      '@ai-gui/plugin-bigscreen':
+        specifier: workspace:*
+        version: link:../plugin-bigscreen
+      '@ai-gui/plugin-chart':
+        specifier: workspace:*
+        version: link:../plugin-chart
+      '@ai-gui/plugin-citation':
+        specifier: workspace:*
+        version: link:../plugin-citation
+      '@ai-gui/plugin-dashboard':
+        specifier: workspace:*
+        version: link:../plugin-dashboard
+      '@ai-gui/plugin-evidence':
+        specifier: workspace:*
+        version: link:../plugin-evidence
+      '@ai-gui/plugin-figure':
+        specifier: workspace:*
+        version: link:../plugin-figure
+      '@ai-gui/plugin-flashcard':
+        specifier: workspace:*
+        version: link:../plugin-flashcard
+      '@ai-gui/plugin-form':
+        specifier: workspace:*
+        version: link:../plugin-form
+      '@ai-gui/plugin-function':
+        specifier: workspace:*
+        version: link:../plugin-function
+      '@ai-gui/plugin-graph':
+        specifier: workspace:*
+        version: link:../plugin-graph
+      '@ai-gui/plugin-gravity':
+        specifier: workspace:*
+        version: link:../plugin-gravity
+      '@ai-gui/plugin-highlight':
+        specifier: workspace:*
+        version: link:../plugin-highlight
+      '@ai-gui/plugin-katex':
+        specifier: workspace:*
+        version: link:../plugin-katex
+      '@ai-gui/plugin-map':
+        specifier: workspace:*
+        version: link:../plugin-map
+      '@ai-gui/plugin-mermaid':
+        specifier: workspace:*
+        version: link:../plugin-mermaid
+      '@ai-gui/plugin-molecule':
+        specifier: workspace:*
+        version: link:../plugin-molecule
+      '@ai-gui/plugin-motion':
+        specifier: workspace:*
+        version: link:../plugin-motion
+      '@ai-gui/plugin-optics':
+        specifier: workspace:*
+        version: link:../plugin-optics
+      '@ai-gui/plugin-physics':
+        specifier: workspace:*
+        version: link:../plugin-physics
+      '@ai-gui/plugin-primitives':
+        specifier: workspace:*
+        version: link:../plugin-primitives
+      '@ai-gui/plugin-progress':
+        specifier: workspace:*
+        version: link:../plugin-progress
+      '@ai-gui/plugin-quote':
+        specifier: workspace:*
+        version: link:../plugin-quote
+      '@ai-gui/plugin-resultset':
+        specifier: workspace:*
+        version: link:../plugin-resultset
+      '@ai-gui/plugin-scene':
+        specifier: workspace:*
+        version: link:../plugin-scene
+      '@ai-gui/plugin-solid':
+        specifier: workspace:*
+        version: link:../plugin-solid
+      '@ai-gui/plugin-ui':
+        specifier: workspace:*
+        version: link:../plugin-ui
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.1
+
   packages/core:
     dependencies:
       dompurify:

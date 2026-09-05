@@ -26,6 +26,7 @@
       "@ai-gui/plugin-motion",
       "@ai-gui/plugin-gravity",
       "@ai-gui/plugin-graph",
+      "@ai-gui/cli",
       "@ai-gui/plugin-quote",
       "@ai-gui/plugin-resultset",
       "@ai-gui/plugin-physics",

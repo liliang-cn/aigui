@@ -1,0 +1,92 @@
+{
+  "name": "@ai-gui/cli",
+  "version": "0.38.0",
+  "description": "The aigui command line: `aigui prompt` writes the AIGUI system prompt from a JSON config, for backends that are not Node.",
+  "keywords": [
+    "llm",
+    "ai",
+    "cli",
+    "system-prompt",
+    "aigui"
+  ],
+  "license": "MIT",
+  "author": "Liang Li <ll_faw@hotmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liliang-cn/aigui.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/liliang-cn/aigui#readme",
+  "bugs": "https://github.com/liliang-cn/aigui/issues",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.11"
+  },
+  "bin": {
+    "aigui": "./bin/aigui.js"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test": "pnpm --dir ../.. exec vitest run --project cli",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-gui/core": "workspace:*",
+    "@ai-gui/plugin-katex": "workspace:*",
+    "@ai-gui/plugin-highlight": "workspace:*",
+    "@ai-gui/plugin-mermaid": "workspace:*",
+    "@ai-gui/plugin-primitives": "workspace:*",
+    "@ai-gui/plugin-chart": "workspace:*",
+    "@ai-gui/plugin-dashboard": "workspace:*",
+    "@ai-gui/plugin-bigscreen": "workspace:*",
+    "@ai-gui/plugin-form": "workspace:*",
+    "@ai-gui/plugin-citation": "workspace:*",
+    "@ai-gui/plugin-artifact": "workspace:*",
+    "@ai-gui/plugin-ui": "workspace:*",
+    "@ai-gui/plugin-molecule": "workspace:*",
+    "@ai-gui/plugin-map": "workspace:*",
+    "@ai-gui/plugin-solid": "workspace:*",
+    "@ai-gui/plugin-scene": "workspace:*",
+    "@ai-gui/plugin-function": "workspace:*",
+    "@ai-gui/plugin-optics": "workspace:*",
+    "@ai-gui/plugin-motion": "workspace:*",
+    "@ai-gui/plugin-gravity": "workspace:*",
+    "@ai-gui/plugin-graph": "workspace:*",
+    "@ai-gui/plugin-quote": "workspace:*",
+    "@ai-gui/plugin-physics": "workspace:*",
+    "@ai-gui/plugin-figure": "workspace:*",
+    "@ai-gui/plugin-progress": "workspace:*",
+    "@ai-gui/plugin-flashcard": "workspace:*",
+    "@ai-gui/plugin-evidence": "workspace:*",
+    "@ai-gui/plugin-resultset": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0"
+  }
+}
