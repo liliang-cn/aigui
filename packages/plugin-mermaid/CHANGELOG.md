@@ -1,5 +1,11 @@
 # @ai-gui/plugin-mermaid
 
+## 0.38.0
+
+### Patch Changes
+
+- @ai-gui/core@0.38.0
+
 ## 0.37.1
 
 ### Patch Changes
