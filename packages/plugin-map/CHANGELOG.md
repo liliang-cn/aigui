@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.39.0
+
+### Patch Changes
+
+- @ai-gui/core@0.39.0
+
 ## 0.38.0
 
 ### Patch Changes

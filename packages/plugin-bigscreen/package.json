@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/plugin-bigscreen",
-  "version": "0.38.0",
+  "version": "0.39.0",
   "description": "Animated data walls for AIGUI — counting KPIs, sweeping gauges, growing ranks, self-drawing charts, turning 3D bars and globes, on a grid the model lays out.",
   "keywords": [
     "llm",

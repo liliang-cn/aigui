@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/cli",
-  "version": "0.38.0",
+  "version": "0.39.0",
   "description": "The aigui command line: `aigui prompt` writes the AIGUI system prompt from a JSON config, for backends that are not Node.",
   "keywords": [
     "llm",
