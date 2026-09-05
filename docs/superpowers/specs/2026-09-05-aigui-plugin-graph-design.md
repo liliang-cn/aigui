@@ -88,9 +88,9 @@ Errors are rendered as the escaped message in `[data-aigui-graph-error]`, never 
 
 - `ancestors(id)`: the `subClassOf` chain, root last.
 - `isSubClassOf(a, b)`: `a === b` or `b ∈ ancestors(a)`.
-- `classColour(id, palette, overrides)`: first explicit `color` walking up the chain; else hashed
-  from the *root* class name so siblings share a hue family? — No: hashed from the class's own id
-  (like bigscreen's `typeColour`), overrides walking up. Simpler to explain; siblings differ.
+- `classColour(id, palette)`: the first explicit `color` found walking up the `subClassOf` chain;
+  otherwise hashed from the class's own id (like bigscreen's `typeColour`), so two sibling classes
+  without colours are told apart and the same class is the same colour in every block.
 - `checkRelations(def)`: for each relation whose property has a `domain`, the `from` entity's
   class must be a subclass (inclusive) of it; likewise `range` and `to`. An entity with no type
   fails a constrained property. Each failure is a `Violation { relationIndex, side: "domain" |
@@ -178,7 +178,7 @@ zh-CN and en. Rules that must survive editing:
 
 ## Testing
 
-vitest project `plugin-graph` (jsdom where DOM is needed, as the other plugins do):
+vitest project `plugin-graph` (the DOM-touching tests set `// @vitest-environment jsdom`, as bigscreen's mount tests do):
 
 - `parse.test.ts`: every error path; implicit declarations; limits; cycle detection; sanitiser
   (a `<img onerror>` key never reaches the error html).
