@@ -259,6 +259,26 @@ export interface BigscreenOptions {
   globe?: GlobeSkin
   /** What a click on a timeline item or a graph node does. */
   events?: BigscreenEvents
+  /**
+   * Fit the screen to the element it is mounted in, instead of drawing every panel at its own
+   * height.
+   *
+   * A screen is sized for a wall by default: each panel body takes the pixel height the fence
+   * names, or the default for its kind — a globe is 560 — and the screen ends up as tall as the
+   * sum of them. That is right for the surface it was built for, a display with nothing else on
+   * it, and wrong for the one it grew into: a panel embedded in a page, inside a card a few
+   * hundred pixels tall. There the panel drew at full size and covered whatever was beneath it,
+   * because nothing in the screen ever consults the box it was put in.
+   *
+   * With `fit`, the host's element is the authority. The screen becomes a column that fills it,
+   * the grid takes the space the heading leaves, and a panel body flexes into its row rather than
+   * taking a fixed height. The fence's own `height` is ignored — a number in the document cannot
+   * know the box, which is the whole point.
+   *
+   * Meant for a host that gives the screen a bounded box, and usually for one panel: a wall of
+   * twelve squeezed into a card gives each of them a twelfth of a card. Default false.
+   */
+  fit?: boolean
 }
 
 export interface BigscreenError {

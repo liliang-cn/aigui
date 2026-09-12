@@ -80,6 +80,14 @@ export const bigscreenCss = [
   ".aigui-bs-panel-mark{display:inline-block;width:4px;height:14px;border-radius:2px}",
   // `flex:1` alone would set the basis to 0 and override a body's explicit height; grow only.
   ".aigui-bs-panel-body{position:relative;flex:1 1 auto;width:100%;min-width:0;container-type:inline-size}",
+  // Fitting the screen to the box it was put in. Everything here is a
+  // consequence of one decision — the HOST's element decides the height — and
+  // every rule exists because a flex or grid child defaults to its content
+  // size and will not shrink below it without min-height:0.
+  ".aigui-bs-fit{display:flex;flex-direction:column;min-height:0;height:100%}",
+  ".aigui-bs-fit .aigui-bs-grid{flex:1 1 auto;min-height:0;grid-auto-rows:minmax(0,1fr)}",
+  ".aigui-bs-fit .aigui-bs-panel{min-height:0;overflow:hidden}",
+  ".aigui-bs-fit .aigui-bs-panel-body{min-height:0}",
   ".aigui-bs-kpi{display:flex;flex-direction:column;gap:.35rem;justify-content:center;height:100%}",
   ".aigui-bs-kpi-row{display:flex;align-items:baseline;gap:.35rem;min-width:0}",
   ".aigui-bs-kpi-value{font-size:2rem;font-size:clamp(1.2rem,13cqi,2.6rem);font-weight:800;line-height:1.05;letter-spacing:-.01em;white-space:nowrap}",
@@ -143,7 +151,7 @@ export function bigscreen(options: BigscreenOptions = {}): AIGuiPlugin {
         void import("./mount")
           .then(({ mountScreen }) => {
             if (disposed) return
-            destroy = mountScreen(el, definition, options.animate !== false, options.globe, options.events)
+            destroy = mountScreen(el, definition, options.animate !== false, options.globe, options.events, options.fit === true)
           })
           .catch(() => {
             const error = document.createElement("div")

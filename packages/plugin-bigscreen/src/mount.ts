@@ -327,7 +327,7 @@ function bodyHeight(panel: Panel): number {
   return DEFAULT_HEIGHT[panel.kind]
 }
 
-function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, animate: boolean, earth: GlobeSkin | undefined, events: BigscreenEvents | undefined): { node: HTMLElement; destroy: () => void } {
+function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, animate: boolean, earth: GlobeSkin | undefined, events: BigscreenEvents | undefined, fit: boolean): { node: HTMLElement; destroy: () => void } {
   const node = el("section", { class: "aigui-bs-panel", "data-aigui-bigscreen-panel": panel.kind })
   const span = Math.min(panel.span ?? 4, definition.columns)
   node.style.gridColumn = `span ${span}`
@@ -346,8 +346,15 @@ function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, anim
     node.appendChild(head)
   }
   const body = el("div", { class: "aigui-bs-panel-body" })
-  const height = panel.height ?? bodyHeight(panel)
-  if (height) body.style.height = `${height}px`
+  // In a fitted screen the box is the authority and no pixel height is set at
+  // all: the body flexes into the row the grid gave it. Setting one and
+  // overriding it in CSS would not do — an inline height beats a stylesheet,
+  // which is exactly why the fence's number used to win over the card it was
+  // drawn in.
+  if (!fit) {
+    const height = panel.height ?? bodyHeight(panel)
+    if (height) body.style.height = `${height}px`
+  }
   node.appendChild(body)
   let destroy: () => void = () => {}
   try {
@@ -409,9 +416,13 @@ function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, anim
  * is the page's decision, not the fence's. `events` is the same bargain for clicks: what a claim
  * or an entity does when it is clicked is the page's decision too.
  */
-export function mountScreen(host: HTMLElement, definition: ScreenDefinition, animate: boolean, earth?: GlobeSkin, events?: BigscreenEvents): () => void {
+export function mountScreen(host: HTMLElement, definition: ScreenDefinition, animate: boolean, earth?: GlobeSkin, events?: BigscreenEvents, fit = false): () => void {
   const c = palette(definition)
   host.setAttribute("data-aigui-bigscreen", definition.theme)
+  // A fitted screen is a column that fills the host rather than a stack as
+  // tall as its panels. The class carries it so the rules live with the rest
+  // of the stylesheet instead of as inline styles this would have to undo.
+  host.classList.toggle("aigui-bs-fit", fit)
   host.style.setProperty("--aigui-bs-accent", c.accent)
   host.style.setProperty("--aigui-bs-text", c.text)
   host.style.setProperty("--aigui-bs-muted", c.muted)
@@ -431,7 +442,7 @@ export function mountScreen(host: HTMLElement, definition: ScreenDefinition, ani
   const grid = el("div", { class: "aigui-bs-grid" })
   grid.style.gridTemplateColumns = `repeat(${definition.columns}, minmax(0, 1fr))`
   host.appendChild(grid)
-  const mounted = definition.panels.map((panel) => mountPanel(panel, definition, c, animate, earth, events))
+  const mounted = definition.panels.map((panel) => mountPanel(panel, definition, c, animate, earth, events, fit))
   for (const { node } of mounted) grid.appendChild(node)
   return () => {
     for (const { destroy } of mounted) destroy()
