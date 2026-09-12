@@ -1,5 +1,7 @@
 # @ai-gui/core
 
+## 0.40.0
+
 ## 0.39.1
 
 ### Patch Changes
