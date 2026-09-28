@@ -1,5 +1,18 @@
 # @ai-gui/mcp
 
+## 0.42.0
+
+### Minor Changes
+
+- `aigui_render` can open its PNGs in the system image viewer (`AIGUI_OPEN_IMAGES=1`, set by the Claude Code plugin), and the draw skill now defaults to `aigui_open` in a terminal.
+
+### Patch Changes
+
+- @ai-gui/core@0.42.0
+- @ai-gui/plugin-molecule@0.42.0
+- @ai-gui/cli@0.42.0
+- @ai-gui/image@0.42.0
+
 ## 0.41.2
 
 ### Patch Changes

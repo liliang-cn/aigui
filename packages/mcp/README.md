@@ -18,7 +18,7 @@ The plugin starts the server through a small launcher that ships with it. On fir
 Or the server on its own, installed once:
 
 ```sh
-npm install -g @ai-gui/mcp@0.41.2
+npm install -g @ai-gui/mcp@0.42.0
 claude mcp add aigui -- aigui-mcp
 ```
 
