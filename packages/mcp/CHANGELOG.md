@@ -1,5 +1,15 @@
 # @ai-gui/mcp
 
+## 0.41.1
+
+### Patch Changes
+
+- 6b91a4b: The Claude Code plugin launches the server pinned and with `npx --prefer-offline`, so a cached server starts in seconds instead of re-checking ~300 dependencies online on every start. The server downloads Playwright's headless shell in the background once it has connected, because the Chrome/Edge fallback draws 3D many times slower.
+  - @ai-gui/core@0.41.1
+  - @ai-gui/plugin-molecule@0.41.1
+  - @ai-gui/cli@0.41.1
+  - @ai-gui/image@0.41.1
+
 ## 0.41.0
 
 ### Minor Changes
