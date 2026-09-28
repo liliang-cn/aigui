@@ -13,19 +13,16 @@ As a plugin, which also brings the skills that tell Claude when to draw:
 /plugin install aigui@aigui
 ```
 
-Or the server on its own:
+The plugin starts the server through a small launcher that ships with it. On first use it installs this package into `~/.cache/aigui/server/<version>` — a few hundred megabytes, charts, diagrams and 3D engines included — while the session is already connected; the first tool call waits for the install, and every later start runs the installed server directly, in well under a second. It does not use `npx`, which with a dependency tree this size either re-checks every package online on each start (longer than Claude Code waits for a server to connect) or, with `--prefer-offline`, trusts a cached registry listing that predates the release it was asked for and refuses to start.
+
+Or the server on its own, installed once:
 
 ```sh
-claude mcp add aigui -- npx --prefer-offline -y @ai-gui/mcp@0.41.1
+npm install -g @ai-gui/mcp@0.41.1
+claude mcp add aigui -- aigui-mcp
 ```
 
-Any other MCP client takes the same command, over stdio. Pin a version and keep `--prefer-offline`: with both, a cached server starts in seconds. With `@latest`, or without the flag, `npx` re-checks the metadata of all ~300 dependencies online on every start, which on a slow line takes longer than Claude Code waits for a server to connect. (The plugin already launches it this way.)
-
-The first launch installs the server and its renderers — a few hundred megabytes, charts, diagrams and 3D engines included — and can itself outlast that wait. If `/mcp` shows it failed the first time, reconnect it there; or install ahead of time with the same spec:
-
-```sh
-npx --prefer-offline -y @ai-gui/mcp@0.41.1 --version
-```
+Any other MCP client runs the same `aigui-mcp` command, over stdio.
 
 ## Tools
 

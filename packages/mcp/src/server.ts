@@ -7,7 +7,7 @@ import { ensureHeadlessShell, type BrowserSetup } from "./browser"
 import { guide } from "./guide"
 import { writePage } from "./open"
 import { packageVersion } from "./paths"
-import { renderToContent } from "./render"
+import { renderToContent, type RenderedContent } from "./render"
 
 const PICTURE = BLOCKS.filter((block) => block.picture).map((block) => block.name).join(", ")
 const ALL = BLOCKS.map((block) => block.name).join(", ")
@@ -22,6 +22,57 @@ export interface ServerDeps {
   setup?: BrowserSetup
   /** How long a render waits for that download before going ahead. Default 60 s. */
   setupWaitMs?: number
+}
+
+export type ToolResult = RenderedContent
+
+const failure = (text: string): ToolResult => ({ content: [{ type: "text", text }], isError: true })
+
+/**
+ * What each tool does, apart from the protocol around it.
+ *
+ * Exported because the Claude Code plugin's launcher answers the protocol itself while this
+ * package is still being installed on first use, and then calls straight into here — so the two
+ * paths cannot disagree about what a tool returns.
+ */
+export async function callTool(name: string, args: Record<string, unknown>, deps: ServerDeps = {}): Promise<ToolResult> {
+  const str = (key: string) => (typeof args[key] === "string" ? (args[key] as string) : undefined)
+  const theme = str("theme") === "light" || str("theme") === "dark" ? (str("theme") as "light" | "dark") : undefined
+  switch (name) {
+    case "aigui_guide":
+      try {
+        const blocks = Array.isArray(args.blocks) ? args.blocks.filter((b): b is string => typeof b === "string") : undefined
+        return { content: [{ type: "text", text: await guide(blocks, str("locale")) }] }
+      } catch (error) {
+        return failure(String((error as Error).message))
+      }
+    case "aigui_render": {
+      const markdown = str("markdown")
+      if (!markdown) return failure("markdown is required.")
+      const width = typeof args.width === "number" ? args.width : undefined
+      return renderToContent(markdown, {
+        theme,
+        width,
+        outDir: deps.outDir,
+        acquire: deps.acquire,
+        setup: deps.setup ?? (() => ensureHeadlessShell()),
+        setupWaitMs: deps.setupWaitMs,
+      })
+    }
+    case "aigui_open": {
+      const markdown = str("markdown")
+      if (!markdown) return failure("markdown is required.")
+      try {
+        const page = await writePage(markdown, { title: str("title"), theme, outDir: deps.outDir, open: deps.open })
+        const text = page.opened ? `Opened ${page.url}\nFile: ${page.path}` : `Wrote ${page.path} — open ${page.url} in a browser.`
+        return { content: [{ type: "text", text }] }
+      } catch (error) {
+        return failure(`Could not write the page: ${String((error as Error).message)}`)
+      }
+    }
+    default:
+      return failure(`Unknown tool ${name}.`)
+  }
 }
 
 /**
@@ -49,13 +100,7 @@ export function createServer(deps: ServerDeps = {}): McpServer {
       },
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async ({ blocks, locale }) => {
-      try {
-        return { content: [{ type: "text", text: await guide(blocks, locale) }] }
-      } catch (error) {
-        return { content: [{ type: "text", text: String((error as Error).message) }], isError: true }
-      }
-    },
+    async (args) => callTool("aigui_guide", args, deps),
   )
 
   server.registerTool(
@@ -75,7 +120,7 @@ export function createServer(deps: ServerDeps = {}): McpServer {
       },
       annotations: { readOnlyHint: false, openWorldHint: false },
     },
-    async ({ markdown, theme, width }) => renderToContent(markdown, { theme, width, outDir: deps.outDir, acquire: deps.acquire, setup: deps.setup ?? (() => ensureHeadlessShell()), setupWaitMs: deps.setupWaitMs }),
+    async (args) => callTool("aigui_render", args, deps),
   )
 
   server.registerTool(
@@ -95,15 +140,7 @@ export function createServer(deps: ServerDeps = {}): McpServer {
       },
       annotations: { readOnlyHint: false, openWorldHint: false },
     },
-    async ({ markdown, title, theme }) => {
-      try {
-        const page = await writePage(markdown, { title, theme, outDir: deps.outDir, open: deps.open })
-        const text = page.opened ? `Opened ${page.url}\nFile: ${page.path}` : `Wrote ${page.path} — open ${page.url} in a browser.`
-        return { content: [{ type: "text", text }] }
-      } catch (error) {
-        return { content: [{ type: "text", text: `Could not write the page: ${String((error as Error).message)}` }], isError: true }
-      }
-    },
+    async (args) => callTool("aigui_open", args, deps),
   )
 
   return server
