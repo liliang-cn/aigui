@@ -42,14 +42,33 @@ if (existsSync(entry)) {
  * another is still installing must never find — and import — a half-written tree. If two installs
  * race, the loser's rename fails, the winner's tree is already there, and the loser's is removed.
  */
-function install() {
+async function install() {
+  // Right after a release npm's CDN can list a package without yet listing its newest version,
+  // and an install of the new version fails with ETARGET for a few minutes. That is exactly when
+  // a plugin update arrives, so it is waited out rather than reported.
+  const attempts = 4
+  const delay = Number(process.env.AIGUI_INSTALL_RETRY_MS ?? 30_000)
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await installOnce()
+    } catch (error) {
+      if (attempt >= attempts || !/ETARGET|notarget|No matching version/i.test(String(error.message))) throw error
+      log(`the registry does not list this release yet; retrying in ${Math.round(delay / 1000)}s (${attempt}/${attempts - 1})`)
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+  }
+}
+
+function installOnce() {
   return new Promise((resolve, reject) => {
     const scratch = `${target}.partial-${process.pid}`
     mkdirSync(scratch, { recursive: true })
     log(`installing @ai-gui/mcp@${version} (first use only) …`)
     // `AIGUI_NPM` is for tests, which install a fake server rather than the real one.
     const npm = process.env.AIGUI_NPM || (process.platform === "win32" ? "npm.cmd" : "npm")
-    const child = spawn(npm, ["install", "--prefix", scratch, "--no-audit", "--no-fund", "--loglevel=error", `@ai-gui/mcp@${version}`], {
+    // `--prefer-online`: npm otherwise answers from package listings it cached minutes ago, and a
+    // listing cached before this release does not know the version asked for.
+    const child = spawn(npm, ["install", "--prefix", scratch, "--prefer-online", "--no-audit", "--no-fund", "--loglevel=error", `@ai-gui/mcp@${version}`], {
       stdio: ["ignore", "pipe", "pipe"],
       shell: process.platform === "win32",
     })

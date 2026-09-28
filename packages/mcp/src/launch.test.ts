@@ -17,7 +17,7 @@ const repo = fileURLToPath(new URL("../../../", import.meta.url))
 const launcher = join(repo, "plugin", "launch.mjs")
 
 /** A stand-in for `npm install`: copies a fake server to where the real one would go. */
-async function fakeNpm(dir: string, exitCode = 0): Promise<string> {
+async function fakeNpm(dir: string, exitCode = 0, notYetListed = 0): Promise<string> {
   const server = join(dir, "fake-server.js")
   await writeFile(
     server,
@@ -37,6 +37,11 @@ async function fakeNpm(dir: string, exitCode = 0): Promise<string> {
       'import { mkdirSync, readFileSync, writeFileSync } from "node:fs"',
       'import { join } from "node:path"',
       `if (${exitCode} !== 0) { console.error("npm ERR! network unreachable"); process.exit(${exitCode}) }`,
+      // The first `notYetListed` runs fail the way npm does while its CDN lags a release.
+      `const counter = ${JSON.stringify(join(dir, "runs"))}`,
+      'let runs = 0; try { runs = Number(readFileSync(counter, "utf8")) } catch {}',
+      "writeFileSync(counter, String(runs + 1))",
+      `if (runs < ${notYetListed}) { console.error("npm error code ETARGET\\nnpm error notarget No matching version found for @ai-gui/cli@9.9.9."); process.exit(1) }`,
       'const prefix = process.argv[process.argv.indexOf("--prefix") + 1]',
       "const pkg = process.argv[process.argv.length - 1]",
       'const dist = join(prefix, "node_modules", "@ai-gui", "mcp", "dist")',
@@ -125,6 +130,17 @@ describe("the plugin launcher", () => {
     expect(stderr).toContain("installing @ai-gui/mcp@")
     // Moved into place, so the next session takes the fast path.
     expect((await stat(join(serverDir, "node_modules", "@ai-gui", "mcp", "dist", "index.js"))).isFile()).toBe(true)
+  })
+
+  it("waits out a registry that does not list the release yet", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "aigui-launch-"))
+    const { replies, stderr } = await run(
+      { AIGUI_SERVER_DIR: join(dir, "server"), AIGUI_NPM: await fakeNpm(dir, 0, 2), AIGUI_INSTALL_RETRY_MS: "50" },
+      [init, { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "aigui_guide", arguments: {} } }],
+      2,
+    )
+    expect(replies.find((r) => r.id === 2)?.result.content[0].text).toContain("called aigui_guide")
+    expect(stderr).toContain("does not list this release yet")
   })
 
   it("reports a failed install on the tool call instead of hanging or dying", async () => {
