@@ -61,7 +61,7 @@ pnpm add @ai-gui/live
 npx @ai-gui/cli prompt --plugins katex,mermaid,graph --locale zh-CN -o prompt.txt
 
 # charts, diagrams and 3D from an agent, as an MCP server (optional)
-npm install -g @ai-gui/mcp@0.41.1 && claude mcp add aigui -- aigui-mcp
+npm install -g @ai-gui/mcp@0.41.2 && claude mcp add aigui -- aigui-mcp
 ```
 
 ### In Claude Code
