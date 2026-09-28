@@ -32,6 +32,9 @@ export async function readPublicPackages(packageRoot = new URL("../packages/", i
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]
 if (isMain) {
   const tag = process.argv[2] ?? process.env.GITHUB_REF_NAME ?? ""
-  validateRelease(tag, await readPublicPackages())
+  // The Claude Code plugin is released by the same tag, so its manifest has to carry the same
+  // version: `/plugin update` compares it, and a stale one tells users there is nothing new.
+  const plugin = JSON.parse(await readFile(new URL("../.claude-plugin/plugin.json", import.meta.url), "utf8"))
+  validateRelease(tag, [...(await readPublicPackages()), { name: ".claude-plugin/plugin.json", version: plugin.version }])
   console.log(`Validated release ${tag}`)
 }

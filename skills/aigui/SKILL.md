@@ -5,7 +5,7 @@ description: Use when integrating the @ai-gui SDK to render streaming LLM output
 
 # AIGUI
 
-AIGUI is a framework-agnostic TypeScript SDK that renders **streaming** LLM output as live UI. A headless core parses the stream into an AST; adapters render it in React / Vue / vanilla; plugins add block types. Full detail: [AGENTS.md](./AGENTS.md) and [README.md](./README.md).
+AIGUI is a framework-agnostic TypeScript SDK that renders **streaming** LLM output as live UI. A headless core parses the stream into an AST; adapters render it in React / Vue / vanilla; plugins add block types. Full detail: [AGENTS.md](../../AGENTS.md) and [README.md](../../README.md).
 
 ## When to use
 
@@ -131,4 +131,4 @@ Card example:
 - **Maps are host-networked** — the model may emit only inline geographic data. Basemaps, tile providers, tokens, and network policy belong exclusively to the host.
 - **`evidence` and `resultset` are the host's, not yours** — those fences are appended by the application from what it actually executed. A model that can invent a number can invent the query said to have produced it, so emitting one is claiming provenance you do not have.
 
-See [AGENTS.md](./AGENTS.md) for full examples.
+See [AGENTS.md](../../AGENTS.md) for full examples.

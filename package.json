@@ -21,7 +21,7 @@
     "validate:playground": "pnpm --filter @ai-gui/playground build",
     "validate:release-tag": "node scripts/release-tag.mjs",
     "changeset": "changeset",
-    "version-packages": "changeset version",
+    "version-packages": "changeset version && node scripts/sync-plugin-version.mjs",
     "release": "pnpm build && pnpm typecheck && pnpm test:unit && pnpm validate:packages && pnpm validate:playground && changeset publish"
   },
   "devDependencies": {

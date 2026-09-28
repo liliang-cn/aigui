@@ -1,0 +1,32 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "aigui",
+  "version": "0.40.0",
+  "description": "Draw charts, diagrams, maths, 3D scenes, orbits, molecules and dashboards from Claude Code — as PNGs or a live page in the browser — and get guidance for integrating the @ai-gui SDK.",
+  "author": {
+    "name": "Liang Li",
+    "email": "ll_faw@hotmail.com"
+  },
+  "homepage": "https://github.com/liliang-cn/aigui",
+  "repository": "https://github.com/liliang-cn/aigui",
+  "license": "MIT",
+  "keywords": [
+    "chart",
+    "diagram",
+    "3d",
+    "visualization",
+    "mcp",
+    "echarts",
+    "mermaid",
+    "katex"
+  ],
+  "mcpServers": {
+    "aigui": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@ai-gui/mcp@latest"
+      ]
+    }
+  }
+}

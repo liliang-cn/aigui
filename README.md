@@ -59,7 +59,21 @@ pnpm add @ai-gui/live
 
 # the system prompt as a file, for a Go / Rust / Python / Java backend (optional)
 npx @ai-gui/cli prompt --plugins katex,mermaid,graph --locale zh-CN -o prompt.txt
+
+# charts, diagrams and 3D from an agent, as an MCP server (optional)
+claude mcp add aigui -- npx -y @ai-gui/mcp@latest
 ```
+
+### In Claude Code
+
+The repository is a Claude Code plugin. Installing it gives Claude an MCP server that draws AIGUI blocks — as PNGs it can look at, or as a live page in your browser — plus two skills: one that tells it when a picture beats text, one for integrating this SDK into a project.
+
+```text
+/plugin marketplace add liliang-cn/aigui
+/plugin install aigui@aigui
+```
+
+Pictures need a browser to draw in; Chrome or Edge on the machine is enough. See [`@ai-gui/mcp`](./packages/mcp/README.md).
 
 ## Quick start — React
 
@@ -529,6 +543,7 @@ LLM stream ──▶ @ai-gui/core (headless)
 | [`@ai-gui/plugin-gravity`](./packages/plugin-gravity/README.md) | Orbits and collisions, integrated (` ```gravity `). |
 | [`@ai-gui/plugin-graph`](./packages/plugin-graph/README.md) | Knowledge graphs and ontologies, 2D and 3D, checked (` ```graph `). |
 | [`@ai-gui/cli`](./packages/cli/README.md) | `aigui prompt`: the system prompt from a JSON config, for backends that are not Node. |
+| [`@ai-gui/mcp`](./packages/mcp/README.md) | An MCP server that draws blocks as PNGs or a live page; the engine of the Claude Code plugin. |
 | [`@ai-gui/plugin-physics`](./packages/plugin-physics/README.md) | Force and vector diagrams (` ```physics `). |
 | [`@ai-gui/plugin-quote`](./packages/plugin-quote/README.md) | Candlestick charts with computed indicators (` ```quote `). |
 | [`@ai-gui/plugin-figure`](./packages/plugin-figure/README.md) | Labelled figures with leader-line callouts (` ```figure `). |
@@ -564,7 +579,7 @@ pnpm build   # build all packages
 
 ## For agents
 
-Integrating AIGUI into a project, or generating content for an AIGUI frontend? See [AGENTS.md](./AGENTS.md) (integration + generation guide) and [SKILL.md](./SKILL.md) (checklist form).
+Integrating AIGUI into a project, or generating content for an AIGUI frontend? See [AGENTS.md](./AGENTS.md) (integration + generation guide) and [skills/aigui/SKILL.md](./skills/aigui/SKILL.md) (checklist form).
 
 ## License
 

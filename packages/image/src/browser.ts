@@ -46,9 +46,40 @@ export interface PageLease {
  */
 export const LAUNCH_ARGS = ["--font-render-hinting=none", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
 
+/** The Playwright call this module makes, narrowed so the fallback can be tested without it. */
+export type ChromiumLaunch = (options: { args: string[]; channel?: string }) => Promise<BrowserLike>
+
+/**
+ * Which browsers to try, in order.
+ *
+ * Playwright's own Chromium first, because it is the one this package is tested against. But it
+ * is a separate download that `npm install` does not perform, and a tool started through `npx` —
+ * the MCP server, say — never gets the chance to run `playwright install`. Almost every desktop
+ * already has Chrome or Edge, and Playwright can drive those through a `channel`, so they are the
+ * fallback. `AIGUI_BROWSER_CHANNEL` pins one, for a host that knows what it has.
+ */
+export function browserCandidates(env: Record<string, string | undefined> = globalThis.process?.env ?? {}): Array<string | undefined> {
+  const pinned = env.AIGUI_BROWSER_CHANNEL?.trim()
+  if (pinned) return [pinned === "chromium" ? undefined : pinned]
+  return [undefined, "chrome", "msedge"]
+}
+
+/** Launch the first candidate that exists; if none does, report the first failure, which names the missing download. */
+export async function launchFirstAvailable(launch: ChromiumLaunch, candidates: Array<string | undefined>): Promise<BrowserLike> {
+  let first: unknown
+  for (const channel of candidates) {
+    try {
+      return await launch(channel ? { args: LAUNCH_ARGS, channel } : { args: LAUNCH_ARGS })
+    } catch (error) {
+      first ??= error
+    }
+  }
+  throw first
+}
+
 const defaultLauncher: Launcher = async () => {
   const playwright = await import("playwright")
-  return await playwright.chromium.launch({ args: LAUNCH_ARGS })
+  return await launchFirstAvailable((options) => playwright.chromium.launch(options) as Promise<BrowserLike>, browserCandidates())
 }
 
 let browser: BrowserLike | undefined

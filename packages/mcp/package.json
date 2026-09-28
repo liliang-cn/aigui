@@ -1,0 +1,99 @@
+{
+  "name": "@ai-gui/mcp",
+  "version": "0.40.0",
+  "description": "An MCP server that lets an agent draw AIGUI blocks — charts, diagrams, maths, 3D scenes, orbits, molecules, data walls — as PNGs or as a live page in the browser.",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "claude-code",
+    "llm",
+    "chart",
+    "3d",
+    "visualization",
+    "aigui"
+  ],
+  "license": "MIT",
+  "author": "Liang Li <ll_faw@hotmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liliang-cn/aigui.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://github.com/liliang-cn/aigui#readme",
+  "bugs": "https://github.com/liliang-cn/aigui/issues",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.11"
+  },
+  "bin": {
+    "aigui-mcp": "./bin/aigui-mcp.js"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown && vite build --config vite.viewer.config.ts",
+    "test": "pnpm --dir ../.. exec vitest run --project mcp",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-gui/cli": "workspace:*",
+    "@ai-gui/core": "workspace:*",
+    "@ai-gui/image": "workspace:*",
+    "@ai-gui/plugin-molecule": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "echarts": "^5.5.1",
+    "playwright": "^1.48.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@ai-gui/vanilla": "workspace:*",
+    "@ai-gui/plugin-bigscreen": "workspace:*",
+    "@ai-gui/plugin-chart": "workspace:*",
+    "@ai-gui/plugin-citation": "workspace:*",
+    "@ai-gui/plugin-dashboard": "workspace:*",
+    "@ai-gui/plugin-figure": "workspace:*",
+    "@ai-gui/plugin-function": "workspace:*",
+    "@ai-gui/plugin-graph": "workspace:*",
+    "@ai-gui/plugin-gravity": "workspace:*",
+    "@ai-gui/plugin-highlight": "workspace:*",
+    "@ai-gui/plugin-katex": "workspace:*",
+    "@ai-gui/plugin-mermaid": "workspace:*",
+    "@ai-gui/plugin-motion": "workspace:*",
+    "@ai-gui/plugin-optics": "workspace:*",
+    "@ai-gui/plugin-physics": "workspace:*",
+    "@ai-gui/plugin-primitives": "workspace:*",
+    "@ai-gui/plugin-progress": "workspace:*",
+    "@ai-gui/plugin-quote": "workspace:*",
+    "@ai-gui/plugin-scene": "workspace:*",
+    "@ai-gui/plugin-solid": "workspace:*",
+    "@types/node": "^22.0.0",
+    "echarts-gl": "^2.0.9",
+    "katex": "^0.16.9",
+    "vite": "^5.4.0"
+  }
+}

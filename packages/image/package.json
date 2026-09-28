@@ -67,7 +67,8 @@
     "@ai-gui/plugin-bigscreen": "workspace:*",
     "@ai-gui/plugin-molecule": "workspace:*",
     "echarts-gl": "^2.0.9",
-    "katex": "^0.16.9"
+    "katex": "^0.16.9",
+    "echarts": "^5.5.1"
   },
   "peerDependencies": {
     "playwright": "^1.48.0"

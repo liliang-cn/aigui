@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { BrowserUnavailableError, __resetBrowserForTests, acquirePage, closeBrowser } from "./browser"
+import { BrowserUnavailableError, LAUNCH_ARGS, __resetBrowserForTests, acquirePage, browserCandidates, closeBrowser, launchFirstAvailable } from "./browser"
 
 function fakeLauncher() {
   const closed = { browser: 0, page: 0 }
@@ -134,5 +134,37 @@ describe("acquirePage", () => {
     await vi.advanceTimersByTimeAsync(1001)
     expect(closed.browser).toBe(1)
     vi.useRealTimers()
+  })
+})
+
+describe("choosing a browser", () => {
+  const browser = { close: async () => {}, newPage: async () => ({ close: async () => {} }) }
+
+  it("tries Playwright's Chromium, then Chrome, then Edge", () => {
+    expect(browserCandidates({})).toEqual([undefined, "chrome", "msedge"])
+  })
+
+  it("lets the host pin one", () => {
+    expect(browserCandidates({ AIGUI_BROWSER_CHANNEL: "msedge" })).toEqual(["msedge"])
+    expect(browserCandidates({ AIGUI_BROWSER_CHANNEL: "chromium" })).toEqual([undefined])
+  })
+
+  it("falls through to the system Chrome when the bundled Chromium was never downloaded", async () => {
+    // This is what `npx` gives a first-time user: Playwright installed, its browser not.
+    const launch = vi.fn(async (options: { args: string[]; channel?: string }) => {
+      if (!options.channel) throw new Error("Executable doesn't exist at ~/.cache/ms-playwright/chromium")
+      return browser
+    })
+    await expect(launchFirstAvailable(launch, [undefined, "chrome", "msedge"])).resolves.toBe(browser)
+    expect(launch.mock.calls.map(([options]) => options.channel)).toEqual([undefined, "chrome"])
+    // The WebGL flags go to whichever browser is used, or the 3D blocks come out blank.
+    expect(launch.mock.calls[1][0].args).toEqual(LAUNCH_ARGS)
+  })
+
+  it("reports the first failure when nothing launches, since that one names the missing download", async () => {
+    const launch = vi.fn(async (options: { channel?: string }) => {
+      throw new Error(options.channel ? `no ${options.channel}` : "run npx playwright install chromium")
+    })
+    await expect(launchFirstAvailable(launch, [undefined, "chrome"])).rejects.toThrow("playwright install chromium")
   })
 })

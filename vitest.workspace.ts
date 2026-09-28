@@ -33,6 +33,7 @@ const alias = {
   "@ai-gui/vue": fileURLToPath(new URL("./packages/vue/src/index.ts", import.meta.url)),
   "@ai-gui/vanilla": fileURLToPath(new URL("./packages/vanilla/src/index.ts", import.meta.url)),
   "@ai-gui/image": fileURLToPath(new URL("./packages/image/src/index.ts", import.meta.url)),
+  "@ai-gui/mcp": fileURLToPath(new URL("./packages/mcp/src/index.ts", import.meta.url)),
   "@ai-gui/openclaw": fileURLToPath(new URL("./packages/openclaw/src/index.ts", import.meta.url)),
   "@ai-gui/live": fileURLToPath(new URL("./packages/live/src/index.ts", import.meta.url)),
   "@ai-gui/plugin-chart": fileURLToPath(new URL("./packages/plugin-chart/src/index.ts", import.meta.url)),
@@ -213,6 +214,10 @@ export default defineWorkspace([
   {
     resolve: { alias },
     test: { name: "image", root: "packages/image", coverage },
+  },
+  {
+    resolve: { alias },
+    test: { name: "mcp", root: "packages/mcp", coverage },
   },
   {
     resolve: { alias },

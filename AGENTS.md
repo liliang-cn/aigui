@@ -6,7 +6,7 @@ This guide has two independent parts. Read the one that matches your job:
 - **Part B** — you are the **LLM generating content** that an AIGUI frontend will render.
 - **Part C** — you are **maintaining this repo** and need to release it.
 
-For the human-facing overview see [README.md](./README.md); for the checklist form see [SKILL.md](./SKILL.md).
+For the human-facing overview see [README.md](./README.md); for the checklist form see [skills/aigui/SKILL.md](./skills/aigui/SKILL.md).
 
 ---
 
@@ -304,7 +304,7 @@ local `~/.npmrc` is not the one that works.
 
 ```sh
 # 1. bump every public package to the same new version
-pnpm changeset version        # or edit versions by hand — they must all match
+pnpm version-packages         # changeset version + the Claude Code plugin manifest; all must match
 
 # 2. commit, tag, push
 git commit -am "chore: release v0.20.2"

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "aigui",
+  "description": "AIGUI for Claude Code: draw charts, diagrams, 3D and dashboards, and integrate the @ai-gui SDK.",
+  "owner": {
+    "name": "Liang Li",
+    "email": "ll_faw@hotmail.com"
+  },
+  "plugins": [
+    {
+      "name": "aigui",
+      "source": "./",
+      "description": "Draw charts, diagrams, maths, 3D scenes, orbits, molecules and dashboards from Claude Code, and integrate the @ai-gui SDK."
+    }
+  ]
+}

@@ -398,7 +398,9 @@ function mount3D(definition: Molecule3DDefinition, chemistry: ParsedChemistry, o
         .then((module) => {
           if (disposed) return
           const createViewer = (module as unknown as { createViewer: (element: HTMLElement, config: Record<string, unknown>) => Viewer }).createViewer
-          viewer = createViewer(viewport, { backgroundColor: "white", defaultcolors: ELEMENT_COLORS })
+          // Transparent, so the molecule sits on whatever page it is on. An opaque white box was
+          // the one thing on a dark page that still looked like a light one.
+          viewer = createViewer(viewport, { backgroundColor: "white", backgroundAlpha: 0, defaultcolors: ELEMENT_COLORS })
           if (disposed) return
           viewer.addModel(chemistry.molfile, "mol")
           const style = definition.style ?? "ball-and-stick"

@@ -137,6 +137,16 @@ describe("molecule 3D lifecycle", () => {
     }
   })
 
+  it("draws on a transparent background, so a dark page stays dark", async () => {
+    const { molecule } = await import("./index")
+    const render = collectNodeRenderers([molecule()]).molecule
+    const out = await render({ key: "m:bg", type: "molecule", content: JSON.stringify(definition), complete: true } as ASTNode) as RenderOutput
+    if (out.kind !== "mount") throw new Error("expected mount")
+    out.mount(document.createElement("div"))
+    await vi.waitFor(() => expect(mocks.createViewer).toHaveBeenCalledOnce())
+    expect(mocks.createViewer.mock.calls[0][1]).toMatchObject({ backgroundAlpha: 0 })
+  })
+
   it("provides a Reset control that restores zoom and rendering", async () => {
     const { molecule } = await import("./index")
     const render = collectNodeRenderers([molecule()]).molecule

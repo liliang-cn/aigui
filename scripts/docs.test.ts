@@ -44,7 +44,7 @@ describe("root docs", () => {
 
   it("keeps the skill's package references real too", () => {
     const published = new Set(publishedPackages())
-    const advertised = new Set([...read("SKILL.md").matchAll(/@ai-gui\/[a-z0-9-]+/g)].map((match) => match[0]))
+    const advertised = new Set([...read("skills/aigui/SKILL.md").matchAll(/@ai-gui\/[a-z0-9-]+/g)].map((match) => match[0]))
     expect([...advertised].filter((name) => !published.has(name))).toEqual([])
   })
 })
