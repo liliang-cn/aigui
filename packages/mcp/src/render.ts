@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { BrowserUnavailableError, DEFAULT_KINDS, renderMarkdownToImages, selectRenderableBlocks, type InternalRenderOptions } from "@ai-gui/image"
+import { awaitSetup, type BrowserSetup } from "./browser"
 import { outputRoot } from "./paths"
 
 export interface RenderedContent {
@@ -29,7 +30,15 @@ export const NO_BROWSER = [
  */
 export async function renderToContent(
   markdown: string,
-  options: { theme?: "light" | "dark"; width?: number; outDir?: string; acquire?: InternalRenderOptions["acquire"] } = {},
+  options: {
+    theme?: "light" | "dark"
+    width?: number
+    outDir?: string
+    acquire?: InternalRenderOptions["acquire"]
+    /** The background browser download, and how long to wait for it. */
+    setup?: BrowserSetup
+    setupWaitMs?: number
+  } = {},
 ): Promise<RenderedContent> {
   const candidates = selectRenderableBlocks(markdown, { kinds: DEFAULT_KINDS, max: 12 })
   if (candidates.length === 0) {
@@ -38,6 +47,7 @@ export async function renderToContent(
       isError: true,
     }
   }
+  const setup = options.setup ? await awaitSetup(options.setup, options.setupWaitMs ?? 60_000) : "ready"
   let result
   try {
     result = await renderMarkdownToImages(markdown, {
@@ -59,6 +69,7 @@ export async function renderToContent(
     `Drew ${result.images.length} picture${result.images.length === 1 ? "" : "s"}:`,
     ...lines,
     ...(failed > 0 ? [`${failed} block${failed === 1 ? "" : "s"} could not be drawn and stayed as source; check its JSON against aigui_guide.`] : []),
+    ...(setup === "pending" ? ["The faster headless browser is still downloading (first use only); 3D blocks may fail until it finishes — retry in a few minutes, or use aigui_open."] : []),
   ].join("\n")
   const images = await Promise.all(result.images.map(async (image) => ({ type: "image" as const, data: (await readFile(image.path)).toString("base64"), mimeType: "image/png" as const })))
   return { content: [{ type: "text", text: summary }, ...images], isError: result.images.length === 0 }

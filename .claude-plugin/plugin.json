@@ -24,8 +24,9 @@
     "aigui": {
       "command": "npx",
       "args": [
+        "--prefer-offline",
         "-y",
-        "@ai-gui/mcp@latest"
+        "@ai-gui/mcp@0.41.0"
       ]
     }
   }

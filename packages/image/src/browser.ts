@@ -43,6 +43,11 @@ export interface PageLease {
  * that behind `--enable-unsafe-swiftshader` and needs to be told to use it, or `getContext("webgl")`
  * returns null and every 3D block falls back to its text. Hinting is off so glyphs look the same
  * at every scale factor.
+ *
+ * Not `--disable-frame-rate-limit`, though it looks like the cure for how slowly the Chrome
+ * fallback draws: it also lets a three.js scene's render loop spin unthrottled on the software
+ * GPU, which starves the page until the screenshot times out — in the headless shell too, which
+ * paces frames at 16 ms and never needed it.
  */
 export const LAUNCH_ARGS = ["--font-render-hinting=none", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
 

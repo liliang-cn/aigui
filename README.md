@@ -61,7 +61,7 @@ pnpm add @ai-gui/live
 npx @ai-gui/cli prompt --plugins katex,mermaid,graph --locale zh-CN -o prompt.txt
 
 # charts, diagrams and 3D from an agent, as an MCP server (optional)
-claude mcp add aigui -- npx -y @ai-gui/mcp@latest
+claude mcp add aigui -- npx --prefer-offline -y @ai-gui/mcp@0.41.1
 ```
 
 ### In Claude Code
@@ -73,7 +73,7 @@ The repository is a Claude Code plugin. Installing it gives Claude an MCP server
 /plugin install aigui@aigui
 ```
 
-Pictures need a browser to draw in; Chrome or Edge on the machine is enough. See [`@ai-gui/mcp`](./packages/mcp/README.md).
+The server downloads the headless browser it draws pictures with on first start. See [`@ai-gui/mcp`](./packages/mcp/README.md).
 
 ## Quick start — React
 

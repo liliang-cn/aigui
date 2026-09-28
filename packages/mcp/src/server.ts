@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { closeBrowser, type InternalRenderOptions } from "@ai-gui/image"
 import { z } from "zod"
 import { BLOCKS } from "./blocks"
+import { ensureHeadlessShell, type BrowserSetup } from "./browser"
 import { guide } from "./guide"
 import { writePage } from "./open"
 import { packageVersion } from "./paths"
@@ -17,6 +18,10 @@ export interface ServerDeps {
   /** Injected in tests: where files go, and whether a browser window is opened. */
   outDir?: string
   open?: boolean
+  /** The background download of the headless browser. Default: Playwright's installer. */
+  setup?: BrowserSetup
+  /** How long a render waits for that download before going ahead. Default 60 s. */
+  setupWaitMs?: number
 }
 
 /**
@@ -70,7 +75,7 @@ export function createServer(deps: ServerDeps = {}): McpServer {
       },
       annotations: { readOnlyHint: false, openWorldHint: false },
     },
-    async ({ markdown, theme, width }) => renderToContent(markdown, { theme, width, outDir: deps.outDir, acquire: deps.acquire }),
+    async ({ markdown, theme, width }) => renderToContent(markdown, { theme, width, outDir: deps.outDir, acquire: deps.acquire, setup: deps.setup ?? (() => ensureHeadlessShell()), setupWaitMs: deps.setupWaitMs }),
   )
 
   server.registerTool(
@@ -115,4 +120,7 @@ export async function main(): Promise<void> {
   process.on("SIGTERM", shutdown)
   process.stdin.on("close", shutdown)
   await server.connect(new StdioServerTransport())
+  // After connecting, never before: the first download can take minutes, and Claude Code gives
+  // a server about thirty seconds to answer. The first picture waits for it; nothing else does.
+  void ensureHeadlessShell()
 }

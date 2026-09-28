@@ -4,10 +4,12 @@ import { join } from "node:path"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js"
 import { describe, expect, it } from "vitest"
+import { awaitSetup, ensureHeadlessShell } from "./browser"
 import { createServer, type ServerDeps } from "./server"
 
 async function connect(deps: ServerDeps = {}) {
-  const server = createServer(deps)
+  // Never the real installer here: in CI it would download a browser.
+  const server = createServer({ setup: async () => true, ...deps })
   const client = new Client({ name: "test", version: "0" })
   const [a, b] = InMemoryTransport.createLinkedPair()
   await Promise.all([server.connect(a), client.connect(b)])
@@ -94,6 +96,35 @@ describe("the aigui MCP server", () => {
     })
     const result = await client.callTool({ name: "aigui_render", arguments: { markdown: "```mermaid\ngraph TD; A-->B;\n```" } })
     expect(result.isError).toBe(true)
+    expect(text(result)).toContain("npx playwright install chromium")
+  })
+})
+
+describe("the background browser download", () => {
+  it("is skipped when the host pinned a browser or opted out", async () => {
+    await expect(ensureHeadlessShell({ AIGUI_BROWSER_CHANNEL: "chrome" })).resolves.toBe(false)
+    await expect(ensureHeadlessShell({ AIGUI_NO_BROWSER_DOWNLOAD: "1" })).resolves.toBe(false)
+  })
+
+  it("is waited for, but only so long", async () => {
+    expect(await awaitSetup(async () => true, 1000)).toBe("ready")
+    expect(await awaitSetup(async () => false, 1000)).toBe("failed")
+    expect(await awaitSetup(() => new Promise(() => {}), 20)).toBe("pending")
+  })
+
+  it("says so when a picture was drawn before the download finished", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-"))
+    const client = await connect({
+      outDir,
+      setup: () => new Promise(() => {}),
+      setupWaitMs: 50,
+      acquire: async () => {
+        throw new Error("Executable doesn't exist")
+      },
+    })
+    // The render still goes ahead after the wait — here it fails for want of a browser, and the
+    // advice is the missing-browser one, not a hang.
+    const result = await client.callTool({ name: "aigui_render", arguments: { markdown: "```mermaid\ngraph TD; A-->B;\n```" } })
     expect(text(result)).toContain("npx playwright install chromium")
   })
 })

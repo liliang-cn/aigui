@@ -35,6 +35,11 @@ if (isMain) {
   // The Claude Code plugin is released by the same tag, so its manifest has to carry the same
   // version: `/plugin update` compares it, and a stale one tells users there is nothing new.
   const plugin = JSON.parse(await readFile(new URL("../.claude-plugin/plugin.json", import.meta.url), "utf8"))
-  validateRelease(tag, [...(await readPublicPackages()), { name: ".claude-plugin/plugin.json", version: plugin.version }])
+  const pinned = plugin.mcpServers.aigui.args.find((arg) => arg.startsWith("@ai-gui/mcp@"))?.slice("@ai-gui/mcp@".length)
+  validateRelease(tag, [
+    ...(await readPublicPackages()),
+    { name: ".claude-plugin/plugin.json", version: plugin.version },
+    { name: ".claude-plugin/plugin.json → @ai-gui/mcp", version: pinned },
+  ])
   console.log(`Validated release ${tag}`)
 }

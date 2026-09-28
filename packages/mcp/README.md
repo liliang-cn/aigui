@@ -16,15 +16,15 @@ As a plugin, which also brings the skills that tell Claude when to draw:
 Or the server on its own:
 
 ```sh
-claude mcp add aigui -- npx -y @ai-gui/mcp@latest
+claude mcp add aigui -- npx --prefer-offline -y @ai-gui/mcp@0.41.1
 ```
 
-Any other MCP client takes the same command: `npx -y @ai-gui/mcp@latest`, over stdio.
+Any other MCP client takes the same command, over stdio. Pin a version and keep `--prefer-offline`: with both, a cached server starts in seconds. With `@latest`, or without the flag, `npx` re-checks the metadata of all ~300 dependencies online on every start, which on a slow line takes longer than Claude Code waits for a server to connect. (The plugin already launches it this way.)
 
-The first launch installs the server and its renderers — a few hundred megabytes, charts, diagrams and 3D engines included — and on a slow connection that can take longer than Claude Code waits for a server to connect. If `/mcp` shows it failed the first time, reconnect it there; or install ahead of time:
+The first launch installs the server and its renderers — a few hundred megabytes, charts, diagrams and 3D engines included — and can itself outlast that wait. If `/mcp` shows it failed the first time, reconnect it there; or install ahead of time with the same spec:
 
 ```sh
-npx -y @ai-gui/mcp@latest --version
+npx --prefer-offline -y @ai-gui/mcp@0.41.1 --version
 ```
 
 ## Tools
@@ -39,7 +39,7 @@ The syntax is fetched on demand rather than written into the tool descriptions: 
 
 ## A browser for the pictures
 
-`aigui_render` draws in headless Chromium through Playwright. It tries Playwright's own Chromium first, then the Google Chrome and Microsoft Edge already on the machine — so on most desktops it works with nothing to install. Where there is neither, run `npx playwright install chromium` once; the tool says so if it has to. `AIGUI_BROWSER_CHANNEL` pins one (`chromium`, `chrome`, `msedge`).
+`aigui_render` draws in Playwright's headless Chromium. `npx` installs Playwright but not that browser, so the server downloads it itself (about 100 MB, once) in the background as soon as it starts; later starts check it in a fraction of a second. The first picture waits up to a minute for the download, then goes ahead with the Google Chrome or Microsoft Edge already on the machine, which draws charts and diagrams well but 3D slowly. `AIGUI_NO_BROWSER_DOWNLOAD=1` skips the download; `AIGUI_BROWSER_CHANNEL` pins a browser (`chromium`, `chrome`, `msedge`) and also skips it.
 
 `aigui_open` needs no headless browser at all: it writes a file and hands it to the system's default one.
 
