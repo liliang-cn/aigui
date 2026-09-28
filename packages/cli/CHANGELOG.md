@@ -1,5 +1,39 @@
 # @ai-gui/cli
 
+## 0.41.0
+
+### Patch Changes
+
+- Updated dependencies [f04de8f]
+  - @ai-gui/plugin-molecule@0.41.0
+  - @ai-gui/core@0.41.0
+  - @ai-gui/plugin-katex@0.41.0
+  - @ai-gui/plugin-highlight@0.41.0
+  - @ai-gui/plugin-mermaid@0.41.0
+  - @ai-gui/plugin-primitives@0.41.0
+  - @ai-gui/plugin-chart@0.41.0
+  - @ai-gui/plugin-form@0.41.0
+  - @ai-gui/plugin-citation@0.41.0
+  - @ai-gui/plugin-artifact@0.41.0
+  - @ai-gui/plugin-ui@0.41.0
+  - @ai-gui/plugin-solid@0.41.0
+  - @ai-gui/plugin-scene@0.41.0
+  - @ai-gui/plugin-function@0.41.0
+  - @ai-gui/plugin-optics@0.41.0
+  - @ai-gui/plugin-motion@0.41.0
+  - @ai-gui/plugin-gravity@0.41.0
+  - @ai-gui/plugin-graph@0.41.0
+  - @ai-gui/plugin-quote@0.41.0
+  - @ai-gui/plugin-resultset@0.41.0
+  - @ai-gui/plugin-physics@0.41.0
+  - @ai-gui/plugin-figure@0.41.0
+  - @ai-gui/plugin-progress@0.41.0
+  - @ai-gui/plugin-flashcard@0.41.0
+  - @ai-gui/plugin-map@0.41.0
+  - @ai-gui/plugin-evidence@0.41.0
+  - @ai-gui/plugin-dashboard@0.41.0
+  - @ai-gui/plugin-bigscreen@0.41.0
+
 ## 0.40.0
 
 ### Patch Changes

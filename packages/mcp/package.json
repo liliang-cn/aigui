@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/mcp",
-  "version": "0.40.0",
+  "version": "0.41.0",
   "description": "An MCP server that lets an agent draw AIGUI blocks — charts, diagrams, maths, 3D scenes, orbits, molecules, data walls — as PNGs or as a live page in the browser.",
   "keywords": [
     "mcp",
