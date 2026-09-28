@@ -42,7 +42,7 @@ The syntax is fetched on demand rather than written into the tool descriptions: 
 
 ## Files
 
-Pictures go to `~/.cache/aigui/images`, pages to `~/.cache/aigui/pages` with the viewer script beside them — not the temp directory, because a page is something a person reopens. `AIGUI_OUT_DIR` moves both; `XDG_CACHE_HOME` is honoured. `AIGUI_NO_OPEN=1` writes pages without opening them.
+Pictures go to `~/.cache/aigui/images`, pages to `~/.cache/aigui/pages` with the viewer script beside them — not the temp directory, because a page is something a person reopens. `AIGUI_OUT_DIR` moves both; `XDG_CACHE_HOME` is honoured. `AIGUI_NO_OPEN=1` writes pages without opening them. `AIGUI_OPEN_IMAGES=1` also opens `aigui_render`'s PNGs in the system image viewer — the Claude Code plugin sets it, since a terminal cannot show them; leave it off in a client that shows images inline.
 
 A page is self-contained apart from that one viewer script (about 20 MB, every plugin inlined, copied once per version): it loads nothing from the network, and its maths fonts are embedded, because a page opened from `file://` cannot load fonts from beside itself.
 

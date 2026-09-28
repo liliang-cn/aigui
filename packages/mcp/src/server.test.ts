@@ -132,7 +132,8 @@ describe("the background browser download", () => {
 describe.skipIf(process.env.AIGUI_IMAGE_E2E !== "1")("aigui_render (real browser)", () => {
   it("returns the PNGs inline and on disk", async () => {
     const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-e2e-"))
-    const client = await connect({ outDir })
+    let shown: string[] = []
+    const client = await connect({ outDir, showImages: (paths) => ((shown = paths), true) })
     const markdown = [
       "```chart\n{\"xAxis\":{\"type\":\"category\",\"data\":[\"A\",\"B\"]},\"yAxis\":{\"type\":\"value\"},\"series\":[{\"type\":\"bar\",\"data\":[3,7]}]}\n```",
       "```scene\n{\"objects\":[{\"shape\":\"box\",\"size\":[2,1,1],\"anchor\":\"bottom\",\"color\":\"wheat\"}]}\n```",
@@ -143,5 +144,8 @@ describe.skipIf(process.env.AIGUI_IMAGE_E2E !== "1")("aigui_render (real browser
     expect(content.filter((c) => c.type === "image")).toHaveLength(2)
     expect(content[1].mimeType).toBe("image/png")
     expect(text(result)).toMatch(/Drew 2 pictures/)
+    // Shown to the person too, and the agent is told so it does not also paste the paths.
+    expect(shown).toHaveLength(2)
+    expect(text(result)).toContain("open in the user's image viewer")
   }, 90_000)
 })

@@ -25,7 +25,10 @@
       "command": "node",
       "args": [
         "${CLAUDE_PLUGIN_ROOT}/plugin/launch.mjs"
-      ]
+      ],
+      "env": {
+        "AIGUI_OPEN_IMAGES": "1"
+      }
     }
   }
 }

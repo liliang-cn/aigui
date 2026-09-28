@@ -26,7 +26,8 @@ export const NO_BROWSER = [
  * Draw every picture-capable block in `markdown` and return the PNGs as MCP image content.
  *
  * The images go back inline so the agent sees what it drew and can fix it; the paths go back too,
- * because in a terminal the person reading along can only open a file.
+ * because in a terminal the person reading along can only open a file — which `show`, when
+ * given, does for them.
  */
 export async function renderToContent(
   markdown: string,
@@ -38,6 +39,8 @@ export async function renderToContent(
     /** The background browser download, and how long to wait for it. */
     setup?: BrowserSetup
     setupWaitMs?: number
+    /** Show the PNGs to the person too, when they are reading in a terminal that cannot. */
+    show?: (paths: string[]) => boolean
   } = {},
 ): Promise<RenderedContent> {
   const candidates = selectRenderableBlocks(markdown, { kinds: DEFAULT_KINDS, max: 12 })
@@ -63,11 +66,13 @@ export async function renderToContent(
     const missing = error instanceof BrowserUnavailableError || /Executable doesn't exist|playwright install|Failed to launch|channel/i.test(String((error as Error)?.message))
     return { content: [{ type: "text", text: missing ? NO_BROWSER : `Drawing failed: ${String((error as Error)?.message ?? error)}` }], isError: true }
   }
+  const shown = options.show?.(result.images.map((image) => image.path)) ?? false
   const lines = result.images.map((image) => `- ${image.kind}: ${image.path} (${image.width}×${image.height})`)
   const failed = candidates.length - result.images.length
   const summary = [
     `Drew ${result.images.length} picture${result.images.length === 1 ? "" : "s"}:`,
     ...lines,
+    ...(shown ? ["They are open in the user's image viewer."] : []),
     ...(failed > 0 ? [`${failed} block${failed === 1 ? "" : "s"} could not be drawn and stayed as source; check its JSON against aigui_guide.`] : []),
     ...(setup === "pending" ? ["The faster headless browser is still downloading (first use only); 3D blocks may fail until it finishes — retry in a few minutes, or use aigui_open."] : []),
   ].join("\n")

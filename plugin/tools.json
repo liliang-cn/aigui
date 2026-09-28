@@ -35,7 +35,7 @@
   {
     "name": "aigui_render",
     "title": "Draw AIGUI blocks as PNG",
-    "description": "Draw the AIGUI blocks in a markdown string as PNG images and return them. Draws: chart, mermaid, katex, bigscreen, dashboard, scene, gravity, molecule, and markdown tables. Anything else in the markdown is ignored. Use it when a picture answers better than text — a chart of numbers, a diagram of a flow, a 3D shape, an orbit, a molecule. The images come back to you and are saved to disk; tell the user the paths. Call aigui_guide first for the syntax of any block you have not written in this session.",
+    "description": "Draw the AIGUI blocks in a markdown string as PNG images and return them. Draws: chart, mermaid, katex, bigscreen, dashboard, scene, gravity, molecule, and markdown tables. Anything else in the markdown is ignored. Use it when a picture answers better than text — a chart of numbers, a diagram of a flow, a 3D shape, an orbit, a molecule. The images come back to you and are saved to disk; the result says whether they were also opened on the user's screen — if not, tell the user the paths. Call aigui_guide first for the syntax of any block you have not written in this session.",
     "inputSchema": {
       "type": "object",
       "properties": {

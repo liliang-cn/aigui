@@ -14,11 +14,11 @@ Draw when the picture carries the answer: comparing numbers, showing a trend, a 
 ## How
 
 1. **Look up the syntax** with `aigui_guide`. Call it with no arguments once to see the blocks, then with the names you will use — `{"blocks": ["chart", "mermaid"]}`. Do this before the first block of each kind in a session; the rules are specific (most blocks take conditions and compute the results themselves) and guessing a field gets the block refused.
-2. **Pick the output.**
-   - `aigui_render` — PNGs, returned to you and saved to disk. For one or a few pictures inside a conversation. Draws chart, mermaid, maths, tables, bigscreen, dashboard, scene, gravity and molecule.
-   - `aigui_open` — one HTML page, opened in the browser. For an answer that is mostly visual, for anything worth exploring (turning a 3D scene or molecule, hovering a chart, watching a wall or an orbit animate), and for the page-only blocks: graph, solid, function, optics, motion, physics, figure, quote and the rest.
+2. **Pick the output.** In Claude Code the person is reading a terminal, which shows no images — so the page is the default.
+   - `aigui_open` — **the default.** One HTML page, opened in the user's browser, where charts can be hovered, 3D scenes and molecules turned, walls and orbits animate. Required for the page-only blocks: graph, solid, function, optics, motion, physics, figure, quote and the rest.
+   - `aigui_render` — PNGs, returned to you, saved to disk, and (from the plugin) opened in the user's image viewer. Use it when the user wants an image file, or when you need to check a picture yourself before showing it. Draws chart, mermaid, maths, tables, bigscreen, dashboard, scene, gravity and molecule.
 3. **Look at what came back.** `aigui_render` returns the images to you: check the picture says what you meant before you describe it. If a block could not be drawn, the result says so — fix its JSON against the guide and try again rather than telling the user it worked.
-4. **Tell the user where it is.** Give the file path or the page URL from the result. In a terminal they cannot see the image inline.
+4. **Tell the user where it is.** Say it is open, and give the file path or page URL from the result so they can find it again. If the result does not say it was opened, they have not seen it: give the path and say so.
 
 ## Rules that save a round trip
 

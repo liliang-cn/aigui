@@ -5,7 +5,7 @@ import { z } from "zod"
 import { BLOCKS } from "./blocks"
 import { ensureHeadlessShell, type BrowserSetup } from "./browser"
 import { guide } from "./guide"
-import { writePage } from "./open"
+import { openFiles, writePage } from "./open"
 import { packageVersion } from "./paths"
 import { renderToContent, type RenderedContent } from "./render"
 
@@ -22,6 +22,17 @@ export interface ServerDeps {
   setup?: BrowserSetup
   /** How long a render waits for that download before going ahead. Default 60 s. */
   setupWaitMs?: number
+  /**
+   * Open aigui_render's PNGs on the user's screen as well. Default: on when `AIGUI_OPEN_IMAGES=1`,
+   * which the Claude Code plugin sets — its terminal cannot show an image, so without this only
+   * the agent ever sees the picture. Off elsewhere: a client that shows images inline would get
+   * every picture twice.
+   */
+  showImages?: (paths: string[]) => boolean
+}
+
+function defaultShowImages(): ((paths: string[]) => boolean) | undefined {
+  return process.env.AIGUI_OPEN_IMAGES === "1" && process.env.AIGUI_NO_OPEN !== "1" ? openFiles : undefined
 }
 
 export type ToolResult = RenderedContent
@@ -57,6 +68,7 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
         acquire: deps.acquire,
         setup: deps.setup ?? (() => ensureHeadlessShell()),
         setupWaitMs: deps.setupWaitMs,
+        show: "showImages" in deps ? deps.showImages : defaultShowImages(),
       })
     }
     case "aigui_open": {
@@ -110,7 +122,7 @@ export function createServer(deps: ServerDeps = {}): McpServer {
       description: [
         "Draw the AIGUI blocks in a markdown string as PNG images and return them.",
         `Draws: ${PICTURE}, and markdown tables. Anything else in the markdown is ignored.`,
-        "Use it when a picture answers better than text — a chart of numbers, a diagram of a flow, a 3D shape, an orbit, a molecule. The images come back to you and are saved to disk; tell the user the paths.",
+        "Use it when a picture answers better than text — a chart of numbers, a diagram of a flow, a 3D shape, an orbit, a molecule. The images come back to you and are saved to disk; the result says whether they were also opened on the user's screen — if not, tell the user the paths.",
         "Call aigui_guide first for the syntax of any block you have not written in this session.",
       ].join(" "),
       inputSchema: {

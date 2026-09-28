@@ -59,20 +59,29 @@ export async function writePage(
 }
 
 /**
- * Ask the operating system to open a file in its default browser.
+ * Ask the operating system to open files with their default apps — a page in the browser, a PNG
+ * in the image viewer.
  *
- * Detached and unwaited: the browser outlives this call, and a missing `xdg-open` on a headless
- * box must not fail the tool — the path is returned either way.
+ * Detached and unwaited: the app outlives this call, and a missing `xdg-open` on a headless box
+ * must not fail the tool — the paths are returned either way.
  */
-export function openInBrowser(path: string): boolean {
-  const [command, args] =
-    process.platform === "darwin" ? ["open", [path]] : process.platform === "win32" ? ["cmd", ["/c", "start", "", path]] : ["xdg-open", [path]]
+export function openFiles(paths: string[]): boolean {
+  if (paths.length === 0) return false
+  // macOS opens several files in one window; elsewhere each gets its own call.
+  const calls: Array<[string, string[]]> =
+    process.platform === "darwin"
+      ? [["open", paths]]
+      : paths.map((path) => (process.platform === "win32" ? ["cmd", ["/c", "start", "", path]] : ["xdg-open", [path]]))
   try {
-    const child = spawn(command as string, args as string[], { detached: true, stdio: "ignore" })
-    child.on("error", () => {})
-    child.unref()
+    for (const [command, args] of calls) {
+      const child = spawn(command, args, { detached: true, stdio: "ignore" })
+      child.on("error", () => {})
+      child.unref()
+    }
     return true
   } catch {
     return false
   }
 }
+
+export const openInBrowser = (path: string): boolean => openFiles([path])
