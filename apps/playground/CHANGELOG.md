@@ -1,5 +1,27 @@
 # @ai-gui/playground
 
+## 0.0.65
+
+### Patch Changes
+
+- Updated dependencies [920189c]
+  - @ai-gui/plugin-scene@0.43.0
+  - @ai-gui/core@0.43.0
+  - @ai-gui/react@0.43.0
+  - @ai-gui/vue@0.43.0
+  - @ai-gui/vanilla@0.43.0
+  - @ai-gui/plugin-mermaid@0.43.0
+  - @ai-gui/plugin-citation@0.43.0
+  - @ai-gui/plugin-artifact@0.43.0
+  - @ai-gui/plugin-ui@0.43.0
+  - @ai-gui/plugin-molecule@0.43.0
+  - @ai-gui/plugin-solid@0.43.0
+  - @ai-gui/plugin-gravity@0.43.0
+  - @ai-gui/plugin-graph@0.43.0
+  - @ai-gui/plugin-map@0.43.0
+  - @ai-gui/devtools@0.43.0
+  - @ai-gui/plugin-bigscreen@0.43.0
+
 ## 0.0.64
 
 ### Patch Changes

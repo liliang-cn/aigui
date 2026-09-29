@@ -1,5 +1,14 @@
 # @ai-gui/mcp
 
+## 0.43.0
+
+### Patch Changes
+
+- @ai-gui/cli@0.43.0
+- @ai-gui/image@0.43.0
+- @ai-gui/core@0.43.0
+- @ai-gui/plugin-molecule@0.43.0
+
 ## 0.42.0
 
 ### Minor Changes

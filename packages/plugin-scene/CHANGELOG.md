@@ -1,5 +1,15 @@
 # @ai-gui/plugin-scene
 
+## 0.43.0
+
+### Minor Changes
+
+- 920189c: Scene labels are drawn at a fixed size, move out of each other's way, and can go in side columns with leaders (`labelSide`, `labelOffset`) so stacked objects stay readable; scenes without a camera are fitted to what is drawn.
+
+### Patch Changes
+
+- @ai-gui/core@0.43.0
+
 ## 0.42.0
 
 ### Patch Changes
