@@ -71,8 +71,17 @@ saying so.
 | --- | --- |
 | Shapes | `box`, `sphere`, `cylinder` (with `radiusTop` for a frustum), `cone`, both with `sides` to make them faceted — a 4-sided cone is a hipped roof, a 6-sided cylinder a hex nut — `torus` (lying flat, axis y), `capsule`, `plane` (lying flat), `model` (glTF/GLB) |
 | Placement | `position`, `rotation` in degrees, `anchor` (`center` or `bottom`) |
-| Appearance | `color` (hex or a colour name), `opacity`, `material` (`matte`, `metal`, `glass`), `wireframe`, `label` |
+| Appearance | `color` (hex or a colour name), `opacity`, `material` (`matte`, `metal`, `glass`), `wireframe` |
+| Labels | `label`; `labelSide` — `top` (default), `left`, `right`, `front`; `labelOffset` `[x, y, z]` in metres |
 | Scene | `camera` (`position`, `target`; otherwise framed automatically), `grid`, `autoRotate`, `caption` |
+
+Labels are drawn flat over the 3D canvas at a fixed 13 px, so they stay readable however near or far
+the camera is, and labels that would cover each other are moved apart with a leader back to their
+object. `left` and `right` put a label in a column beside the whole scene, joined to the object's side
+by a leader, the way a figure is annotated — the placement for stacked objects, whose tops are
+covered by whatever rests on them. Without a `camera` the view is fitted to the objects and to the
+room the label columns need; with one, the author's view stands and is only moved back, along the
+same line, as far as the columns need.
 
 Not in this version, and the prompt spec tells the model to explain them in prose instead: boolean
 operations, curved-surface modelling, textures, animation, physics, lighting setup. The spec also

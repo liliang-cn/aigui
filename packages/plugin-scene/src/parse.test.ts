@@ -133,4 +133,21 @@ describe("model objects", () => {
     expect(fail(model("https://assets.example.com/chair.glb", { size: -1 }), allowed)).toContain("size must be a positive length")
     expect(fail(scene([{ shape: "model" }]), allowed)).toContain("model needs a src URL")
   })
+  it("keeps where a label goes", () => {
+    const result = parseScene(scene([box({ label: "d1", labelSide: "left", labelOffset: [0, 0.2, 0] }), box({ label: "d2" })]))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.value.definition.objects[0]).toMatchObject({ labelSide: "left", labelOffset: [0, 0.2, 0] })
+    // Absent stays absent, so an old scene's definition is exactly what it was.
+    expect(result.value.definition.objects[1]).not.toHaveProperty("labelSide")
+    expect(result.value.definition.objects[1]).not.toHaveProperty("labelOffset")
+  })
+  it("names a label placement it cannot honour", () => {
+    expect(fail(scene([box({ label: "x", labelSide: "bottom" })]))).toBe("objects[0].labelSide must be top, left, right or front")
+    expect(fail(scene([box({ label: "x", labelSide: 1 })]))).toBe("objects[0].labelSide must be top, left, right or front")
+    expect(fail(scene([box({ label: "x", labelOffset: [0, 1] })]))).toBe("objects[0].labelOffset must be [x, y, z] in metres")
+    expect(fail(scene([box({ label: "x", labelOffset: [0, "1", 0] })]))).toBe("objects[0].labelOffset must be [x, y, z] in metres")
+    expect(fail(scene([box({ labelSide: "left" })]))).toBe("objects[0].labelSide needs a label")
+    expect(fail(scene([box({ labelOffset: [0, 1, 0] })]))).toBe("objects[0].labelOffset needs a label")
+  })
 })

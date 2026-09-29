@@ -2,8 +2,9 @@ import { mkdtemp, stat } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterAll, describe, expect, it } from "vitest"
-import { closeBrowser } from "./browser"
-import { renderMarkdownToImages } from "./render"
+import { readFileSync } from "node:fs"
+import { acquirePage, closeBrowser, type PageLease } from "./browser"
+import { renderMarkdownToImages, type InternalRenderOptions } from "./render"
 
 const enabled = process.env.AIGUI_IMAGE_E2E === "1"
 
@@ -111,4 +112,35 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
     expect(result.images).toHaveLength(1)
     expect(result.images[0].height).toBeGreaterThan(300)
   }, 60_000)
+
+  /**
+   * The scene that broke labels: two stacks of boxes and a pipe, every object labelled, the lower
+   * box of each stack covered by the one above. With `labelSide` the labels must all be readable
+   * and clear of the objects and of each other — which the scene reports on its label layer, read
+   * here from the page the picture was actually taken of, before it is handed back.
+   */
+  it("lays out a stacked scene's labels without overlaps, with the author's camera and without", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-labels-"))
+    const sided = readFileSync(join(__dirname, "../../plugin-scene/src/fixtures/regression/stacked-labels.json"), "utf8")
+    const { camera: _camera, ...framed } = JSON.parse(sided)
+    const layers: Array<{ labels: string | null; overlaps: string | null }> = []
+    const acquire: InternalRenderOptions["acquire"] = async (options) => {
+      const lease = (await acquirePage(options)) as PageLease & { page: { evaluate<T>(fn: () => T): Promise<T> } }
+      return {
+        page: lease.page,
+        release: async () => {
+          layers.push(await lease.page.evaluate(() => {
+            const layer = document.querySelector("[data-aigui-scene-labels]")
+            return { labels: layer?.getAttribute("data-labels") ?? null, overlaps: layer?.getAttribute("data-overlaps") ?? null }
+          }))
+          await lease.release()
+        },
+      }
+    }
+    for (const definition of [sided, JSON.stringify(framed)]) {
+      const result = await renderMarkdownToImages("```scene\n" + definition + "\n```", { outDir, timeoutMs: 30_000, acquire })
+      expect(result.images).toHaveLength(1)
+    }
+    expect(layers).toEqual([{ labels: "6", overlaps: "0" }, { labels: "6", overlaps: "0" }])
+  }, 90_000)
 })

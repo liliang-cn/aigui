@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { buildSystemPrompt, collectNodeRenderers, type ASTNode, type RenderOutput } from "@ai-gui/core"
-import { scene, scenePromptSpec } from "./index"
+import { parseScene, scene, scenePromptSpec } from "./index"
 
 const renderNode = (content: string, complete = true, options?: Parameters<typeof scene>[0]): Promise<RenderOutput> =>
   collectNodeRenderers([scene(options)]).scene({ key: "0:0", type: "scene", content, complete } as ASTNode) as Promise<RenderOutput>
@@ -71,8 +71,25 @@ describe("scenePromptSpec", () => {
   it("shows the anchor habit in every worked example, because that is what a model copies", () => {
     const spec = scenePromptSpec("zh-CN")
     const examples = spec.split("```scene\n").slice(1)
-    expect(examples).toHaveLength(2)
+    expect(examples).toHaveLength(3)
     for (const example of examples) expect(example).toContain('"anchor": "bottom"')
+  })
+  it("parses every worked example it shows, in both languages", () => {
+    for (const locale of ["zh-CN", "en"]) {
+      for (const example of scenePromptSpec(locale).split("```scene\n").slice(1)) {
+        const result = parseScene(example.slice(0, example.indexOf("```")))
+        expect(result.ok, `${locale}: ${result.ok ? "" : result.error.message}`).toBe(true)
+      }
+    }
+  })
+  it("teaches labelSide for stacks, with an example that uses it", () => {
+    for (const locale of ["zh-CN", "en"]) {
+      const spec = scenePromptSpec(locale)
+      expect(spec).toContain("labelSide")
+      expect(spec).toContain("labelOffset")
+      expect(spec).toContain('"labelSide": "left"')
+      expect(spec).toContain('"labelSide": "right"')
+    }
   })
   it("sends solid-geometry questions to the solid block instead", () => {
     expect(scenePromptSpec("zh-CN")).toContain("用 solid 块")

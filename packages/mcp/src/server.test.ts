@@ -1,6 +1,8 @@
+import { readFileSync } from "node:fs"
 import { mkdtemp, readFile, readdir } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
+import { fileURLToPath, pathToFileURL } from "node:url"
 import { Client } from "@modelcontextprotocol/sdk/client/index.js"
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js"
 import { describe, expect, it } from "vitest"
@@ -147,5 +149,40 @@ describe.skipIf(process.env.AIGUI_IMAGE_E2E !== "1")("aigui_render (real browser
     // Shown to the person too, and the agent is told so it does not also paste the paths.
     expect(shown).toHaveLength(2)
     expect(text(result)).toContain("open in the user's image viewer")
+  }, 90_000)
+})
+
+describe.skipIf(process.env.AIGUI_IMAGE_E2E !== "1")("aigui_open (real browser)", () => {
+  /**
+   * The page path of the stacked-labels regression: the same scene the PNG test draws, written by
+   * aigui_open and opened the way a person's browser would open it — from a file, with the viewer
+   * bundle beside it. Each scene reports on its label layer how many labels it drew and how many
+   * sit on another label or another object.
+   */
+  it("lays out a stacked scene's labels without overlaps on the page", async () => {
+    const here = dirname(fileURLToPath(import.meta.url))
+    const sided = readFileSync(join(here, "../../plugin-scene/src/fixtures/regression/stacked-labels.json"), "utf8")
+    const { camera: _camera, ...framed } = JSON.parse(sided)
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-labels-"))
+    const client = await connect({ outDir, open: false })
+    const markdown = ["```scene\n" + sided + "\n```", "```scene\n" + JSON.stringify(framed) + "\n```"].join("\n\n")
+    const result = await client.callTool({ name: "aigui_open", arguments: { markdown, title: "labels" } })
+    const path = text(result).match(/Wrote (\S+\.html)/)![1]
+
+    const { chromium } = await import("playwright")
+    const browser = await chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] })
+    try {
+      const page = await browser.newPage({ viewport: { width: 1000, height: 1400 } })
+      await page.goto(pathToFileURL(path).href)
+      await page.waitForFunction(() => document.querySelectorAll("[data-aigui-scene-labels][data-overlaps]").length === 2, undefined, { timeout: 30_000 })
+      // Let damping settle: the layout is redone whenever the view moves.
+      await page.waitForTimeout(1500)
+      const layers = await page.evaluate(() =>
+        [...document.querySelectorAll("[data-aigui-scene-labels]")].map((el) => ({ labels: el.getAttribute("data-labels"), overlaps: el.getAttribute("data-overlaps") })),
+      )
+      expect(layers).toEqual([{ labels: "6", overlaps: "0" }, { labels: "6", overlaps: "0" }])
+    } finally {
+      await browser.close()
+    }
   }, 90_000)
 })

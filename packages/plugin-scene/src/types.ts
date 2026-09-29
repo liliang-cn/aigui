@@ -8,9 +8,21 @@ export type Material = "matte" | "metal" | "glass"
 /** Whether `position` names the object's centre or the middle of its underside. */
 export type Anchor = "center" | "bottom"
 
+/**
+ * Where an object's label goes.
+ *
+ * `top` (the default) sits above the object. `left` and `right` put it in a column outside the
+ * whole scene with a leader to the object's side — what a stack needs, since the top of anything
+ * with something resting on it is covered. `front` sits on the face towards the reader.
+ */
+export type LabelSide = "top" | "left" | "right" | "front"
+
 interface ObjectBase {
-  /** Text drawn beside the object, always facing the reader. */
+  /** Text drawn beside the object, always facing the reader, at a fixed size on screen. */
   label?: string
+  labelSide?: LabelSide
+  /** Metres added to the point the label is attached to, e.g. `[0, 0.3, 0]` to lift it. */
+  labelOffset?: Vec3
   /** Where the object is, per `anchor`. Default `[0, 0, 0]`. */
   position?: Vec3
   /** Euler rotation in degrees about x, y, z. Default `[0, 0, 0]`. */

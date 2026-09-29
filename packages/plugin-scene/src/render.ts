@@ -1,6 +1,9 @@
 import type * as THREE from "three"
-import { DEFAULT_VIEW, centerOf, framingDistance, halfExtents, sceneBounds } from "./bounds"
+import { sceneBounds } from "./bounds"
+import { LABEL_FONT_PX, countOverlaps, layoutLabels } from "./labels"
 import type { Bounds, SceneDefinition, SceneObject, Vec3 } from "./types"
+import { DEG, LABEL_PADDING, estimateLabelWidth, frameCamera, geometryFor, labelEntry, labelRequests, placeAt, screenObstacles, type LabelEntry, type Solid } from "./view"
+
 
 /**
  * Three.js is imported when a scene is actually drawn, never when the plugin is installed.
@@ -16,6 +19,8 @@ export interface Palette {
   grid: string
   gridCenter: string
   label: string
+  /** The outline drawn round label text so it reads over an object as well as over the page. */
+  halo: string
   sky: string
   ground: string
 }
@@ -23,34 +28,10 @@ export interface Palette {
 /** A scene has to read against the page it is on; lit for a light page it glares on a dark one. */
 export function palette(theme?: string): Palette {
   return theme === "dark"
-    ? { object: "#94a3b8", grid: "#3f3f46", gridCenter: "#71717a", label: "#fafafa", sky: "#e2e8f0", ground: "#1e293b" }
-    : { object: "#64748b", grid: "#d4d4d8", gridCenter: "#a1a1aa", label: "#18181b", sky: "#ffffff", ground: "#94a3b8" }
+    ? { object: "#94a3b8", grid: "#3f3f46", gridCenter: "#71717a", label: "#fafafa", halo: "rgba(24,24,27,0.85)", sky: "#e2e8f0", ground: "#1e293b" }
+    : { object: "#64748b", grid: "#d4d4d8", gridCenter: "#a1a1aa", label: "#18181b", halo: "rgba(255,255,255,0.9)", sky: "#ffffff", ground: "#94a3b8" }
 }
 
-const DEG = Math.PI / 180
-
-function geometryFor(three: typeof THREE, object: SceneObject): THREE.BufferGeometry | undefined {
-  switch (object.shape) {
-    case "box":
-      return new three.BoxGeometry(object.size[0], object.size[1], object.size[2])
-    case "sphere":
-      return new three.SphereGeometry(object.radius, 48, 32)
-    case "cylinder":
-      return new three.CylinderGeometry(object.radiusTop ?? object.radius, object.radius, object.height, object.sides ?? 48)
-    case "cone":
-      return new three.ConeGeometry(object.radius, object.height, object.sides ?? 48)
-    case "torus":
-      // Three's torus stands on edge like a wheel; laid flat its axis is y, the same as every
-      // other round shape here, so a ring "on the table" needs no rotation from the model.
-      return new three.TorusGeometry(object.radius, object.tube, 24, 64).rotateX(-Math.PI / 2)
-    case "capsule":
-      return new three.CapsuleGeometry(object.radius, object.height, 8, 24)
-    case "plane":
-      return new three.PlaneGeometry(object.size[0], object.size[1]).rotateX(-Math.PI / 2)
-    case "model":
-      return undefined
-  }
-}
 
 function materialFor(three: typeof THREE, object: SceneObject, colours: Palette): THREE.Material {
   const color = object.color ?? colours.object
@@ -67,39 +48,7 @@ function materialFor(three: typeof THREE, object: SceneObject, colours: Palette)
   }
 }
 
-/** A word drawn beside an object, as a sprite so it always faces the reader. */
-function labelSprite(three: typeof THREE, text: string, colour: string, scaleBy: number): THREE.Sprite {
-  const height = 96
-  const canvas = document.createElement("canvas")
-  const context = canvas.getContext("2d")
-  const font = "600 56px ui-sans-serif, system-ui, sans-serif"
-  let width = height * 2
-  if (context) {
-    context.font = font
-    width = Math.max(height, Math.ceil(context.measureText(text).width) + 32)
-  }
-  canvas.width = width
-  canvas.height = height
-  if (context) {
-    context.fillStyle = colour
-    context.font = font
-    context.textAlign = "center"
-    context.textBaseline = "middle"
-    context.fillText(text, width / 2, height / 2)
-  }
-  const texture = new three.CanvasTexture(canvas)
-  const sprite = new three.Sprite(new three.SpriteMaterial({ map: texture, depthTest: false, transparent: true }))
-  sprite.scale.set((scaleBy * width) / height, scaleBy, 1)
-  sprite.renderOrder = 10
-  return sprite
-}
-
-function placeAt(object3d: THREE.Object3D, object: SceneObject): void {
-  const [x, y, z] = centerOf(object)
-  object3d.position.set(x, y, z)
-  const [rx, ry, rz] = object.rotation ?? [0, 0, 0]
-  object3d.rotation.set(rx * DEG, ry * DEG, rz * DEG)
-}
+const LABEL_FONT = `600 ${LABEL_FONT_PX}px ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif`
 
 /**
  * Fit a loaded model to the box the definition promised for it.
@@ -152,9 +101,29 @@ export async function mountScene(
   scene.add(world)
 
   const bounds = sceneBounds(definition.objects)
-  const labelScale = Math.max(bounds.radius * 0.12, 0.08)
 
-  for (const object of definition.objects) {
+  // Labels are drawn on a flat canvas over the 3D one, in screen pixels: text that is part of the
+  // 3D scene grows and shrinks with the camera, and cannot be moved out of another label's way.
+  host.style.position = "relative"
+  const overlay = document.createElement("canvas")
+  overlay.setAttribute("data-aigui-scene-labels", "")
+  overlay.style.cssText = "position:absolute;left:0;top:0;pointer-events:none"
+  const pen = overlay.getContext("2d")
+  const measure = (text: string) => {
+    if (!pen) return estimateLabelWidth(text)
+    pen.font = LABEL_FONT
+    return Math.ceil(pen.measureText(text).width) + LABEL_PADDING
+  }
+
+  const labels: LabelEntry[] = []
+  /** Every drawn object, by its index in the definition: what labels must not cover. */
+  const solids: Solid[] = []
+  const addLabel = (owner: number, object: SceneObject, node: THREE.Object3D) => {
+    const entry = labelEntry(owner, object, node, measure)
+    if (entry) labels.push(entry)
+  }
+
+  for (const [index, object] of definition.objects.entries()) {
     if (object.shape === "model") continue
     const geometry = geometryFor(three, object)
     if (!geometry) continue
@@ -163,7 +132,9 @@ export async function mountScene(
     const mesh = new three.Mesh(geometry, material)
     placeAt(mesh, object)
     world.add(mesh)
-    if (object.label) world.add(labelFor(three, object, colours.label, labelScale, disposables))
+    mesh.updateMatrixWorld()
+    solids.push({ owner: index, node: mesh, flat: object.shape === "plane" })
+    addLabel(index, object, mesh)
   }
 
   scene.add(new three.HemisphereLight(colours.sky, colours.ground, 1.1))
@@ -191,6 +162,7 @@ export async function mountScene(
   renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2))
   renderer.setSize(width, height)
   host.appendChild(renderer.domElement)
+  host.appendChild(overlay)
 
   const controls = new OrbitControls(camera, renderer.domElement)
   controls.enableDamping = true
@@ -198,25 +170,86 @@ export async function mountScene(
   controls.autoRotateSpeed = 1.2
 
   const frame = (fit: Bounds) => {
-    const target = definition.camera?.target ?? fit.center
-    const distance = framingDistance(fit, fov, camera.aspect)
-    if (definition.camera?.position) {
-      camera.position.set(...definition.camera.position)
-    } else {
-      camera.position.set(...DEFAULT_VIEW).normalize().multiplyScalar(distance).add(new three.Vector3(...target))
-    }
-    controls.target.set(...target)
+    const { target, distance } = frameCamera(three, camera, { definition, solids, labels, fit, width: canvasWidth(), height })
+    controls.target.copy(target)
     controls.minDistance = fit.radius * 0.5
     controls.maxDistance = distance * 4
     controls.update()
+    labelsDirty = true
   }
+  const canvasWidth = () => host.clientWidth || width
+  let labelsDirty = true
   frame(bounds)
+
+  let lastView = ""
+  /**
+   * Lay the labels out and draw them — only when the view has changed.
+   *
+   * Every frame would be simpler, but a still scene should be still: an image renderer waits for
+   * the page to stop changing, and so does a reader's battery.
+   */
+  const drawLabels = () => {
+    if (!pen) return
+    const w = canvasWidth()
+    const view = `${w}x${height}:${camera.matrixWorld.elements.map((n) => n.toFixed(5)).join(",")}`
+    if (view === lastView && !labelsDirty) return
+    lastView = view
+    labelsDirty = false
+    const ratio = Math.min(globalThis.devicePixelRatio || 1, 2)
+    if (overlay.width !== Math.round(w * ratio) || overlay.height !== Math.round(height * ratio)) {
+      overlay.width = Math.round(w * ratio)
+      overlay.height = Math.round(height * ratio)
+      overlay.style.width = `${w}px`
+      overlay.style.height = `${height}px`
+    }
+    pen.setTransform(ratio, 0, 0, ratio, 0, 0)
+    pen.clearRect(0, 0, w, height)
+    if (labels.length === 0) return
+
+    const obstacles = screenObstacles(three, camera, solids, w, height)
+    const { requests, shown } = labelRequests(three, camera, labels, w, height)
+    const placed = layoutLabels(requests, { width: w, height, obstacles })
+    const overlaps = String(countOverlaps(placed, requests, obstacles))
+    if (overlay.getAttribute("data-overlaps") !== overlaps) overlay.setAttribute("data-overlaps", overlaps)
+    if (overlay.getAttribute("data-labels") !== String(placed.length)) overlay.setAttribute("data-labels", String(placed.length))
+
+    pen.font = LABEL_FONT
+    pen.textAlign = "center"
+    pen.textBaseline = "middle"
+    pen.lineJoin = "round"
+    for (const { leader } of placed) {
+      if (!leader) continue
+      const [from, to] = leader
+      pen.globalAlpha = 0.6
+      pen.strokeStyle = colours.label
+      pen.lineWidth = 1
+      pen.beginPath()
+      pen.moveTo(from.x, from.y)
+      pen.lineTo(to.x, to.y)
+      pen.stroke()
+      pen.beginPath()
+      pen.arc(to.x, to.y, 2.25, 0, Math.PI * 2)
+      pen.fillStyle = colours.label
+      pen.fill()
+      pen.globalAlpha = 1
+    }
+    for (const [i, { rect }] of placed.entries()) {
+      const x = rect.x + rect.width / 2
+      const y = rect.y + rect.height / 2
+      pen.strokeStyle = colours.halo
+      pen.lineWidth = 3.5
+      pen.strokeText(shown[i].text, x, y)
+      pen.fillStyle = colours.label
+      pen.fillText(shown[i].text, x, y)
+    }
+  }
 
   let frameId = 0
   const tick = () => {
     frameId = requestAnimationFrame(tick)
     controls.update()
     renderer.render(scene, camera)
+    drawLabels()
   }
   tick()
 
@@ -240,7 +273,11 @@ export async function mountScene(
           if (disposed) return
           const holder = fitModel(three, gltf.scene, object)
           world.add(holder)
-          if (object.label) world.add(labelFor(three, object, colours.label, labelScale, disposables))
+          holder.updateMatrixWorld(true)
+          const owner = definition.objects.indexOf(object)
+          solids.push({ owner, node: holder, flat: false })
+          addLabel(owner, object, holder)
+          labelsDirty = true
         } catch (error) {
           options.onModelError?.(object, error)
         }
@@ -278,16 +315,9 @@ export async function mountScene(
       // of them; without this the browser starts dropping the oldest canvas on screen.
       renderer.forceContextLoss?.()
       renderer.domElement.remove()
+      overlay.remove()
     },
   }
-}
-
-function labelFor(three: typeof THREE, object: SceneObject, colour: string, scaleBy: number, disposables: Array<{ dispose(): void }>): THREE.Sprite {
-  const sprite = labelSprite(three, object.label ?? "", colour, scaleBy)
-  const [x, y, z] = centerOf(object)
-  sprite.position.set(x, y + halfExtents(object)[1] + scaleBy * 0.9, z)
-  disposables.push(sprite.material.map!, sprite.material)
-  return sprite
 }
 
 export type { Vec3 }

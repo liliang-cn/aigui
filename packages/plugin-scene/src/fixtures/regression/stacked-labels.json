@@ -1,0 +1,120 @@
+{
+  "objects": [
+    {
+      "shape": "box",
+      "size": [
+        1.6,
+        0.9,
+        1.2
+      ],
+      "position": [
+        -3.4,
+        0,
+        0
+      ],
+      "anchor": "bottom",
+      "color": "#64748b",
+      "label": "STORAGE: LVM thin",
+      "labelSide": "left"
+    },
+    {
+      "shape": "box",
+      "size": [
+        1.6,
+        0.9,
+        1.2
+      ],
+      "position": [
+        -3.4,
+        0.9,
+        0
+      ],
+      "anchor": "bottom",
+      "color": "#b45309",
+      "label": "d1  DRBD",
+      "labelSide": "left"
+    },
+    {
+      "shape": "box",
+      "size": [
+        1.6,
+        0.9,
+        1.2
+      ],
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "anchor": "bottom",
+      "color": "#64748b",
+      "label": "STORAGE: LVM thin",
+      "labelSide": "right"
+    },
+    {
+      "shape": "box",
+      "size": [
+        1.6,
+        0.9,
+        1.2
+      ],
+      "position": [
+        0,
+        0.9,
+        0
+      ],
+      "anchor": "bottom",
+      "color": "#b45309",
+      "label": "d2  DRBD",
+      "labelSide": "right"
+    },
+    {
+      "shape": "box",
+      "size": [
+        1.6,
+        0.9,
+        1.2
+      ],
+      "position": [
+        3.4,
+        0.9,
+        0
+      ],
+      "anchor": "bottom",
+      "color": "#b45309",
+      "opacity": 0.5,
+      "label": "d3  DRBD (diskless)",
+      "labelSide": "right"
+    },
+    {
+      "shape": "cylinder",
+      "radius": 0.05,
+      "height": 7.2,
+      "position": [
+        0,
+        1.35,
+        -1.0
+      ],
+      "rotation": [
+        0,
+        0,
+        90
+      ],
+      "color": "#dc2626",
+      "label": "DRBD 复制网络 eth1",
+      "labelSide": "right"
+    }
+  ],
+  "camera": {
+    "position": [
+      0,
+      2.6,
+      8.5
+    ],
+    "target": [
+      0,
+      1.0,
+      0
+    ]
+  }
+}

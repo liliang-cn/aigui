@@ -49,7 +49,11 @@ const ZH = `3D 场景（围栏代码块）：\`\`\`scene 开头，块内是一�
 - opacity：0–1，默认 1
 - material："matte"（默认）| "metal" | "glass"
 - wireframe：true 只画线框
-- label：显示在物体上方的短文字
+- label：物体的短文字标注，字号固定，不随远近缩放
+- labelSide：标注放哪边。"top"（默认，物体上方）| "left" | "right"（放到整个场景左/右侧的一列，用细引线连到物体侧面）| "front"（物体正面）
+- labelOffset：[x, y, z]，米，在默认挂点上再挪一点，一般不用写
+
+叠放的东西（层栈、机柜里的设备、楼层）：下面那件的顶面被上面那件盖住，标注默认放在上方就会压在上面那件身上。这种场景给每个带 label 的物体写 labelSide——左边的一叠用 "left"，右边的用 "right"，标注会排成两列、互不遮挡。
 
 例子——一张桌子，桌面架在四条腿上：
 
@@ -81,6 +85,20 @@ const ZH = `3D 场景（围栏代码块）：\`\`\`scene 开头，块内是一�
 }
 \`\`\`
 
+例子——两叠存储，叠放的物体用 labelSide 把标注放到两侧：
+
+\`\`\`scene
+{
+  "objects": [
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [-1.5, 0, 0], "anchor": "bottom", "color": "#64748b", "label": "LVM thin", "labelSide": "left" },
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [-1.5, 0.9, 0], "anchor": "bottom", "color": "#b45309", "label": "DRBD d1", "labelSide": "left" },
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [1.5, 0, 0], "anchor": "bottom", "color": "#64748b", "label": "LVM thin", "labelSide": "right" },
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [1.5, 0.9, 0], "anchor": "bottom", "color": "#b45309", "label": "DRBD d2", "labelSide": "right" }
+  ],
+  "caption": "每个节点上 DRBD 叠在 LVM thin 之上"
+}
+\`\`\`
+
 这一版画不了的（遇到就退回纯 markdown 讲解）：布尔运算（挖孔、切割）、曲面建模、贴图、动画、物理模拟、光源设置。立体几何题（正方体截面之类）不要用 scene，用 solid 块。`
 
 const EN = `3D scenes (fenced): \`\`\`scene with a JSON object inside. Emit one when the reader needs to see how an object or a group of objects sits in space — a piece of furniture, a device, the massing of a building, how a few parts fit together. The reader can turn it with the mouse. Keep the explanation itself outside the block.
@@ -91,7 +109,9 @@ Use only the fields listed. When something cannot be expressed, explain it in or
 
 Top level: objects (required, keep it under about 30); camera (optional {"position":[x,y,z],"target":[x,y,z]}; the scene frames itself when omitted); grid (ground grid, default true); autoRotate (default false); caption (one sentence).
 
-Each object: shape ("box" | "sphere" | "cylinder" | "cone" | "torus" | "capsule" | "plane" | "model"); sizes per shape (box: size [w,h,d]; sphere: radius; cylinder: radius, height, optional radiusTop, optional sides for a faceted post; cone: radius, height, optional sides, so 4 is a hipped roof; torus: radius, tube, lying flat with its axis on y; capsule: radius, height of the middle section; plane: size [w,d], lying flat; model: src, an https URL to a glTF/GLB file, and size, the longest side after scaling). position [x,y,z]; rotation [x,y,z] in degrees; anchor "center" (default) or "bottom"; color as hex like "#4f46e5" or a name like red, blue, gray, wheat; opacity 0–1; material "matte" (default), "metal" or "glass"; wireframe true; label, a short text drawn above the object.
+Each object: shape ("box" | "sphere" | "cylinder" | "cone" | "torus" | "capsule" | "plane" | "model"); sizes per shape (box: size [w,h,d]; sphere: radius; cylinder: radius, height, optional radiusTop, optional sides for a faceted post; cone: radius, height, optional sides, so 4 is a hipped roof; torus: radius, tube, lying flat with its axis on y; capsule: radius, height of the middle section; plane: size [w,d], lying flat; model: src, an https URL to a glTF/GLB file, and size, the longest side after scaling). position [x,y,z]; rotation [x,y,z] in degrees; anchor "center" (default) or "bottom"; color as hex like "#4f46e5" or a name like red, blue, gray, wheat; opacity 0–1; material "matte" (default), "metal" or "glass"; wireframe true; label, a short text drawn at a fixed size whatever the camera distance; labelSide, where the label goes — "top" (default, above the object), "left" or "right" (in a column beside the whole scene, joined to the object's side by a thin leader), or "front" (on the face towards the reader); labelOffset [x,y,z] in metres, a nudge from the default spot, rarely needed.
+
+Stacked objects (a layer stack, devices in a rack, floors): the top of anything with something resting on it is covered, so a label above it lands on the object above. Give every labelled object in a stack a labelSide — "left" for a stack on the left, "right" for one on the right — and the labels line up in two columns clear of the objects and of each other.
 
 A model object may only use a URL the conversation already contains. Never invent one. The host may not allow external models at all, in which case that object is refused.
 
@@ -107,6 +127,20 @@ Example — a table, its top resting on four legs:
     { "shape": "box", "size": [1.4, 0.04, 0.8], "position": [0, 0.72, 0], "anchor": "bottom", "color": "wheat", "label": "top" }
   ],
   "caption": "A 1.4 m × 0.8 m dining table, top at 0.72 m"
+}
+\`\`\`
+
+Example — two storage stacks, their labels moved to the sides:
+
+\`\`\`scene
+{
+  "objects": [
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [-1.5, 0, 0], "anchor": "bottom", "color": "#64748b", "label": "LVM thin", "labelSide": "left" },
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [-1.5, 0.9, 0], "anchor": "bottom", "color": "#b45309", "label": "DRBD d1", "labelSide": "left" },
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [1.5, 0, 0], "anchor": "bottom", "color": "#64748b", "label": "LVM thin", "labelSide": "right" },
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [1.5, 0.9, 0], "anchor": "bottom", "color": "#b45309", "label": "DRBD d2", "labelSide": "right" }
+  ],
+  "caption": "On each node DRBD sits on top of LVM thin"
 }
 \`\`\`
 

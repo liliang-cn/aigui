@@ -1,10 +1,11 @@
-import type { Anchor, Material, ParsedScene, RefusedModel, SceneCamera, SceneDefinition, SceneObject, SceneResult, ShapeKind, Vec3 } from "./types"
+import type { Anchor, LabelSide, Material, ParsedScene, RefusedModel, SceneCamera, SceneDefinition, SceneObject, SceneResult, ShapeKind, Vec3 } from "./types"
 
 const SHAPES = new Set<ShapeKind>(["box", "sphere", "cylinder", "cone", "torus", "capsule", "plane", "model"])
 const MATERIALS = new Set<Material>(["matte", "metal", "glass"])
 const ANCHORS = new Set<Anchor>(["center", "bottom"])
+const LABEL_SIDES = new Set<LabelSide>(["top", "left", "right", "front"])
 const SCENE_FIELDS = new Set(["objects", "camera", "grid", "autoRotate", "caption"])
-const COMMON_FIELDS = ["shape", "label", "position", "rotation", "anchor", "color", "opacity", "material", "wireframe"]
+const COMMON_FIELDS = ["shape", "label", "labelSide", "labelOffset", "position", "rotation", "anchor", "color", "opacity", "material", "wireframe"]
 const SHAPE_FIELDS: Record<ShapeKind, string[]> = {
   box: ["size"],
   sphere: ["radius"],
@@ -96,6 +97,18 @@ function parseObject(raw: unknown, index: number, allowedModelOrigins: readonly 
   if (raw.label !== undefined) {
     if (typeof raw.label !== "string" || raw.label.length > 80) return bad(`${at}.label must be a short string`)
     base.label = raw.label
+  }
+  // Placement without text is a mistake worth naming: the model meant a label and left it out.
+  if ((raw.labelSide !== undefined || raw.labelOffset !== undefined) && raw.label === undefined) {
+    return bad(`${at}.${raw.labelSide !== undefined ? "labelSide" : "labelOffset"} needs a label`)
+  }
+  if (raw.labelSide !== undefined) {
+    if (typeof raw.labelSide !== "string" || !LABEL_SIDES.has(raw.labelSide as LabelSide)) return bad(`${at}.labelSide must be top, left, right or front`)
+    base.labelSide = raw.labelSide
+  }
+  if (raw.labelOffset !== undefined) {
+    if (!vec3(raw.labelOffset)) return bad(`${at}.labelOffset must be [x, y, z] in metres`)
+    base.labelOffset = raw.labelOffset
   }
   if (raw.position !== undefined) {
     if (!vec3(raw.position)) return bad(`${at}.position must be [x, y, z]`)

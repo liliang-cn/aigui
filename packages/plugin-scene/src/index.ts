@@ -6,9 +6,11 @@ import type { SceneOptions } from "./types"
 export { scenePromptSpec } from "./prompt"
 export { parseScene, modelOriginAllowed, COLOR_NAMES } from "./parse"
 export { sceneBounds, centerOf, halfExtents, framingDistance } from "./bounds"
+export { layoutLabels, LABEL_FONT_PX, type LabelRequest, type PlacedLabel, type Rect } from "./labels"
 export type {
   Anchor,
   Bounds,
+  LabelSide,
   Material,
   ParsedScene,
   RefusedModel,
