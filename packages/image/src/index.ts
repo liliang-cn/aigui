@@ -1,5 +1,6 @@
 export type {
   BlockSelection,
+  Issue,
   RenderableKind,
   RenderedImage,
   RenderOptions,
@@ -19,3 +20,5 @@ export { BrowserUnavailableError, closeBrowser } from "./browser"
 export { renderMarkdownToImages } from "./render"
 export type { InternalRenderOptions } from "./render"
 export { katexCss as inlineKatexCss } from "./page/fonts"
+export { inspectPage } from "./inspect-page"
+export type { InspectPageOptions } from "./inspect-page"

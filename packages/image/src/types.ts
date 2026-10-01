@@ -1,3 +1,6 @@
+import type { Issue } from "./page/inspect"
+
+export type { Issue }
 /**
  * A block family that can be turned into a picture.
  *
@@ -31,6 +34,12 @@ export interface RenderedImage {
   path: string
   width: number
   height: number
+  /**
+   * What a reader would trip over in the picture — clipped or tiny text, poor contrast, labels a
+   * plugin could not keep apart. Empty when nothing was found. A picture with issues is still
+   * returned: the caller decides whether to redraw.
+   */
+  issues: Issue[]
 }
 
 export interface RenderOptions {

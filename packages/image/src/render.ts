@@ -14,6 +14,7 @@ import {
   type RenderOptions,
   type RenderResult,
 } from "./types"
+import type { Issue } from "./page/inspect"
 
 /** The Playwright page surface this module drives. */
 interface RenderPage {
@@ -108,13 +109,13 @@ export async function renderMarkdownToImages(
                 __aiguiRenderBlock: (
                   source: string,
                   options: { width: number; theme?: string },
-                ) => Promise<{ width: number; height: number; failed: boolean }>
+                ) => Promise<{ width: number; height: number; failed: boolean; issues: Issue[] }>
               }).__aiguiRenderBlock(arg.source, { width: arg.width, theme: arg.theme }),
             { source, width, theme: options.theme },
-          ) as Promise<{ width: number; height: number; failed: boolean }>,
+          ) as Promise<{ width: number; height: number; failed: boolean; issues: Issue[] }>,
           timeoutMs,
           `rendering ${selection.kind}`,
-        )) as { width: number; height: number; failed: boolean }
+        )) as { width: number; height: number; failed: boolean; issues?: Issue[] }
         // The plugin threw inside the page. Screenshotting now would attach a blank picture and
         // drop the source that explained it; leaving the block as text is the better failure.
         if (size.failed) throw new Error(`${selection.kind} failed to draw`)
@@ -123,7 +124,7 @@ export async function renderMarkdownToImages(
           timeoutMs,
           `screenshotting ${selection.kind}`,
         )
-        images.push({ kind: selection.kind, path, width: size.width, height: size.height })
+        images.push({ kind: selection.kind, path, width: size.width, height: size.height, issues: size.issues ?? [] })
         rendered.push(selection)
       } catch {
         // This block stays as text. The others are unaffected.

@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
-import { closeBrowser, type InternalRenderOptions } from "@ai-gui/image"
+import { closeBrowser, inspectPage, type InternalRenderOptions, type Issue } from "@ai-gui/image"
 import { z } from "zod"
 import { BLOCKS } from "./blocks"
 import { ensureHeadlessShell, type BrowserSetup } from "./browser"
@@ -23,6 +23,11 @@ export interface ServerDeps {
   /** How long a render waits for that download before going ahead. Default 60 s. */
   setupWaitMs?: number
   /**
+   * Look over a page aigui_open wrote, in the headless browser, before saying it is done. Default:
+   * `inspectPage` from @ai-gui/image; tests inject a stand-in, or `false` to skip it.
+   */
+  inspect?: ((url: string) => Promise<Issue[]>) | false
+  /**
    * Open aigui_render's PNGs on the user's screen as well. Default: on when `AIGUI_OPEN_IMAGES=1`,
    * which the Claude Code plugin sets — its terminal cannot show an image, so without this only
    * the agent ever sees the picture. Off elsewhere: a client that shows images inline would get
@@ -38,6 +43,27 @@ function defaultShowImages(): ((paths: string[]) => boolean) | undefined {
 export type ToolResult = RenderedContent
 
 const failure = (text: string): ToolResult => ({ content: [{ type: "text", text }], isError: true })
+
+/**
+ * The page, looked over in the headless browser: what a reader would trip over, as lines the agent
+ * can act on. Best effort — no browser yet, or a page that takes too long, is said and not fatal,
+ * since the page is already open in front of the user.
+ */
+async function pageCheck(url: string, deps: ServerDeps): Promise<string> {
+  if (deps.inspect === false) return ""
+  const inspect = deps.inspect ?? ((target: string) => inspectPage(target, { timeoutMs: 20_000 }))
+  try {
+    const issues = await inspect(url)
+    if (issues.length === 0) return "\nChecked in a headless browser: no problems found."
+    return [
+      "\nChecked in a headless browser. Problems a reader would trip over:",
+      ...issues.map((issue) => `! ${issue.block}: ${issue.message}`),
+      "Fix those blocks and open the page again, or tell the user what is wrong with it.",
+    ].join("\n")
+  } catch {
+    return "\n(Not checked: no headless browser was available to look the page over.)"
+  }
+}
 
 /**
  * What each tool does, apart from the protocol around it.
@@ -77,7 +103,7 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
       try {
         const page = await writePage(markdown, { title: str("title"), theme, outDir: deps.outDir, open: deps.open })
         const text = page.opened ? `Opened ${page.url}\nFile: ${page.path}` : `Wrote ${page.path} — open ${page.url} in a browser.`
-        return { content: [{ type: "text", text }] }
+        return { content: [{ type: "text", text: `${text}${await pageCheck(page.url, deps)}` }] }
       } catch (error) {
         return failure(`Could not write the page: ${String((error as Error).message)}`)
       }

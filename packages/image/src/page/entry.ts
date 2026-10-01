@@ -1,12 +1,13 @@
 import { createRenderer } from "@ai-gui/vanilla"
 import { imagePlugins } from "../plugins"
+import { inspectRendered, type Issue } from "./inspect"
 
 declare global {
   interface Window {
     __aiguiRenderBlock: (
       source: string,
       options?: { width?: number; theme?: string; quietMs?: number; canvasSettleMs?: number },
-    ) => Promise<{ width: number; height: number; failed: boolean }>
+    ) => Promise<{ width: number; height: number; failed: boolean; issues: Issue[] }>
   }
 }
 
@@ -79,5 +80,6 @@ window.__aiguiRenderBlock = async (source, options = {}) => {
     width: Math.ceil(box.width),
     height: Math.ceil(box.height),
     failed: root.querySelector(FAILED) !== null,
+    issues: inspectRendered(root),
   }
 }

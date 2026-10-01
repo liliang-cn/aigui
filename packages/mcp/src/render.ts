@@ -67,11 +67,16 @@ export async function renderToContent(
     return { content: [{ type: "text", text: missing ? NO_BROWSER : `Drawing failed: ${String((error as Error)?.message ?? error)}` }], isError: true }
   }
   const shown = options.show?.(result.images.map((image) => image.path)) ?? false
-  const lines = result.images.map((image) => `- ${image.kind}: ${image.path} (${image.width}×${image.height})`)
+  const lines = result.images.flatMap((image) => [
+    `- ${image.kind}: ${image.path} (${image.width}×${image.height})`,
+    ...(image.issues ?? []).map((issue) => `  ! ${issue.message}`),
+  ])
+  const flagged = result.images.some((image) => (image.issues ?? []).length > 0)
   const failed = candidates.length - result.images.length
   const summary = [
     `Drew ${result.images.length} picture${result.images.length === 1 ? "" : "s"}:`,
     ...lines,
+    ...(flagged ? ["Lines marked ! are problems found in the drawn picture. Fix the block and draw it again before showing it, or tell the user what is wrong with it."] : []),
     ...(shown ? ["They are open in the user's image viewer."] : []),
     ...(failed > 0 ? [`${failed} block${failed === 1 ? "" : "s"} could not be drawn and stayed as source; check its JSON against aigui_guide.`] : []),
     ...(setup === "pending" ? ["The faster headless browser is still downloading (first use only); 3D blocks may fail until it finishes — retry in a few minutes, or use aigui_open."] : []),

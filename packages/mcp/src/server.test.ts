@@ -11,7 +11,8 @@ import { createServer, type ServerDeps } from "./server"
 
 async function connect(deps: ServerDeps = {}) {
   // Never the real installer here: in CI it would download a browser.
-  const server = createServer({ setup: async () => true, ...deps })
+  // Nor a real page check: it would launch a browser for every aigui_open.
+  const server = createServer({ setup: async () => true, inspect: false, ...deps })
   const client = new Client({ name: "test", version: "0" })
   const [a, b] = InMemoryTransport.createLinkedPair()
   await Promise.all([server.connect(a), client.connect(b)])
@@ -72,6 +73,29 @@ describe("the aigui MCP server", () => {
     // KaTeX's fonts ride inline: a file:// page cannot load them from beside itself.
     expect(html).toContain("data:font/woff2;base64,")
     expect(text(result)).toContain(join(outDir, "pages", page))
+  })
+
+  it("says what a look over the opened page found, so the agent can fix it", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-"))
+    const seen: string[] = []
+    const client = await connect({
+      outDir,
+      open: false,
+      inspect: async (url) => {
+        seen.push(url)
+        return [{ block: "scene", kind: "plugin", message: "2 labels sit on another label or object" }]
+      },
+    })
+    const result = await client.callTool({ name: "aigui_open", arguments: { markdown: "# x" } })
+    expect(seen).toHaveLength(1)
+    expect(seen[0]).toMatch(/^file:/)
+    expect(text(result)).toContain("! scene: 2 labels sit on another label or object")
+    const clean = await (await connect({ outDir, open: false, inspect: async () => [] })).callTool({ name: "aigui_open", arguments: { markdown: "# x" } })
+    expect(text(clean)).toContain("no problems found")
+    // A check that cannot run is said, not fatal: the page is already open in front of the user.
+    const broken = await (await connect({ outDir, open: false, inspect: async () => { throw new Error("no browser") } })).callTool({ name: "aigui_open", arguments: { markdown: "# x" } })
+    expect(broken.isError).toBeFalsy()
+    expect(text(broken)).toContain("Not checked")
   })
 
   it("refuses markdown with nothing drawable instead of launching a browser for it", async () => {
@@ -164,10 +188,12 @@ describe.skipIf(process.env.AIGUI_IMAGE_E2E !== "1")("aigui_open (real browser)"
     const sided = readFileSync(join(here, "../../plugin-scene/src/fixtures/regression/stacked-labels.json"), "utf8")
     const { camera: _camera, ...framed } = JSON.parse(sided)
     const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-labels-"))
-    const client = await connect({ outDir, open: false })
+    const client = await connect({ outDir, open: false, inspect: undefined })
     const markdown = ["```scene\n" + sided + "\n```", "```scene\n" + JSON.stringify(framed) + "\n```"].join("\n\n")
     const result = await client.callTool({ name: "aigui_open", arguments: { markdown, title: "labels" } })
     const path = text(result).match(/Wrote (\S+\.html)/)![1]
+    // The server's own look over the page agrees before the test looks for itself.
+    expect(text(result)).toContain("no problems found")
 
     const { chromium } = await import("playwright")
     const browser = await chromium.launch({ args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] })

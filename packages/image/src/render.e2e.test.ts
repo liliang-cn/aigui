@@ -143,4 +143,18 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
     }
     expect(layers).toEqual([{ labels: "6", overlaps: "0" }, { labels: "6", overlaps: "0" }])
   }, 90_000)
+
+  /**
+   * The second look a picture gets. A clean block comes back with nothing to say — a checker that
+   * cries wolf on every chart is one nobody reads — and a crowded one names what is wrong in terms
+   * the model that wrote it can act on.
+   */
+  it("says what is wrong with a crowded picture, and nothing about a clean one", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-issues-"))
+    const clean = await renderMarkdownToImages('```chart\n{"xAxis":{"type":"category","data":["A","B"]},"yAxis":{"type":"value"},"series":[{"type":"bar","data":[3,7]}]}\n```\n\n$$\n\\frac{a}{b}\n$$', { outDir, timeoutMs: 30_000 })
+    expect(clean.images.flatMap((image) => image.issues)).toEqual([])
+    const slices = JSON.stringify(Array.from({ length: 14 }, (_, i) => ({ name: `s${i}`, value: i + 1 })))
+    const crowded = await renderMarkdownToImages(`\`\`\`bigscreen\n{"title":"W","panels":[{"kind":"chart","title":"Share","span":12,"option":{"series":[{"type":"pie","data":${slices}}]}}]}\n\`\`\``, { outDir, timeoutMs: 30_000 })
+    expect(crowded.images[0].issues).toEqual([{ block: "bigscreen", kind: "plugin", message: expect.stringContaining("Share: a pie of 14 slices") }])
+  }, 90_000)
 })

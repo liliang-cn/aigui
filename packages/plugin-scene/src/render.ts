@@ -210,7 +210,12 @@ export async function mountScene(
     const { requests, shown } = labelRequests(three, camera, labels, w, height)
     const placed = layoutLabels(requests, { width: w, height, obstacles })
     const overlaps = String(countOverlaps(placed, requests, obstacles))
-    if (overlay.getAttribute("data-overlaps") !== overlaps) overlay.setAttribute("data-overlaps", overlaps)
+    if (overlay.getAttribute("data-overlaps") !== overlaps) {
+      overlay.setAttribute("data-overlaps", overlaps)
+      // Said where a checker looks for it, with the fix: the model that wrote the scene reads this.
+      if (overlaps === "0") overlay.removeAttribute("data-aigui-issue")
+      else overlay.setAttribute("data-aigui-issue", `${overlaps === "1" ? "1 label sits" : `${overlaps} labels sit`} on another label or object — give stacked or crowded objects "labelSide": "left" or "right"`)
+    }
     if (overlay.getAttribute("data-labels") !== String(placed.length)) overlay.setAttribute("data-labels", String(placed.length))
 
     pen.font = LABEL_FONT

@@ -1,3 +1,4 @@
+import { crowding } from "./crowding"
 import { BarChart, EffectScatterChart, FunnelChart, GaugeChart, HeatmapChart, LineChart, LinesChart, PieChart, RadarChart, ScatterChart } from "echarts/charts"
 import { DatasetComponent, GridComponent, LegendComponent, PolarComponent, RadarComponent, TitleComponent, TooltipComponent, VisualMapComponent } from "echarts/components"
 import { init, use, type ECharts, type EChartsCoreOption } from "echarts/core"
@@ -405,6 +406,23 @@ function mountPanel(panel: Panel, definition: ScreenDefinition, c: Palette, anim
     }
   } catch {
     note(body, "Panel could not be drawn.")
+  }
+  // Once the grid has given the panel its size: say so if it holds more than that size can show.
+  // Read by whoever checks the drawing — an image renderer, a test — never shown on the wall. An
+  // observer rather than a frame: a still wall asks for no frames, and that stays true.
+  if (typeof ResizeObserver === "function") {
+    const watch = new ResizeObserver(() => {
+      if (body.clientWidth === 0) return
+      watch.disconnect()
+      const problem = crowding(panel, body.clientWidth, body.clientHeight)
+      if (problem) node.setAttribute("data-aigui-issue", `${panel.title ?? panel.kind}: ${problem}`)
+    })
+    watch.observe(body)
+    const inner = destroy
+    destroy = () => {
+      watch.disconnect()
+      inner()
+    }
   }
   return { node, destroy }
 }
