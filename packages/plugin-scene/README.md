@@ -73,7 +73,8 @@ saying so.
 | Placement | `position`, `rotation` in degrees, `anchor` (`center` or `bottom`) |
 | Appearance | `color` (hex or a colour name), `opacity`, `material` (`matte`, `metal`, `glass`), `wireframe` |
 | Labels | `label`; `labelSide` — `top` (default), `left`, `right`, `front`; `labelOffset` `[x, y, z]` in metres |
-| Scene | `camera` (`position`, `target`; otherwise framed automatically), `grid`, `autoRotate`, `caption` |
+| Scene | `camera` (`position`, `target`; otherwise framed automatically), `grid`, `autoRotate`, `caption`, `steps` |
+| Steps | `caption`, `move` (id → position), `color` (id → colour), `hide`, `show`, `highlight` — objects named by their `id` |
 
 Labels are drawn flat over the 3D canvas at a fixed 13 px, so they stay readable however near or far
 the camera is, and labels that would cover each other are moved apart with a leader back to their
@@ -83,6 +84,12 @@ covered by whatever rests on them. Without a `camera` the view is fitted to the 
 room the label columns need; with one, the author's view stands and is only moved back, along the
 same line, as far as the columns need.
 
+`steps` turn a scene into a process — a part fitted, a disk swapped, a load moved. Each step says only
+what changes and the change holds afterwards. In the page they play with the objects easing into
+place, a highlighted object outlined (its own colour is left alone: a red that means "failed" stays
+red), and controls to pause and step. Drawn still (`animate: false`, as `@ai-gui/image` draws it),
+the scene is shown as the last step leaves it with the steps listed under it.
+
 Not in this version, and the prompt spec tells the model to explain them in prose instead: boolean
 operations, curved-surface modelling, textures, animation, physics, lighting setup. The spec also
 sends solid-geometry questions to [`@ai-gui/plugin-solid`](../plugin-solid/README.md), whose
@@ -90,6 +97,8 @@ figures are computed from a textbook's conditions rather than placed by hand.
 
 ## Options
 
+- `animate?: boolean` — play `steps`. `false` draws the last step's state with the steps listed. Default `true`.
+- `stepMs?: number` — milliseconds per step. Default 2600.
 - `height?: number` — canvas height in CSS pixels, default 360.
 - `allowedModelOrigins?: string[]` — exact HTTPS origins a `model` may be loaded from, e.g.
   `["https://assets.example.com"]`. Absent or empty, every `model` object is left out of its scene

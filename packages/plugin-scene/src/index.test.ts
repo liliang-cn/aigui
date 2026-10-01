@@ -71,7 +71,7 @@ describe("scenePromptSpec", () => {
   it("shows the anchor habit in every worked example, because that is what a model copies", () => {
     const spec = scenePromptSpec("zh-CN")
     const examples = spec.split("```scene\n").slice(1)
-    expect(examples).toHaveLength(3)
+    expect(examples).toHaveLength(4)
     for (const example of examples) expect(example).toContain('"anchor": "bottom"')
   })
   it("parses every worked example it shows, in both languages", () => {

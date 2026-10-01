@@ -18,6 +18,8 @@ export type Anchor = "center" | "bottom"
 export type LabelSide = "top" | "left" | "right" | "front"
 
 interface ObjectBase {
+  /** A name for the object, so a step can move, recolour, hide or highlight it. */
+  id?: string
   /** Text drawn beside the object, always facing the reader, at a fixed size on screen. */
   label?: string
   labelSide?: LabelSide
@@ -80,9 +82,31 @@ export interface SceneDefinition {
   /** Turn the scene slowly on its own until the reader takes hold of it. Default false. */
   autoRotate?: boolean
   caption?: string
+  /** A process played over the scene, one step at a time. */
+  steps?: SceneStep[]
+}
+
+/**
+ * One moment of a process over a scene. Like a topology's, a step says only what changes, and what
+ * it changes stays changed: an object moved in step 2 is still there in step 4.
+ */
+export interface SceneStep {
+  caption: string
+  /** Object id to its new `position` (same meaning as the object's own, anchor included). */
+  move?: Record<string, Vec3>
+  /** Object id to its new colour. */
+  color?: Record<string, string>
+  hide?: string[]
+  show?: string[]
+  /** Objects to draw attention to during this step only. */
+  highlight?: string[]
 }
 
 export interface SceneOptions {
+  /** Play the steps. False draws the scene as the last step leaves it, steps listed under it. Default true. */
+  animate?: boolean
+  /** Milliseconds per step when playing. Default 2600. */
+  stepMs?: number
   /** Height of the canvas in CSS pixels. Default 360. */
   height?: number
   /**

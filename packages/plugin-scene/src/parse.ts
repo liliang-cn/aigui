@@ -1,11 +1,12 @@
-import type { Anchor, LabelSide, Material, ParsedScene, RefusedModel, SceneCamera, SceneDefinition, SceneObject, SceneResult, ShapeKind, Vec3 } from "./types"
+import type { Anchor, LabelSide, Material, ParsedScene, RefusedModel, SceneCamera, SceneDefinition, SceneObject, SceneResult, SceneStep, ShapeKind, Vec3 } from "./types"
 
 const SHAPES = new Set<ShapeKind>(["box", "sphere", "cylinder", "cone", "torus", "capsule", "plane", "model"])
 const MATERIALS = new Set<Material>(["matte", "metal", "glass"])
 const ANCHORS = new Set<Anchor>(["center", "bottom"])
 const LABEL_SIDES = new Set<LabelSide>(["top", "left", "right", "front"])
-const SCENE_FIELDS = new Set(["objects", "camera", "grid", "autoRotate", "caption"])
-const COMMON_FIELDS = ["shape", "label", "labelSide", "labelOffset", "position", "rotation", "anchor", "color", "opacity", "material", "wireframe"]
+const SCENE_FIELDS = new Set(["objects", "camera", "grid", "autoRotate", "caption", "steps"])
+const STEP_FIELDS = new Set(["caption", "move", "color", "hide", "show", "highlight"])
+const COMMON_FIELDS = ["shape", "id", "label", "labelSide", "labelOffset", "position", "rotation", "anchor", "color", "opacity", "material", "wireframe"]
 const SHAPE_FIELDS: Record<ShapeKind, string[]> = {
   box: ["size"],
   sphere: ["radius"],
@@ -94,6 +95,10 @@ function parseObject(raw: unknown, index: number, allowedModelOrigins: readonly 
   }
 
   const base: Record<string, unknown> = { shape }
+  if (raw.id !== undefined) {
+    if (typeof raw.id !== "string" || raw.id.trim() === "" || raw.id.length > 48) return bad(`${at}.id must be a short non-empty string`)
+    base.id = raw.id
+  }
   if (raw.label !== undefined) {
     if (typeof raw.label !== "string" || raw.label.length > 80) return bad(`${at}.label must be a short string`)
     base.label = raw.label
@@ -269,5 +274,68 @@ export function parseScene(
     if (typeof raw.caption !== "string") return bad("caption must be a string")
     definition.caption = raw.caption
   }
+  if (raw.steps !== undefined) {
+    const steps = parseSteps(raw.steps, objects)
+    if (!steps.ok) return steps
+    definition.steps = steps.value
+  }
   return { ok: true, value: { definition, refused } }
+}
+
+/**
+ * Validate a scene's steps against its objects.
+ *
+ * Every id a step names must be an object's — a step that moves something that is not there would
+ * play as nothing happening, which reads as the process not doing what the caption says.
+ */
+function parseSteps(raw: unknown, objects: readonly SceneObject[]): SceneResult<SceneStep[]> {
+  if (!Array.isArray(raw)) return bad("steps must be an array")
+  if (raw.length === 0) return bad("steps must not be empty — leave it out instead")
+  if (raw.length > 24) return bad("steps has more than 24 entries")
+  const ids = new Set<string>()
+  for (const object of objects) {
+    if (object.id === undefined) continue
+    if (ids.has(object.id)) return bad(`object id "${object.id}" is used twice`)
+    ids.add(object.id)
+  }
+  const steps: SceneStep[] = []
+  for (const [i, entry] of raw.entries()) {
+    const at = `steps[${i}]`
+    if (!isRecord(entry)) return bad(`${at} must be an object`)
+    for (const key of Object.keys(entry)) if (!STEP_FIELDS.has(key)) return bad(`${at}.${key} is not a field of a step — allowed: ${[...STEP_FIELDS].join(", ")}`)
+    if (typeof entry.caption !== "string" || entry.caption.trim() === "" || entry.caption.length > 160) return bad(`${at}.caption must be a sentence of at most 160 characters`)
+    const step: SceneStep = { caption: entry.caption }
+    const known = (id: string, where: string): SceneResult<true> => (ids.has(id) ? { ok: true, value: true } : bad(`${where} "${id}" is not an object id — give the object an "id"`))
+    for (const field of ["move", "color"] as const) {
+      const value = entry[field]
+      if (value === undefined) continue
+      if (!isRecord(value)) return bad(`${at}.${field} must be an object of object id to ${field === "move" ? "[x, y, z]" : "colour"}`)
+      const out: Record<string, unknown> = {}
+      for (const [id, v] of Object.entries(value)) {
+        const ok = known(id, `${at}.${field}`)
+        if (!ok.ok) return ok
+        if (field === "move") {
+          if (!vec3(v)) return bad(`${at}.move.${id} must be [x, y, z]`)
+          out[id] = v
+        } else {
+          if (typeof v !== "string" || !(HEX.test(v) || COLOR_NAMES.has(v.toLowerCase()))) return bad(`${at}.color.${id} must be a hex colour like #4f46e5 or a colour name`)
+          out[id] = v.toLowerCase()
+        }
+      }
+      step[field] = out as never
+    }
+    for (const field of ["hide", "show", "highlight"] as const) {
+      const value = entry[field]
+      if (value === undefined) continue
+      if (!Array.isArray(value)) return bad(`${at}.${field} must be an array of object ids`)
+      for (const id of value) {
+        if (typeof id !== "string") return bad(`${at}.${field} must be an array of object ids`)
+        const ok = known(id, `${at}.${field}`)
+        if (!ok.ok) return ok
+      }
+      step[field] = value as string[]
+    }
+    steps.push(step)
+  }
+  return { ok: true, value: steps }
 }

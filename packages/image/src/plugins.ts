@@ -34,7 +34,7 @@ export function imagePlugins(width: number = DEFAULT_WIDTH): AIGuiPlugin[] {
     // bundle imports it too.
     katex({ css: "" }),
     dashboard(),
-    scene({ height: Math.round(inner * 0.6) }),
+    scene({ height: Math.round(inner * 0.6), animate: false }),
     gravity({ animate: false, width: inner, height: Math.round(inner * 0.625) }),
     topology({ animate: false }),
     bigscreen({ animate: false }),
