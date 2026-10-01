@@ -224,13 +224,13 @@ export async function mountScene(
     pen.lineJoin = "round"
     for (const { leader } of placed) {
       if (!leader) continue
-      const [from, to] = leader
+      const to = leader[leader.length - 1]
       pen.globalAlpha = 0.6
       pen.strokeStyle = colours.label
       pen.lineWidth = 1
       pen.beginPath()
-      pen.moveTo(from.x, from.y)
-      pen.lineTo(to.x, to.y)
+      pen.moveTo(leader[0].x, leader[0].y)
+      for (const point of leader.slice(1)) pen.lineTo(point.x, point.y)
       pen.stroke()
       pen.beginPath()
       pen.arc(to.x, to.y, 2.25, 0, Math.PI * 2)

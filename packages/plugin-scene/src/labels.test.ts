@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { COLUMN_GAP, countOverlaps, layoutLabels, unionRect, type LabelRequest, type Rect } from "./labels"
+import { COLUMN_GAP, convexHull, countLeaderTangles, countOverlaps, layoutLabels, segmentHitsObstacle, unionRect, type LabelRequest, type Obstacle, type Rect } from "./labels"
 
 const W = 760
 const H = 456
@@ -24,7 +24,7 @@ describe("layoutLabels", () => {
       else expect(rect.x).toBeGreaterThanOrEqual(scene.x + scene.width + COLUMN_GAP - 0.01)
       // Level with its anchor when nothing is in the way, and a leader to it either way.
       expect(Math.abs(rect.y + rect.height / 2 - requests[i].anchor.y)).toBeLessThan(0.01)
-      expect(leader?.[1]).toEqual(requests[i].anchor)
+      expect(leader?.at(-1)).toEqual(requests[i].anchor)
     }
     expect(countOverlaps(placed, requests, stacks)).toBe(0)
   })
@@ -51,7 +51,7 @@ describe("layoutLabels", () => {
     const placed = layoutLabels(requests, { width: W, height: H, obstacles: stacks })
     expect(overlap(placed[0].rect, placed[1].rect)).toBe(false)
     expect(placed[0].leader).toBeUndefined()
-    expect(placed[1].leader?.[1]).toEqual({ x: 262, y: 172 })
+    expect(placed[1].leader?.at(-1)).toEqual({ x: 262, y: 172 })
   })
 
   it("leaves a top label over an object where it was — objects are what the side columns are for", () => {
@@ -78,5 +78,38 @@ describe("layoutLabels", () => {
       expect(rect.x + rect.width).toBeLessThanOrEqual(W)
       expect(rect.y + rect.height).toBeLessThanOrEqual(H)
     }
+  })
+
+  it("bends a leader round an object in the way instead of through it", () => {
+    // A box at x 300–400 and, behind it from the right column's point of view, a box at 100–200.
+    const near: Obstacle = { owner: 1, rect: { x: 300, y: 150, width: 100, height: 100 } }
+    const far: Obstacle = { owner: 0, rect: { x: 100, y: 150, width: 100, height: 100 } }
+    const requests = [label("right", 200, 200, 0)]
+    const [placed] = layoutLabels(requests, { width: W, height: H, obstacles: [far, near] })
+    expect(placed.leader!.length).toBeGreaterThan(2)
+    expect(countLeaderTangles([placed], requests, [far, near])).toBe(0)
+    // And it still ends on its own object.
+    const end = placed.leader!.at(-1)!
+    expect(end.x).toBeGreaterThanOrEqual(100)
+    expect(end.x).toBeLessThanOrEqual(200)
+  })
+
+  it("trades two labels' places when their leaders would cross", () => {
+    // The upper anchor is far from the column and the lower one near it, at almost the same
+    // height: in anchor order the far one's leader cuts across the near one's.
+    const requests = [label("right", 100, 200, 0), label("right", 500, 201, 1)]
+    const obstacles: Obstacle[] = [
+      { owner: 0, rect: { x: 60, y: 190, width: 40, height: 20 } },
+      { owner: 1, rect: { x: 460, y: 191, width: 40, height: 20 } },
+    ]
+    const placed = layoutLabels(requests, { width: W, height: H, obstacles })
+    expect(countLeaderTangles(placed, requests, obstacles)).toBe(0)
+  })
+
+  it("judges an object by its silhouette, not its bounding box", () => {
+    // A diamond: its bounding box's corners are empty, and a line through one misses it.
+    const diamond: Obstacle = { owner: 0, rect: { x: 0, y: 0, width: 100, height: 100 }, outline: convexHull([{ x: 50, y: 0 }, { x: 100, y: 50 }, { x: 50, y: 100 }, { x: 0, y: 50 }]) }
+    expect(segmentHitsObstacle({ x: -10, y: 10 }, { x: 10, y: -10 }, diamond)).toBe(false)
+    expect(segmentHitsObstacle({ x: -10, y: 50 }, { x: 110, y: 50 }, diamond)).toBe(true)
   })
 })

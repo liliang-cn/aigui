@@ -1,7 +1,7 @@
 import type * as THREE from "three"
 import { DEFAULT_VIEW, centerOf, framingDistance } from "./bounds"
 import { fitCamera, projectToScreen, type Margins } from "./frame"
-import { COLUMN_GAP, LABEL_FONT_PX, type LabelRequest, type Rect } from "./labels"
+import { COLUMN_GAP, LABEL_FONT_PX, convexHull, type LabelRequest, type Obstacle } from "./labels"
 import type { Bounds, LabelSide, SceneDefinition, SceneObject, Vec3 } from "./types"
 
 /*
@@ -81,27 +81,18 @@ export function corners(three: typeof THREE, box: THREE.Box3): THREE.Vector3[] {
 }
 
 /**
- * An object's box cut into roughly cubic pieces along its longest side.
+ * The eight corners of an object's own box, turned and placed as the object is.
  *
- * What a label must not cover is the object's outline on screen, and one rectangle round a long
- * thin thing seen at an angle — a cable, a rail — is mostly empty space: the diagonal pipe across a
- * scene would claim half the canvas. A row of small boxes along it hugs the real shape.
+ * A world-aligned box round a turned object is bigger than the object; its own box, carried by its
+ * transform, is not. A model file has no single geometry to ask, so it gets the world box.
  */
-export function pieces(three: typeof THREE, box: THREE.Box3): THREE.Box3[] {
-  const size = box.getSize(new three.Vector3())
-  const axes = [size.x, size.y, size.z]
-  const longest = axes.indexOf(Math.max(...axes))
-  const second = Math.max(...axes.filter((_, i) => i !== longest), 1e-6)
-  const count = Math.min(16, Math.max(1, Math.round(axes[longest] / Math.max(second, axes[longest] / 16))))
-  const out: THREE.Box3[] = []
-  for (let i = 0; i < count; i++) {
-    const piece = box.clone()
-    const from = box.min.getComponent(longest) + (axes[longest] * i) / count
-    piece.min.setComponent(longest, from)
-    piece.max.setComponent(longest, from + axes[longest] / count)
-    out.push(piece)
+export function objectCorners(three: typeof THREE, node: THREE.Object3D): THREE.Vector3[] {
+  const mesh = node as THREE.Mesh
+  if (mesh.isMesh && mesh.geometry) {
+    mesh.geometry.computeBoundingBox()
+    return corners(three, mesh.geometry.boundingBox!).map((p) => p.applyMatrix4(mesh.matrixWorld))
   }
-  return out
+  return corners(three, new three.Box3().setFromObject(node))
 }
 
 /** A drawn object, by its index in the definition. Flat ones — a floor — are not in labels' way. */
@@ -139,7 +130,7 @@ export function frameCamera(
 ): { target: THREE.Vector3; distance: number } {
   const { definition, solids, labels, fit, width, height } = input
   const target = new three.Vector3(...(definition.camera?.target ?? fit.center))
-  const points = () => solids.flatMap(({ node }) => corners(three, new three.Box3().setFromObject(node)))
+  const points = () => solids.flatMap(({ node }) => objectCorners(three, node))
   const sphereDistance = framingDistance(fit, camera.fov, camera.aspect)
   if (definition.camera?.position) {
     const chosen = new three.Vector3(...definition.camera.position)
@@ -166,18 +157,17 @@ export function frameCamera(
   return { target: fitted.target, distance: fitted.position.distanceTo(fitted.target) }
 }
 
-/** Each solid's outline on screen, in pieces that follow long thin shapes. */
-export function screenObstacles(three: typeof THREE, camera: THREE.PerspectiveCamera, solids: readonly Solid[], width: number, height: number): Array<{ owner: number; rect: Rect }> {
-  const obstacles: Array<{ owner: number; rect: Rect }> = []
+/** Each solid's silhouette on screen: the convex hull of its box's corners, projected. */
+export function screenObstacles(three: typeof THREE, camera: THREE.PerspectiveCamera, solids: readonly Solid[], width: number, height: number): Obstacle[] {
+  const obstacles: Obstacle[] = []
   for (const { owner, node, flat } of solids) {
     if (flat) continue
-    for (const piece of pieces(three, new three.Box3().setFromObject(node))) {
-      const screen = projectToScreen(three, camera, corners(three, piece), width, height)
-      if (!screen.every((p) => p.inFront)) continue
-      const xs = screen.map((p) => p.x)
-      const ys = screen.map((p) => p.y)
-      obstacles.push({ owner, rect: { x: Math.min(...xs), y: Math.min(...ys), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) } })
-    }
+    const screen = projectToScreen(three, camera, objectCorners(three, node), width, height)
+    if (!screen.every((p) => p.inFront)) continue
+    const outline = convexHull(screen)
+    const xs = outline.map((p) => p.x)
+    const ys = outline.map((p) => p.y)
+    obstacles.push({ owner, outline, rect: { x: Math.min(...xs), y: Math.min(...ys), width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) } })
   }
   return obstacles
 }

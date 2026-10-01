@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url"
 import * as THREE from "three"
 import { describe, expect, it } from "vitest"
 import { sceneBounds } from "./bounds"
-import { countOverlaps, layoutLabels, type PlacedLabel } from "./labels"
+import { countLeaderTangles, countOverlaps, layoutLabels, type PlacedLabel } from "./labels"
 import { parseScene } from "./parse"
 import type { SceneDefinition } from "./types"
 import { estimateLabelWidth, frameCamera, geometryFor, labelEntry, labelRequests, placeAt, screenObstacles, type LabelEntry, type Solid } from "./view"
@@ -61,6 +61,8 @@ describe("stacked objects with labels (the reported scene)", () => {
     expect(countOverlaps(placed, requests, obstacles)).toBe(0)
     expect(onCanvas(placed)).toBe(true)
     for (const { leader } of placed) expect(leader).toBeDefined()
+    // And every leader reads unambiguously: no two cross, none runs through another object.
+    expect(countLeaderTangles(placed, requests, obstacles)).toBe(0)
   })
 
   it("hangs the turned cylinder's label from where the cylinder lies, not where it would stand", () => {
