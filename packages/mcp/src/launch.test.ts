@@ -119,7 +119,7 @@ describe("the plugin launcher", () => {
       3,
     )
     expect(replies.find((r) => r.id === 1)?.result.serverInfo.name).toBe("aigui")
-    expect(replies.find((r) => r.id === 2)?.result.tools.map((t: { name: string }) => t.name)).toEqual(["aigui_guide", "aigui_render", "aigui_open"])
+    expect(replies.find((r) => r.id === 2)?.result.tools.map((t: { name: string }) => t.name)).toEqual(["aigui_guide", "aigui_render", "aigui_open", "aigui_edit", "aigui_export"])
     const call = replies.find((r) => r.id === 3)?.result
     expect(call.content[0].text).toContain('called aigui_guide {"blocks":["chart"]}')
     // It installed the version the plugin manifest names.

@@ -23,12 +23,12 @@ type Content = Array<{ type: string; text?: string; data?: string; mimeType?: st
 const text = (result: { content: unknown }) => (result.content as Content).filter((c) => c.type === "text").map((c) => c.text).join("\n")
 
 describe("the aigui MCP server", () => {
-  it("offers exactly the three tools", async () => {
+  it("offers exactly the five tools", async () => {
     const client = await connect()
     const { tools } = await client.listTools()
-    expect(tools.map((tool) => tool.name).sort()).toEqual(["aigui_guide", "aigui_open", "aigui_render"])
+    expect(tools.map((tool) => tool.name).sort()).toEqual(["aigui_edit", "aigui_export", "aigui_guide", "aigui_open", "aigui_render"])
     // The workflow an agent follows is in the descriptions, since that is all it sees before it decides to draw.
-    for (const tool of tools.filter((t) => t.name !== "aigui_guide")) expect(tool.description).toContain("aigui_guide first")
+    for (const tool of tools.filter((t) => t.name === "aigui_render" || t.name === "aigui_open")) expect(tool.description).toContain("aigui_guide first")
   })
 
   it("lists the blocks when asked for no syntax, marking the ones that are page-only", async () => {
@@ -96,6 +96,53 @@ describe("the aigui MCP server", () => {
     const broken = await (await connect({ outDir, open: false, inspect: async () => { throw new Error("no browser") } })).callTool({ name: "aigui_open", arguments: { markdown: "# x" } })
     expect(broken.isError).toBeFalsy()
     expect(text(broken)).toContain("Not checked")
+  })
+
+  it("keeps a history of pages, newest first, and links it from every page", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-"))
+    const client = await connect({ outDir, open: false })
+    await client.callTool({ name: "aigui_open", arguments: { markdown: "# one", title: "第一页" } })
+    const second = await client.callTool({ name: "aigui_open", arguments: { markdown: "# two", title: "Second <page>" } })
+    expect(text(second)).toMatch(/All pages: file:.*\/pages\/index\.html/)
+    const index = await readFile(join(outDir, "pages", "index.html"), "utf8")
+    expect(index.indexOf("Second &lt;page&gt;")).toBeLessThan(index.indexOf("第一页"))
+    const page = (await readdir(join(outDir, "pages"))).find((f) => f.endsWith("-second-page.html"))!
+    expect(await readFile(join(outDir, "pages", page), "utf8")).toContain('href="./index.html"')
+  })
+
+  it("edits the last page in place by find and replace, and refuses an edit that does not name one place", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-"))
+    const client = await connect({ outDir, open: false })
+    await client.callTool({ name: "aigui_open", arguments: { markdown: '# Sales\n\n```chart\n{"series":[{"type":"bar","data":[1,2]}]}\n```\n\nA and A.', title: "Sales" } })
+    const files = async () => (await readdir(join(outDir, "pages"))).filter((f) => f.endsWith(".html") && f !== "index.html")
+    const [page] = await files()
+    const edited = await client.callTool({ name: "aigui_edit", arguments: { edits: [{ find: '"data":[1,2]', replace: '"data":[1,2,3]' }] } })
+    expect(edited.isError).toBeFalsy()
+    expect(text(edited)).toContain(`Edited ${page} (1 change)`)
+    expect(await files()).toEqual([page])
+    const html = await readFile(join(outDir, "pages", page), "utf8")
+    expect(html).toContain('\\"data\\":[1,2,3]')
+    expect(html).toContain("<title>Sales</title>")
+    const twice = await client.callTool({ name: "aigui_edit", arguments: { edits: [{ find: "A", replace: "B" }] } })
+    expect(twice.isError).toBe(true)
+    expect(text(twice)).toMatch(/occurs \d+ times/)
+    const missing = await client.callTool({ name: "aigui_edit", arguments: { page, edits: [{ find: "nowhere", replace: "x" }] } })
+    expect(text(missing)).toContain("does not occur in the page")
+  })
+
+  it("exports the last page beside it, as PNG by default", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-"))
+    const calls: Array<{ url: string; format: string; path: string }> = []
+    const client = await connect({ outDir, open: false, exportFile: async (url, o) => (calls.push({ url, ...o }), o.path) })
+    expect(text(await client.callTool({ name: "aigui_export", arguments: {} }))).toContain("no page to export yet")
+    await client.callTool({ name: "aigui_open", arguments: { markdown: "# x", title: "Report" } })
+    const png = await client.callTool({ name: "aigui_export", arguments: {} })
+    const pdf = await client.callTool({ name: "aigui_export", arguments: { format: "pdf" } })
+    expect(calls.map((c) => c.format)).toEqual(["png", "pdf"])
+    expect(calls[0].url).toMatch(/^file:.*-report\.html$/)
+    expect(calls[1].path).toMatch(/-report\.pdf$/)
+    expect(text(png)).toMatch(/Saved .*-report\.png/)
+    expect(text(pdf)).toMatch(/Saved .*-report\.pdf/)
   })
 
   it("refuses markdown with nothing drawable instead of launching a browser for it", async () => {

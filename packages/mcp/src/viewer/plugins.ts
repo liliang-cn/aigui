@@ -26,7 +26,11 @@ import { solid } from "@ai-gui/plugin-solid"
  * 3D-capable, the wall and the orbits animated. KaTeX's `css` is empty because the page carries
  * the real stylesheet, fonts inlined; the default is an `@import` a file page cannot resolve.
  */
-export function viewerPlugins(theme: string): AIGuiPlugin[] {
+/**
+ * `still` is the page as a picture: nothing plays. An export or a look-over that caught a topology
+ * mid-step would show a dot on top of a label and a row of play buttons nobody can press.
+ */
+export function viewerPlugins(theme: string, still = false): AIGuiPlugin[] {
   return [
     chart({ interactive: true, gl: true, width: "container" }),
     mermaid({ theme: theme === "dark" ? "dark" : "default" }),
@@ -35,10 +39,10 @@ export function viewerPlugins(theme: string): AIGuiPlugin[] {
     primitives(),
     citation(),
     dashboard(),
-    bigscreen(),
-    scene(),
-    gravity(),
-    topology(),
+    bigscreen({ animate: !still }),
+    scene({ animate: !still }),
+    gravity({ animate: !still }),
+    topology({ animate: !still }),
     molecule(),
     graph(),
     solid(),

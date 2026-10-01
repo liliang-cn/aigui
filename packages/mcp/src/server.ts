@@ -1,12 +1,15 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
-import { closeBrowser, inspectPage, type InternalRenderOptions, type Issue } from "@ai-gui/image"
+import { basename, dirname, join } from "node:path"
+import { pathToFileURL } from "node:url"
+import { closeBrowser, exportPage, inspectPage, type InternalRenderOptions, type Issue } from "@ai-gui/image"
 import { z } from "zod"
 import { BLOCKS } from "./blocks"
 import { ensureHeadlessShell, type BrowserSetup } from "./browser"
 import { guide } from "./guide"
-import { openFiles, writePage } from "./open"
-import { packageVersion } from "./paths"
+import { ensureViewer, openFiles, writePage } from "./open"
+import { applyEdits, readPage, resolvePage } from "./pages"
+import { outputRoot, packageVersion } from "./paths"
 import { renderToContent, type RenderedContent } from "./render"
 
 const PICTURE = BLOCKS.filter((block) => block.picture).map((block) => block.name).join(", ")
@@ -34,6 +37,8 @@ export interface ServerDeps {
    * every picture twice.
    */
   showImages?: (paths: string[]) => boolean
+  /** Injected in tests: how a page becomes a PNG or PDF. Default `exportPage` from @ai-gui/image. */
+  exportFile?: (url: string, options: { format: "png" | "pdf"; path: string; theme?: "light" | "dark" }) => Promise<string>
 }
 
 function defaultShowImages(): ((paths: string[]) => boolean) | undefined {
@@ -43,6 +48,12 @@ function defaultShowImages(): ((paths: string[]) => boolean) | undefined {
 export type ToolResult = RenderedContent
 
 const failure = (text: string): ToolResult => ({ content: [{ type: "text", text }], isError: true })
+
+/** What to tell the agent about a page it just wrote: where it is, and where all of them are. */
+function opened(page: { path: string; url: string; opened: boolean }): string {
+  const head = page.opened ? `Opened ${page.url}\nFile: ${page.path}` : `Wrote ${page.path} — open ${page.url} in a browser.`
+  return `${head}\nAll pages: ${pathToFileURL(join(dirname(page.path), "index.html")).href}`
+}
 
 /**
  * The page, looked over in the headless browser: what a reader would trip over, as lines the agent
@@ -102,10 +113,44 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
       if (!markdown) return failure("markdown is required.")
       try {
         const page = await writePage(markdown, { title: str("title"), theme, outDir: deps.outDir, open: deps.open })
-        const text = page.opened ? `Opened ${page.url}\nFile: ${page.path}` : `Wrote ${page.path} — open ${page.url} in a browser.`
-        return { content: [{ type: "text", text: `${text}${await pageCheck(page.url, deps)}` }] }
+        return { content: [{ type: "text", text: `${opened(page)}${await pageCheck(page.url, deps)}` }] }
       } catch (error) {
         return failure(`Could not write the page: ${String((error as Error).message)}`)
+      }
+    }
+    case "aigui_edit": {
+      const pages = join(deps.outDir ?? outputRoot(), "pages")
+      const path = await resolvePage(pages, str("page"))
+      if (!path) return failure("There is no page to edit yet — write one with aigui_open first.")
+      const edits = Array.isArray(args.edits)
+        ? args.edits.filter((e): e is { find: string; replace: string } => typeof e === "object" && e !== null && typeof (e as { find?: unknown }).find === "string" && typeof (e as { replace?: unknown }).replace === "string")
+        : []
+      if (edits.length === 0) return failure('edits is required: [{"find": "exact text in the page", "replace": "what it becomes"}].')
+      try {
+        const current = await readPage(path)
+        const markdown = applyEdits(current.markdown, edits)
+        const page = await writePage(markdown, { title: str("title") ?? current.title, theme: theme ?? current.theme, outDir: deps.outDir, open: deps.open, path })
+        return { content: [{ type: "text", text: `Edited ${basename(path)} (${edits.length} change${edits.length === 1 ? "" : "s"}). ${opened(page)}${await pageCheck(page.url, deps)}` }] }
+      } catch (error) {
+        return failure(`Could not edit ${basename(path)}: ${String((error as Error).message)}`)
+      }
+    }
+    case "aigui_export": {
+      const pages = join(deps.outDir ?? outputRoot(), "pages")
+      const path = await resolvePage(pages, str("page"))
+      if (!path) return failure("There is no page to export yet — write one with aigui_open first.")
+      const format = str("format") === "pdf" ? "pdf" : "png"
+      const out = join(dirname(path), basename(path).replace(/\.html$/, `.${format}`))
+      try {
+        // The page names its viewer by version; a page written before this build updated it would
+        // otherwise be exported with the old one.
+        await ensureViewer(dirname(path))
+        const run = deps.exportFile ?? ((url: string, o: { format: "png" | "pdf"; path: string; theme?: "light" | "dark" }) => exportPage(url, o))
+        await run(pathToFileURL(path).href, { format, path: out, theme })
+        const shown = deps.open !== false && process.env.AIGUI_NO_OPEN !== "1" && openFiles([out])
+        return { content: [{ type: "text", text: `Saved ${out}${shown ? " — open on the user's screen." : ""}` }] }
+      } catch (error) {
+        return failure(`Could not export ${basename(path)}: ${String((error as Error).message)}. aigui_export needs the headless browser aigui_render uses.`)
       }
     }
     default:
@@ -179,6 +224,40 @@ export function createServer(deps: ServerDeps = {}): McpServer {
       annotations: { readOnlyHint: false, openWorldHint: false },
     },
     async (args) => callTool("aigui_open", args, deps),
+  )
+
+  server.registerTool(
+    "aigui_edit",
+    {
+      title: "Change a page aigui_open wrote",
+      description: [
+        "Change part of a page written by aigui_open — a number, a panel, a step — without sending the whole answer again.",
+        "Each edit replaces text in the page's markdown: find must be quoted exactly from what you wrote and occur once; include enough of the surrounding JSON to make it unique.",
+        "The page is rewritten in place, opened again, and looked over like a new one. page defaults to the most recent one.",
+      ].join(" "),
+      inputSchema: {
+        page: z.string().optional().describe('The page file path or name, or "last" (default).'),
+        edits: z.array(z.object({ find: z.string().min(1), replace: z.string() })).min(1).describe("Find-and-replace edits on the page's markdown, applied in order."),
+        title: z.string().max(120).optional().describe("A new title, if it should change."),
+      },
+      annotations: { readOnlyHint: false, openWorldHint: false },
+    },
+    async (args) => callTool("aigui_edit", args, deps),
+  )
+
+  server.registerTool(
+    "aigui_export",
+    {
+      title: "Save a page as PNG or PDF",
+      description: "Save a page written by aigui_open as one full-length PNG or as a PDF, for sending or attaching. Returns the file path. page defaults to the most recent one.",
+      inputSchema: {
+        page: z.string().optional().describe('The page file path or name, or "last" (default).'),
+        format: z.enum(["png", "pdf"]).optional().describe("Default png."),
+        theme: z.enum(["light", "dark"]).optional().describe("Colour scheme to draw it in. Default light."),
+      },
+      annotations: { readOnlyHint: false, openWorldHint: false },
+    },
+    async (args) => callTool("aigui_export", args, deps),
   )
 
   return server

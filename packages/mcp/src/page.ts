@@ -46,13 +46,18 @@ main{box-sizing:border-box;max-width:1080px;margin:0 auto;padding:32px 16px 64px
 header{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--rule)}
 header h1{margin:0;font-size:22px;font-weight:650;letter-spacing:.01em}
 header p{margin:4px 0 0;color:var(--muted);font-size:13px}
+header{display:flex;gap:16px;align-items:flex-end;justify-content:space-between}
+header nav{display:flex;gap:8px;font-size:13px;white-space:nowrap}
+header nav a,header nav button{font:inherit;color:var(--muted);background:none;border:1px solid var(--rule);border-radius:6px;padding:3px 10px;text-decoration:none;cursor:pointer}
+header nav a:hover,header nav button:hover{color:var(--fg)}
+@media print{header nav{display:none}main{max-width:none;padding:0}[data-aigui-topology-bar],[data-aigui-scene-bar]{display:none}}
 #aigui-root{min-width:0}
 #aigui-root [data-aigui-molecule]{margin-inline:auto}
 ${baseCss}
 ${options.extraCss ?? ""}
 </style></head>
 <body><main>
-<header><h1>${escapeHtml(title)}</h1><p>AIGUI · ${new Date().toISOString().slice(0, 16).replace("T", " ")}</p></header>
+<header><div><h1>${escapeHtml(title)}</h1><p>AIGUI · ${new Date().toISOString().slice(0, 16).replace("T", " ")}</p></div><nav><a href="./index.html">全部页面</a><button type="button" onclick="print()">打印 / 存 PDF</button></nav></header>
 <div id="aigui-root"></div>
 </main>
 <script type="application/json" id="aigui-data">${embed({ markdown: options.markdown, theme: options.theme })}</script>

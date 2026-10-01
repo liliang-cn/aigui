@@ -14,4 +14,7 @@ import { viewerPlugins } from "./plugins"
 const data = JSON.parse(document.getElementById("aigui-data")?.textContent ?? "{}") as { markdown?: string; theme?: "light" | "dark" }
 const theme = data.theme ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
 const root = document.getElementById("aigui-root") as HTMLElement
-createRenderer(root, { plugins: viewerPlugins(theme), theme }).setText(data.markdown ?? "")
+// `?still`: drawn as a picture rather than played — what an export or a look-over wants.
+const still = new URLSearchParams(location.search).has("still")
+if (still) document.documentElement.setAttribute("data-still", "")
+createRenderer(root, { plugins: viewerPlugins(theme, still), theme }).setText(data.markdown ?? "")

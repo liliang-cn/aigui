@@ -4,6 +4,7 @@ import { join } from "node:path"
 import { pathToFileURL } from "node:url"
 import { inlineKatexCss } from "@ai-gui/image"
 import { pageHtml } from "./page"
+import { recordPage } from "./pages"
 import { outputRoot, packageVersion, viewerBundlePath } from "./paths"
 
 
@@ -33,6 +34,13 @@ async function extraCss(): Promise<string> {
   return `${inlineKatexCss()}\n${moleculeCss}`
 }
 
+/** Put this build's viewer beside the pages in `dir`, unless it is already there; its file name. */
+export async function ensureViewer(dir: string): Promise<string> {
+  const viewer = `aigui-viewer-${packageVersion()}.js`
+  if (!(await sameFile(viewerBundlePath(), join(dir, viewer)))) await copyFile(viewerBundlePath(), join(dir, viewer))
+  return viewer
+}
+
 const slug = (title: string | undefined): string =>
   (title ?? "page")
     .toLowerCase()
@@ -49,16 +57,16 @@ export interface WrittenPage {
 /** Write the page and the viewer beside it, then hand the file to the system's browser. */
 export async function writePage(
   markdown: string,
-  options: { title?: string; theme?: "light" | "dark"; open?: boolean; outDir?: string } = {},
+  options: { title?: string; theme?: "light" | "dark"; open?: boolean; outDir?: string; /** Rewrite this page rather than start a new one. */ path?: string } = {},
 ): Promise<WrittenPage> {
   const dir = join(options.outDir ?? outputRoot(), "pages")
   await mkdir(dir, { recursive: true })
   // Versioned, so an upgrade writes a new bundle beside the old pages instead of breaking them.
-  const viewer = `aigui-viewer-${packageVersion()}.js`
-  if (!(await sameFile(viewerBundlePath(), join(dir, viewer)))) await copyFile(viewerBundlePath(), join(dir, viewer))
+  const viewer = await ensureViewer(dir)
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*$/, "").replace("T", "-")
-  const path = join(dir, `${stamp}-${slug(options.title)}.html`)
+  const path = options.path ?? join(dir, `${stamp}-${slug(options.title)}.html`)
   await writeFile(path, pageHtml({ markdown, title: options.title, theme: options.theme, viewerSrc: `./${viewer}`, extraCss: await extraCss() }))
+  await recordPage(dir, path, options.title?.trim() || "AIGUI")
   const opened = options.open !== false && process.env.AIGUI_NO_OPEN !== "1" ? openInBrowser(path) : false
   return { path, url: pathToFileURL(path).href, opened }
 }

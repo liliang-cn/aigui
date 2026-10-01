@@ -109,5 +109,94 @@
     "execution": {
       "taskSupport": "forbidden"
     }
+  },
+  {
+    "name": "aigui_edit",
+    "title": "Change a page aigui_open wrote",
+    "description": "Change part of a page written by aigui_open — a number, a panel, a step — without sending the whole answer again. Each edit replaces text in the page's markdown: find must be quoted exactly from what you wrote and occur once; include enough of the surrounding JSON to make it unique. The page is rewritten in place, opened again, and looked over like a new one. page defaults to the most recent one.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "description": "The page file path or name, or \"last\" (default).",
+          "type": "string"
+        },
+        "edits": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "find": {
+                "type": "string",
+                "minLength": 1
+              },
+              "replace": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "find",
+              "replace"
+            ]
+          },
+          "description": "Find-and-replace edits on the page's markdown, applied in order."
+        },
+        "title": {
+          "description": "A new title, if it should change.",
+          "type": "string",
+          "maxLength": 120
+        }
+      },
+      "required": [
+        "edits"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
+    "name": "aigui_export",
+    "title": "Save a page as PNG or PDF",
+    "description": "Save a page written by aigui_open as one full-length PNG or as a PDF, for sending or attaching. Returns the file path. page defaults to the most recent one.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "description": "The page file path or name, or \"last\" (default).",
+          "type": "string"
+        },
+        "format": {
+          "description": "Default png.",
+          "type": "string",
+          "enum": [
+            "png",
+            "pdf"
+          ]
+        },
+        "theme": {
+          "description": "Colour scheme to draw it in. Default light.",
+          "type": "string",
+          "enum": [
+            "light",
+            "dark"
+          ]
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
   }
 ]
