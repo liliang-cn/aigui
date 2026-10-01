@@ -16,6 +16,7 @@ export type RenderableKind =
   | "table"
   | "scene"
   | "gravity"
+  | "topology"
   | "bigscreen"
   | "molecule"
 
@@ -63,7 +64,7 @@ export interface RenderResult {
   images: RenderedImage[]
 }
 
-export const DEFAULT_KINDS: RenderableKind[] = ["chart", "mermaid", "dashboard", "card", "math", "table", "scene", "gravity", "bigscreen", "molecule"]
+export const DEFAULT_KINDS: RenderableKind[] = ["chart", "mermaid", "dashboard", "card", "math", "table", "scene", "gravity", "topology", "bigscreen", "molecule"]
 export const DEFAULT_WIDTH = 720
 export const DEFAULT_SCALE = 2
 export const DEFAULT_MAX = 6

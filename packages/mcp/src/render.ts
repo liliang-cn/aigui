@@ -46,7 +46,7 @@ export async function renderToContent(
   const candidates = selectRenderableBlocks(markdown, { kinds: DEFAULT_KINDS, max: 12 })
   if (candidates.length === 0) {
     return {
-      content: [{ type: "text", text: "Nothing in this markdown can be drawn as a picture. Use a chart, mermaid, $$ maths, a table, bigscreen, dashboard, scene, gravity or molecule block — or aigui_open for the rest." }],
+      content: [{ type: "text", text: "Nothing in this markdown can be drawn as a picture. Use a chart, mermaid, $$ maths, a table, bigscreen, dashboard, scene, gravity, topology or molecule block — or aigui_open for the rest." }],
       isError: true,
     }
   }

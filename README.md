@@ -37,7 +37,7 @@ pnpm add @ai-gui/core @ai-gui/vue
 pnpm add @ai-gui/core @ai-gui/vanilla
 
 # plugins (optional)
-pnpm add @ai-gui/plugin-solid @ai-gui/plugin-scene @ai-gui/plugin-function @ai-gui/plugin-optics @ai-gui/plugin-motion @ai-gui/plugin-gravity @ai-gui/plugin-graph @ai-gui/plugin-physics @ai-gui/plugin-quote @ai-gui/plugin-figure @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-dashboard @ai-gui/plugin-bigscreen @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact @ai-gui/plugin-progress @ai-gui/plugin-flashcard @ai-gui/plugin-evidence @ai-gui/plugin-resultset
+pnpm add @ai-gui/plugin-solid @ai-gui/plugin-scene @ai-gui/plugin-function @ai-gui/plugin-optics @ai-gui/plugin-motion @ai-gui/plugin-gravity @ai-gui/plugin-topology @ai-gui/plugin-graph @ai-gui/plugin-physics @ai-gui/plugin-quote @ai-gui/plugin-figure @ai-gui/plugin-ui @ai-gui/plugin-katex @ai-gui/plugin-highlight @ai-gui/plugin-mermaid @ai-gui/plugin-molecule @ai-gui/plugin-map @ai-gui/plugin-primitives @ai-gui/plugin-chart @ai-gui/plugin-dashboard @ai-gui/plugin-bigscreen @ai-gui/plugin-form @ai-gui/plugin-citation @ai-gui/plugin-artifact @ai-gui/plugin-progress @ai-gui/plugin-flashcard @ai-gui/plugin-evidence @ai-gui/plugin-resultset
 
 # plugin authoring helpers (optional)
 pnpm add @ai-gui/plugin-sdk
@@ -209,6 +209,7 @@ await r.feed(res.body!)
 | `@ai-gui/plugin-optics` | `optics(options?)` | ` ```optics ` blocks for ray optics — lenses, mirrors and refraction, with the image and the conclusion computed |
 | `@ai-gui/plugin-motion` | `motion(options?)` | ` ```motion ` blocks for mechanics — projectiles, collisions and oscillation, drawn stroboscopically from the initial conditions |
 | `@ai-gui/plugin-gravity` | `gravity(options?)` | ` ```gravity ` blocks for gravity and collisions — orbits, binaries, comets and colliding discs, integrated from the masses and orbits the model states |
+| `@ai-gui/plugin-topology` | `topology(options?)` | ` ```topology ` blocks for infrastructure topologies — nodes in hosts and racks, links and states, laid out automatically — with steps that play a process such as a write or a failover |
 | `@ai-gui/plugin-graph` | `graph(options?)` | ` ```graph ` blocks for knowledge graphs and ontologies — entities and typed relations, classes with `subClassOf` and properties with `domain`/`range`, drawn in 2D or 3D with the relations that break the ontology marked |
 | `@ai-gui/plugin-physics` | `physics(options?)` | ` ```physics ` blocks for force and vector diagrams — bodies, surfaces, labelled arrows and angles, drawn not simulated |
 | `@ai-gui/plugin-quote` | `quote(options?)` | ` ```quote ` blocks for candlestick charts — the host supplies the prices, the renderer computes every indicator |

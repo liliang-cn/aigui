@@ -77,6 +77,7 @@
     "@ai-gui/plugin-optics": "workspace:*",
     "@ai-gui/plugin-motion": "workspace:*",
     "@ai-gui/plugin-gravity": "workspace:*",
+    "@ai-gui/plugin-topology": "workspace:*",
     "@ai-gui/plugin-graph": "workspace:*",
     "@ai-gui/plugin-quote": "workspace:*",
     "@ai-gui/plugin-physics": "workspace:*",

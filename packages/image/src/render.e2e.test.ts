@@ -157,4 +157,24 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
     const crowded = await renderMarkdownToImages(`\`\`\`bigscreen\n{"title":"W","panels":[{"kind":"chart","title":"Share","span":12,"option":{"series":[{"type":"pie","data":${slices}}]}}]}\n\`\`\``, { outDir, timeoutMs: 30_000 })
     expect(crowded.images[0].issues).toEqual([{ block: "bigscreen", kind: "plugin", message: expect.stringContaining("Share: a pie of 14 slices") }])
   }, 90_000)
+
+  it("says when labels are drawn on top of each other, once per block", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-overlap-"))
+    const names = Array.from({ length: 14 }, (_, i) => `第${i + 1}个很长很长的分类名字`)
+    const option = { xAxis: { type: "category", data: names, axisLabel: { interval: 0 } }, yAxis: { type: "value" }, series: [{ type: "bar", data: names.map((_, i) => i + 1) }] }
+    const result = await renderMarkdownToImages("```chart\n" + JSON.stringify(option) + "\n```", { outDir, timeoutMs: 30_000 })
+    const overlaps = result.images[0].issues.filter((issue) => issue.kind === "overlap")
+    expect(overlaps).toHaveLength(1)
+    expect(overlaps[0].message).toMatch(/^\d+ pairs of labels are drawn on top of each other/)
+  }, 60_000)
+
+  it("draws a topology still, every step numbered and none of its text overlapping", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-e2e-topology-"))
+    const { topologyPromptSpec } = await import("@ai-gui/plugin-topology")
+    const block = topologyPromptSpec("zh-CN").split("```topology\n")[1]
+    const result = await renderMarkdownToImages("```topology\n" + block.slice(0, block.indexOf("```")) + "```", { outDir, timeoutMs: 30_000 })
+    expect(result.images.map((image) => image.kind)).toEqual(["topology"])
+    expect(result.images[0].issues).toEqual([])
+    expect(result.images[0].height).toBeGreaterThan(200)
+  }, 60_000)
 })

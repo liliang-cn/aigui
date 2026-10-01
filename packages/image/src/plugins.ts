@@ -7,6 +7,7 @@ import { katex } from "@ai-gui/plugin-katex"
 import { mermaid } from "@ai-gui/plugin-mermaid"
 import { molecule } from "@ai-gui/plugin-molecule"
 import { scene } from "@ai-gui/plugin-scene"
+import { topology } from "@ai-gui/plugin-topology"
 import { DEFAULT_WIDTH } from "./types"
 
 /**
@@ -35,6 +36,7 @@ export function imagePlugins(width: number = DEFAULT_WIDTH): AIGuiPlugin[] {
     dashboard(),
     scene({ height: Math.round(inner * 0.6) }),
     gravity({ animate: false, width: inner, height: Math.round(inner * 0.625) }),
+    topology({ animate: false }),
     bigscreen({ animate: false }),
     molecule({ width: inner, height: Math.round(inner * 0.6) }),
   ]

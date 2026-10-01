@@ -47,6 +47,7 @@ export const PLUGIN_CATALOG: Record<string, CatalogEntry> = {
   function: entry("@ai-gui/plugin-function", "function", async (o) => (await import("@ai-gui/plugin-function")).fn(o)),
   graph: entry("@ai-gui/plugin-graph", "graph", async (o) => (await import("@ai-gui/plugin-graph")).graph(o)),
   gravity: entry("@ai-gui/plugin-gravity", "gravity", async (o) => (await import("@ai-gui/plugin-gravity")).gravity(o)),
+  topology: entry("@ai-gui/plugin-topology", "topology", async (o) => (await import("@ai-gui/plugin-topology")).topology(o)),
   highlight: entry("@ai-gui/plugin-highlight", "```<lang> code blocks", async (o) => (await import("@ai-gui/plugin-highlight")).highlight(o), ["langs"]),
   katex: entry("@ai-gui/plugin-katex", "$…$ and $$…$$", async (o) => (await import("@ai-gui/plugin-katex")).katex(o), ["chemistry"]),
   map: entry("@ai-gui/plugin-map", "map", async (o) => (await import("@ai-gui/plugin-map")).map(o)),

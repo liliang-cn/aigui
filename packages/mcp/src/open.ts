@@ -7,10 +7,15 @@ import { pageHtml } from "./page"
 import { outputRoot, packageVersion, viewerBundlePath } from "./paths"
 
 
-async function exists(path: string): Promise<boolean> {
+/**
+ * Whether `copy` is already `source`. The name carries the version, which is enough between
+ * releases — but a local build keeps its version while its contents change, and a stale viewer
+ * beside a fresh page shows last build's behaviour with no sign that it is last build's.
+ */
+async function sameFile(source: string, copy: string): Promise<boolean> {
   try {
-    await stat(path)
-    return true
+    const [a, b] = await Promise.all([stat(source), stat(copy)])
+    return a.size === b.size && b.mtimeMs >= a.mtimeMs
   } catch {
     return false
   }
@@ -50,7 +55,7 @@ export async function writePage(
   await mkdir(dir, { recursive: true })
   // Versioned, so an upgrade writes a new bundle beside the old pages instead of breaking them.
   const viewer = `aigui-viewer-${packageVersion()}.js`
-  if (!(await exists(join(dir, viewer)))) await copyFile(viewerBundlePath(), join(dir, viewer))
+  if (!(await sameFile(viewerBundlePath(), join(dir, viewer)))) await copyFile(viewerBundlePath(), join(dir, viewer))
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*$/, "").replace("T", "-")
   const path = join(dir, `${stamp}-${slug(options.title)}.html`)
   await writeFile(path, pageHtml({ markdown, title: options.title, theme: options.theme, viewerSrc: `./${viewer}`, extraCss: await extraCss() }))

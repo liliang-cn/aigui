@@ -20,6 +20,13 @@ async function settle(arg: { selector: string; quietMs: number; maxMs: number; c
   if (!root) return
   await new Promise<void>((resolve) => {
     let timer = 0
+    // A page that animates — a topology playing its steps — never goes quiet. Waiting for quiet
+    // alone hung aigui_open; past the deadline, what is on screen is what gets looked at.
+    const hard = window.setTimeout(() => {
+      observer.disconnect()
+      window.clearTimeout(timer)
+      resolve()
+    }, Math.max(0, deadline - Date.now()))
     const observer = new MutationObserver(schedule)
     function schedule(): void {
       window.clearTimeout(timer)
@@ -31,6 +38,7 @@ async function settle(arg: { selector: string; quietMs: number; maxMs: number; c
         return
       }
       observer.disconnect()
+      window.clearTimeout(hard)
       resolve()
     }
     observer.observe(root, { childList: true, subtree: true, attributes: true, characterData: true })
@@ -61,7 +69,8 @@ export async function inspectPage(url: string, options: InspectPageOptions = {})
   try {
     await page.setViewportSize({ width: options.width ?? 1100, height: 900 })
     await page.goto(url, { timeout: options.timeoutMs ?? 20_000 })
-    await page.evaluate(settle, { selector, quietMs: 300, maxMs: options.timeoutMs ?? 20_000, canvasMs: 1200 })
+    // Quiet for 300ms, or — for a page that animates — 4s of drawing, whichever comes first.
+    await page.evaluate(settle, { selector, quietMs: 300, maxMs: 4_000, canvasMs: 1200 })
     return await page.$eval(selector, inspectRendered, 12)
   } finally {
     await lease.release()

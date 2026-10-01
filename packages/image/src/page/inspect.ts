@@ -2,7 +2,7 @@
 export interface Issue {
   /** Which block family it was found in, from the nearest `data-aigui-*` host — e.g. "scene". */
   block: string
-  kind: "plugin" | "clipped" | "tiny-text" | "low-contrast" | "empty"
+  kind: "plugin" | "clipped" | "tiny-text" | "low-contrast" | "overlap" | "empty"
   message: string
 }
 
@@ -18,6 +18,7 @@ export interface Issue {
  * - **clipped**: text cut off by its box (ellipsis or hidden overflow), or drawn outside the block.
  * - **tiny-text**: text rendered under 9 CSS pixels tall, in HTML or SVG.
  * - **low-contrast**: HTML text whose contrast with what is behind it is under 3:1.
+ * - **overlap**: two pieces of small text drawn over each other, in HTML or SVG.
  * - **empty**: a block that drew nothing.
  *
  * It must stay self-contained — no imports, no helpers outside its body — because it also runs as
@@ -111,6 +112,32 @@ export function inspectRendered(root: Element, limit = 12): Issue[] {
         if (ratio < 3) add(el, "low-contrast", `"${text}" has contrast ${ratio.toFixed(1)}:1 against its background`)
       }
     }
+  }
+  // Text on text: two labels drawn over each other read as neither. Small text only — a heading
+  // and the paragraph under it are not what this is about — and a real overlap, not a touch.
+  const boxes = texty
+    .slice(0, 400)
+    .map((el) => ({ el, box: el.getBoundingClientRect(), text: short(el.textContent ?? "") }))
+    .filter(({ box }) => box.width > 0 && box.height > 0 && box.height < 30)
+  // One line per block, however many pairs: twelve near-identical lines bury everything else.
+  const pairs = new Map<string, { count: number; first: [string, string]; el: Element }>()
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+      const [a, b] = [boxes[i], boxes[j]]
+      if (a.el.contains(b.el) || b.el.contains(a.el)) continue
+      const w = Math.min(a.box.right, b.box.right) - Math.max(a.box.left, b.box.left)
+      const h = Math.min(a.box.bottom, b.box.bottom) - Math.max(a.box.top, b.box.top)
+      if (w <= 0 || h <= 0) continue
+      const smaller = Math.min(a.box.width * a.box.height, b.box.width * b.box.height)
+      if ((w * h) / smaller <= 0.3) continue
+      const block = blockOf(a.el)
+      const seen = pairs.get(block)
+      if (seen) seen.count++
+      else pairs.set(block, { count: 1, first: [a.text, b.text], el: a.el })
+    }
+  }
+  for (const { count, first, el } of pairs.values()) {
+    add(el, "overlap", count === 1 ? `"${first[0]}" and "${first[1]}" are drawn on top of each other` : `${count} pairs of labels are drawn on top of each other, e.g. "${first[0]}" and "${first[1]}" — fewer or shorter labels, or more room`)
   }
   return issues
 }

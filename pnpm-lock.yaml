@@ -198,6 +198,9 @@ importers:
       '@ai-gui/plugin-solid':
         specifier: workspace:*
         version: link:../plugin-solid
+      '@ai-gui/plugin-topology':
+        specifier: workspace:*
+        version: link:../plugin-topology
       '@ai-gui/plugin-ui':
         specifier: workspace:*
         version: link:../plugin-ui
@@ -260,6 +263,9 @@ importers:
       '@ai-gui/plugin-scene':
         specifier: workspace:*
         version: link:../plugin-scene
+      '@ai-gui/plugin-topology':
+        specifier: workspace:*
+        version: link:../plugin-topology
       '@ai-gui/vanilla':
         specifier: workspace:*
         version: link:../vanilla
@@ -383,6 +389,9 @@ importers:
       '@ai-gui/plugin-solid':
         specifier: workspace:*
         version: link:../plugin-solid
+      '@ai-gui/plugin-topology':
+        specifier: workspace:*
+        version: link:../plugin-topology
       '@ai-gui/vanilla':
         specifier: workspace:*
         version: link:../vanilla
@@ -650,6 +659,15 @@ importers:
         specifier: ^0.185.3
         version: 0.185.4
 
+  packages/plugin-topology:
+    dependencies:
+      '@ai-gui/core':
+        specifier: workspace:*
+        version: link:../core
+      '@dagrejs/dagre':
+        specifier: ^1.1.4
+        version: 1.1.8
+
   packages/plugin-ui:
     dependencies:
       '@ai-gui/core':
@@ -891,6 +909,13 @@ packages:
   '@csstools/css-tokenizer@4.0.0':
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
+
+  '@dagrejs/dagre@1.1.8':
+    resolution: {integrity: sha512-5SEDlndt4W/LaVzPYJW+bSmSEZc9EzTf8rJ20WCKvjS5EAZAN0b+x0Yww7VMT4R3Wootkg+X9bUfUxazYw6Blw==}
+
+  '@dagrejs/graphlib@2.2.4':
+    resolution: {integrity: sha512-mepCf/e9+SKYy1d02/UkvSy6+6MoyXhVxP8lLDfA7BPE1X1d4dR0sZznmbM8/XVJ1GPM+Svnx7Xj6ZweByWUkw==}
+    engines: {node: '>17.0.0'}
 
   '@dimforge/rapier3d-compat@0.12.0':
     resolution: {integrity: sha512-uekIGetywIgopfD97oDL5PfeezkFpNhwlzlaEYNOA0N6ghdsOvh/HYjSMek5Q2O1PYvRSDFcqFVJl4r4ZBwOow==}
@@ -4593,6 +4618,12 @@ snapshots:
       css-tree: 3.2.1
 
   '@csstools/css-tokenizer@4.0.0': {}
+
+  '@dagrejs/dagre@1.1.8':
+    dependencies:
+      '@dagrejs/graphlib': 2.2.4
+
+  '@dagrejs/graphlib@2.2.4': {}
 
   '@dimforge/rapier3d-compat@0.12.0': {}
 

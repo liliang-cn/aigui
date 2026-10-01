@@ -80,6 +80,7 @@
     "@ai-gui/plugin-function": "workspace:*",
     "@ai-gui/plugin-graph": "workspace:*",
     "@ai-gui/plugin-gravity": "workspace:*",
+    "@ai-gui/plugin-topology": "workspace:*",
     "@ai-gui/plugin-highlight": "workspace:*",
     "@ai-gui/plugin-katex": "workspace:*",
     "@ai-gui/plugin-mermaid": "workspace:*",

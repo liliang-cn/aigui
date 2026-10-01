@@ -23,6 +23,7 @@ export const BLOCKS: BlockInfo[] = [
   { name: "dashboard", fence: "```dashboard", picture: true, what: "a grid of table + chart panels" },
   { name: "scene", fence: "```scene", picture: true, what: "a 3D scene built from boxes, spheres, cylinders…" },
   { name: "gravity", fence: "```gravity", picture: true, what: "orbits and collisions, integrated from masses and speeds" },
+  { name: "topology", fence: "```topology", picture: true, what: "infrastructure topology — nodes in hosts and racks, links, states — with steps that play a process like a write or a failover" },
   { name: "molecule", fence: "```molecule", picture: true, what: "a molecule from SMILES, in 2D or 3D" },
   { name: "graph", fence: "```graph", picture: false, what: "a network of nodes and edges" },
   { name: "solid", fence: "```solid", picture: false, what: "solid-geometry figures — cubes, pyramids, sections" },

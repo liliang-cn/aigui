@@ -4,6 +4,7 @@ import { chart } from "@ai-gui/plugin-chart"
 import { citation } from "@ai-gui/plugin-citation"
 import { dashboard } from "@ai-gui/plugin-dashboard"
 import { figure } from "@ai-gui/plugin-figure"
+import { topology } from "@ai-gui/plugin-topology"
 import { fn } from "@ai-gui/plugin-function"
 import { graph } from "@ai-gui/plugin-graph"
 import { gravity } from "@ai-gui/plugin-gravity"
@@ -37,6 +38,7 @@ export function viewerPlugins(theme: string): AIGuiPlugin[] {
     bigscreen(),
     scene(),
     gravity(),
+    topology(),
     molecule(),
     graph(),
     solid(),
