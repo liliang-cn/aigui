@@ -1,5 +1,17 @@
 # @ai-gui/plugin-scene
 
+## 0.44.0
+
+### Minor Changes
+
+- b913bc0: Scenes can play a process: objects take an `id`, and `steps` move, recolour, hide, show and outline them, easing between states in the page and drawn as the last step with the steps listed in a picture.
+
+### Patch Changes
+
+- 2c3af69: Drawn blocks are looked over for what a reader would trip over — clipped, tiny or low-contrast text, labels on top of each other, crowded panels — and `aigui_render` / `aigui_open` list the problems so the agent can fix them. Plugins flag their own with `data-aigui-issue`.
+- d1000d6: Scene label leaders no longer cross each other or run through other objects: they bend round what is in the way and end on the object's real silhouette.
+  - @ai-gui/core@0.44.0
+
 ## 0.43.0
 
 ### Minor Changes

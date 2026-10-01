@@ -1,5 +1,15 @@
 # @ai-gui/openclaw
 
+## 0.44.0
+
+### Patch Changes
+
+- Updated dependencies [7268a6e]
+- Updated dependencies [2c3af69]
+- Updated dependencies [b913bc0]
+- Updated dependencies [486b26c]
+  - @ai-gui/image@0.44.0
+
 ## 0.43.0
 
 ### Patch Changes

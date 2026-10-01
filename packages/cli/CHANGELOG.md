@@ -1,5 +1,47 @@
 # @ai-gui/cli
 
+## 0.44.0
+
+### Minor Changes
+
+- 486b26c: New `topology` block: infrastructure diagrams laid out automatically, with steps that play a process — messages travelling, states changing — in the page, and are numbered on one picture in a PNG. The page check no longer waits forever on a page that animates, and flags labels drawn on top of each other.
+
+### Patch Changes
+
+- Updated dependencies [2c3af69]
+- Updated dependencies [d1000d6]
+- Updated dependencies [b913bc0]
+- Updated dependencies [486b26c]
+  - @ai-gui/plugin-bigscreen@0.44.0
+  - @ai-gui/plugin-scene@0.44.0
+  - @ai-gui/plugin-topology@0.44.0
+  - @ai-gui/core@0.44.0
+  - @ai-gui/plugin-katex@0.44.0
+  - @ai-gui/plugin-highlight@0.44.0
+  - @ai-gui/plugin-mermaid@0.44.0
+  - @ai-gui/plugin-primitives@0.44.0
+  - @ai-gui/plugin-chart@0.44.0
+  - @ai-gui/plugin-form@0.44.0
+  - @ai-gui/plugin-citation@0.44.0
+  - @ai-gui/plugin-artifact@0.44.0
+  - @ai-gui/plugin-ui@0.44.0
+  - @ai-gui/plugin-molecule@0.44.0
+  - @ai-gui/plugin-solid@0.44.0
+  - @ai-gui/plugin-function@0.44.0
+  - @ai-gui/plugin-optics@0.44.0
+  - @ai-gui/plugin-motion@0.44.0
+  - @ai-gui/plugin-gravity@0.44.0
+  - @ai-gui/plugin-graph@0.44.0
+  - @ai-gui/plugin-quote@0.44.0
+  - @ai-gui/plugin-resultset@0.44.0
+  - @ai-gui/plugin-physics@0.44.0
+  - @ai-gui/plugin-figure@0.44.0
+  - @ai-gui/plugin-progress@0.44.0
+  - @ai-gui/plugin-flashcard@0.44.0
+  - @ai-gui/plugin-map@0.44.0
+  - @ai-gui/plugin-evidence@0.44.0
+  - @ai-gui/plugin-dashboard@0.44.0
+
 ## 0.43.0
 
 ### Patch Changes

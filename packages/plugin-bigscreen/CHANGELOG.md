@@ -1,5 +1,15 @@
 # @ai-gui/plugin-bigscreen
 
+## 0.44.0
+
+### Minor Changes
+
+- 2c3af69: Drawn blocks are looked over for what a reader would trip over — clipped, tiny or low-contrast text, labels on top of each other, crowded panels — and `aigui_render` / `aigui_open` list the problems so the agent can fix them. Plugins flag their own with `data-aigui-issue`.
+
+### Patch Changes
+
+- @ai-gui/core@0.44.0
+
 ## 0.43.0
 
 ### Patch Changes

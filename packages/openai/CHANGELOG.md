@@ -1,5 +1,11 @@
 # @ai-gui/openai
 
+## 0.44.0
+
+### Patch Changes
+
+- @ai-gui/core@0.44.0
+
 ## 0.43.0
 
 ### Patch Changes

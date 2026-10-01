@@ -1,5 +1,24 @@
 # @ai-gui/mcp
 
+## 0.44.0
+
+### Minor Changes
+
+- 7268a6e: `aigui_edit` changes part of a page by find-and-replace; `aigui_export` saves a page as PNG or PDF, drawn still. Pages are listed in `pages/index.html`, and a page opened with `?still` plays nothing.
+- 2c3af69: Drawn blocks are looked over for what a reader would trip over — clipped, tiny or low-contrast text, labels on top of each other, crowded panels — and `aigui_render` / `aigui_open` list the problems so the agent can fix them. Plugins flag their own with `data-aigui-issue`.
+- 486b26c: New `topology` block: infrastructure diagrams laid out automatically, with steps that play a process — messages travelling, states changing — in the page, and are numbered on one picture in a PNG. The page check no longer waits forever on a page that animates, and flags labels drawn on top of each other.
+
+### Patch Changes
+
+- Updated dependencies [7268a6e]
+- Updated dependencies [2c3af69]
+- Updated dependencies [b913bc0]
+- Updated dependencies [486b26c]
+  - @ai-gui/image@0.44.0
+  - @ai-gui/cli@0.44.0
+  - @ai-gui/core@0.44.0
+  - @ai-gui/plugin-molecule@0.44.0
+
 ## 0.43.0
 
 ### Patch Changes
