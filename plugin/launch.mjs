@@ -44,15 +44,16 @@ if (existsSync(entry)) {
  */
 async function install() {
   // Right after a release npm's CDN can list a package without yet listing its newest version,
-  // and an install of the new version fails with ETARGET for a few minutes. That is exactly when
-  // a plugin update arrives, so it is waited out rather than reported.
-  const attempts = 4
+  // and an install of the new version fails with ETARGET for a few minutes. Later still, the
+  // listing can name a tarball the registry does not serve yet, and the install 404s on it. That
+  // window is exactly when a plugin update arrives, so both are waited out rather than reported.
+  const attempts = Number(process.env.AIGUI_INSTALL_ATTEMPTS ?? 6)
   const delay = Number(process.env.AIGUI_INSTALL_RETRY_MS ?? 30_000)
   for (let attempt = 1; ; attempt++) {
     try {
       return await installOnce()
     } catch (error) {
-      if (attempt >= attempts || !/ETARGET|notarget|No matching version/i.test(String(error.message))) throw error
+      if (attempt >= attempts || !/ETARGET|notarget|No matching version|E404|404 Not Found/i.test(String(error.message))) throw error
       log(`the registry does not list this release yet; retrying in ${Math.round(delay / 1000)}s (${attempt}/${attempts - 1})`)
       await new Promise((resolve) => setTimeout(resolve, delay))
     }
