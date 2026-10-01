@@ -38,3 +38,29 @@ jobs:
 
       - if: matrix.node-version == 20
         run: pnpm validate:packages
+
+  # The pictures themselves: charts, 3D scenes, topologies and the look-over that checks them,
+  # drawn in real headless Chromium. Unit tests cannot see a blank WebGL canvas or two labels on
+  # top of each other; these can.
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # CJK fonts: answers are often Chinese, and a missing face turns every label into boxes.
+      - run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      - run: pnpm --filter @ai-gui/image exec playwright install --with-deps --only-shell chromium
+
+      - run: pnpm test:browser

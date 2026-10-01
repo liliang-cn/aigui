@@ -43,6 +43,13 @@ jobs:
 
       - run: pnpm validate:packages
 
+      # Real-browser drawing, so a release cannot ship a 3D block that renders blank.
+      - run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+
+      - run: pnpm --filter @ai-gui/image exec playwright install --with-deps --only-shell chromium
+
+      - run: pnpm test:browser
+
       # Publishes every workspace package whose version is not yet on the registry.
       # pnpm skips packages already published at their current version.
       - run: pnpm -r publish --access public --no-git-checks --provenance

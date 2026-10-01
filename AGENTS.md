@@ -312,8 +312,16 @@ git commit -am "chore: release v0.20.2"
 git tag v0.20.2 && git push origin main --tags
 ```
 
+Once the workflow is green:
+
+```sh
+# 3. wait for npm to serve every package, then start the plugin's server the way a
+#    user's first session does and check it answers as the new version
+pnpm release:verify --plugin   # --plugin also updates the local Claude Code plugin
+```
+
 The workflow then runs `validate:release-tag` → `build` → `typecheck` → `test:unit` →
-`validate:packages` → `pnpm -r publish --access public --provenance`.
+`validate:packages` → `test:browser` (real headless Chromium) → `pnpm -r publish --access public --provenance`.
 
 Two constraints that will fail a release if ignored:
 

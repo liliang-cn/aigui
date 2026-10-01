@@ -16,6 +16,8 @@
     "test:unit": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:release": "node --test scripts/release-tag.test.mjs",
+    "test:browser": "AIGUI_IMAGE_E2E=1 vitest run --project image --project mcp",
+    "release:verify": "node scripts/release-verify.mjs",
     "typecheck": "turbo run typecheck",
     "validate:packages": "node scripts/validate-packages.mjs",
     "validate:playground": "pnpm --filter @ai-gui/playground build",
