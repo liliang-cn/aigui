@@ -1,5 +1,11 @@
 # @ai-gui/vanilla
 
+## 0.45.0
+
+### Patch Changes
+
+- @ai-gui/core@0.45.0
+
 ## 0.44.0
 
 ### Patch Changes

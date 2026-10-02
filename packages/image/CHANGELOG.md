@@ -1,5 +1,22 @@
 # @ai-gui/image
 
+## 0.45.0
+
+### Patch Changes
+
+- Updated dependencies [5cc3c4d]
+  - @ai-gui/plugin-bigscreen@0.45.0
+  - @ai-gui/plugin-topology@0.44.1
+  - @ai-gui/plugin-scene@0.45.0
+  - @ai-gui/core@0.45.0
+  - @ai-gui/vanilla@0.45.0
+  - @ai-gui/plugin-katex@0.45.0
+  - @ai-gui/plugin-mermaid@0.45.0
+  - @ai-gui/plugin-chart@0.45.0
+  - @ai-gui/plugin-molecule@0.45.0
+  - @ai-gui/plugin-gravity@0.45.0
+  - @ai-gui/plugin-dashboard@0.45.0
+
 ## 0.44.0
 
 ### Minor Changes
