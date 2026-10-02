@@ -62,11 +62,15 @@ const scratch = await mkdtemp(join(tmpdir(), "aigui-site-"))
 process.env.AIGUI_NO_OPEN = "1"
 for (const demo of DEMOS) {
   const page = await writePage(demo.markdown, { title: demo.title, outDir: scratch, open: false, theme: "light" })
-  await copyFile(await standalonePage(page.path), join(out, "demos", `${demo.slug}.html`))
+  const html = await readFile(await standalonePage(page.path), "utf8")
+  // The site's icon on every demo too: a demo is often the page someone keeps a tab open on.
+  const icons = '<link rel="icon" href="../favicon.svg" type="image/svg+xml"><link rel="icon" href="../favicon-32.png" type="image/png" sizes="32x32">'
+  await writeFile(join(out, "demos", `${demo.slug}.html`), html.replace("<title>", `${icons}\n<title>`))
   console.log(`demo ${demo.slug}`)
 }
 
 await cp(join(root, "docs", "images"), join(out, "images"), { recursive: true })
+for (const icon of ["favicon.svg", "favicon-32.png", "apple-touch-icon.png", "icon-512.png"]) await copyFile(join(root, "site", icon), join(out, icon))
 for (const file of ["index.html", "robots.txt", "llms.txt"]) {
   const text = await readFile(join(root, "site", file), "utf8")
   await writeFile(join(out, file), text.replaceAll("{{VERSION}}", version).replaceAll("{{UPDATED}}", today))
