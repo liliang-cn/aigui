@@ -328,7 +328,17 @@ describe.skipIf(process.env.AIGUI_IMAGE_E2E !== "1")("aigui_open (real browser)"
     const out = text(result).match(/Saved (\S+\.gif)/)![1]
     const bytes = await readFile(out)
     expect(bytes.subarray(0, 6).toString()).toBe("GIF89a")
-    // One image descriptor per frame: a dozen seconds at 8 fps is far more than a handful.
-    expect(bytes.filter((b, i) => b === 0x2c && bytes[i - 1] === 0x00).length).toBeGreaterThan(20)
+    // What matters is that it holds one whole play — five steps at 2.4 s — not how many frames a
+    // given machine managed to capture in that time: a slow runner takes fewer, each shown longer.
+    let frames = 0
+    let centiseconds = 0
+    for (let i = 0; i + 5 < bytes.length; i++) {
+      if (bytes[i] === 0x21 && bytes[i + 1] === 0xf9 && bytes[i + 2] === 0x04) {
+        frames++
+        centiseconds += bytes[i + 4] | (bytes[i + 5] << 8)
+      }
+    }
+    expect(frames).toBeGreaterThanOrEqual(6)
+    expect(centiseconds / 100).toBeGreaterThan(11)
   }, 120_000)
 })
