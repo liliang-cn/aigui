@@ -1,3 +1,4 @@
+import { chartCrowding } from "./crowding"
 import {
   BarChart,
   BoxplotChart,
@@ -210,6 +211,7 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
       return {
         kind: "mount",
         mount: (el: HTMLElement) => {
+          el.setAttribute("data-aigui-chart", "")
           let inst: ECharts | undefined
           let disposed = false
           // `echarts-gl` (WebGL) has no static SSR form and its import is async,
@@ -223,6 +225,9 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
               inst = init(el, chartTheme, { width: fluid ? size(el) : width, height })
               inst.setOption(opt)
               unfollow = follow(el, inst)
+              // Drawn on a canvas, its labels are invisible to a page check: say so here instead.
+              const problem = chartCrowding(opt, inst.getWidth(), inst.getHeight())
+              if (problem) el.setAttribute("data-aigui-issue", problem)
             })
             .catch(() => {
               inst?.dispose()
@@ -241,6 +246,7 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
       return {
         kind: "mount",
         mount: (el: HTMLElement) => {
+          el.setAttribute("data-aigui-chart", "")
           const inst = init(el, chartTheme, { renderer: "svg", width: fluid ? size(el) : width, height })
           try {
             inst.setOption(opt)
@@ -270,3 +276,5 @@ export function chart(opts: ChartOptions = {}): AIGuiPlugin {
   }
   return { name: "chart", nodeRenderers: { chart: render }, promptSpec: (locale) => chartPromptSpec(locale) }
 }
+
+export { chartCrowding } from "./crowding"
