@@ -15,7 +15,7 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write # the GitHub release, after the packages are out
       id-token: write # enables npm provenance on public repos
     steps:
       - uses: actions/checkout@v4
@@ -55,3 +55,11 @@ jobs:
       - run: pnpm -r publish --access public --no-git-checks --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      # The GitHub release: what changed, gathered from every package's changelog, and how to
+      # install it. Watchers are notified; npm is the source of the packages either way.
+      - run: |
+          node scripts/release-notes.mjs "${GITHUB_REF_NAME}" > release-notes.md
+          gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-notes.md --verify-tag
+        env:
+          GH_TOKEN: ${{ github.token }}
