@@ -98,6 +98,19 @@ describe("the aigui MCP server", () => {
     expect(text(broken)).toContain("Not checked")
   })
 
+  it("writes the page's own words in English unless asked for another language, and keeps it on edit", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-"))
+    const client = await connect({ outDir, open: false })
+    await client.callTool({ name: "aigui_open", arguments: { markdown: "# a", title: "en" } })
+    const html = async (suffix: string) => readFile(join(outDir, "pages", (await readdir(join(outDir, "pages"))).find((f) => f.endsWith(suffix))!), "utf8")
+    expect(await html("-en.html")).toContain('<html lang="en"')
+    expect(await html("-en.html")).toContain("All pages")
+    await client.callTool({ name: "aigui_open", arguments: { markdown: "# b x", title: "zh", locale: "zh-CN" } })
+    expect(await html("-zh.html")).toContain("全部页面")
+    await client.callTool({ name: "aigui_edit", arguments: { edits: [{ find: "b x", replace: "b y" }] } })
+    expect(await html("-zh.html")).toContain('<html lang="zh-CN"')
+  })
+
   it("keeps a history of pages, newest first, and links it from every page", async () => {
     const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-"))
     const client = await connect({ outDir, open: false })

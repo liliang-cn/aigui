@@ -95,6 +95,14 @@
             "light",
             "dark"
           ]
+        },
+        "locale": {
+          "description": "Language of the page's own buttons and labels. Default en; use the user's language when they ask for one.",
+          "type": "string",
+          "enum": [
+            "en",
+            "zh-CN"
+          ]
         }
       },
       "required": [
@@ -146,6 +154,14 @@
           "description": "A new title, if it should change.",
           "type": "string",
           "maxLength": 120
+        },
+        "locale": {
+          "description": "Change the language of the page's own buttons and labels.",
+          "type": "string",
+          "enum": [
+            "en",
+            "zh-CN"
+          ]
         }
       },
       "required": [

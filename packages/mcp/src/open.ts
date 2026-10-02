@@ -57,7 +57,7 @@ export interface WrittenPage {
 /** Write the page and the viewer beside it, then hand the file to the system's browser. */
 export async function writePage(
   markdown: string,
-  options: { title?: string; theme?: "light" | "dark"; open?: boolean; outDir?: string; /** Rewrite this page rather than start a new one. */ path?: string } = {},
+  options: { title?: string; theme?: "light" | "dark"; locale?: "en" | "zh-CN"; open?: boolean; outDir?: string; /** Rewrite this page rather than start a new one. */ path?: string } = {},
 ): Promise<WrittenPage> {
   const dir = join(options.outDir ?? outputRoot(), "pages")
   await mkdir(dir, { recursive: true })
@@ -65,7 +65,7 @@ export async function writePage(
   const viewer = await ensureViewer(dir)
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*$/, "").replace("T", "-")
   const path = options.path ?? join(dir, `${stamp}-${slug(options.title)}.html`)
-  await writeFile(path, pageHtml({ markdown, title: options.title, theme: options.theme, viewerSrc: `./${viewer}`, extraCss: await extraCss() }))
+  await writeFile(path, pageHtml({ markdown, title: options.title, theme: options.theme, locale: options.locale, viewerSrc: `./${viewer}`, extraCss: await extraCss() }))
   await recordPage(dir, path, options.title?.trim() || "AIGUI")
   const opened = options.open !== false && process.env.AIGUI_NO_OPEN !== "1" ? openInBrowser(path) : false
   return { path, url: pathToFileURL(path).href, opened }

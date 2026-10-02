@@ -170,7 +170,12 @@ export function svgFor(definition: TopologyDefinition, layout: Layout, frame: Fr
     }
     const at = layout.linkLabels[index]
     if (link.label && at) {
-      parts.push(`<text x="${f(at.x)}" y="${f(at.y + 4)}" text-anchor="middle" font-size="11" fill="${colours.muted}" stroke="${colours.halo}" stroke-width="3" paint-order="stroke">${esc(link.label)}</text>`)
+      // A solid block behind the words: a halo round the glyphs leaves the line showing between them.
+      const w = [...link.label].reduce((sum, ch) => sum + (ch.charCodeAt(0) > 0x2e80 ? 11 : 6.2), 0) + 10
+      parts.push(
+        `<rect x="${f(at.x - w / 2)}" y="${f(at.y - 8)}" width="${f(w)}" height="16" rx="4" fill="${colours.halo}"/>`,
+        `<text x="${f(at.x)}" y="${f(at.y + 4)}" text-anchor="middle" font-size="11" fill="${colours.muted}">${esc(link.label)}</text>`,
+      )
     }
   }
 
@@ -189,10 +194,12 @@ export function svgFor(definition: TopologyDefinition, layout: Layout, frame: Fr
     )
     if (node.note) parts.push(`<text x="${f(b.x + 36)}" y="${f(b.y + 44)}" font-size="11" fill="${colours.muted}">${esc(node.note)}</text>`)
     if (state) {
+      // On the top edge, right of centre: a link coming in from above lands on the centre.
       const w = [...state].length * 6.2 + 12
+      const x = Math.max(b.x + b.width / 2 + 10, b.x + b.width - w - 6)
       parts.push(
-        `<rect x="${f(b.x + b.width - w - 6)}" y="${f(b.y - 8)}" width="${f(w)}" height="16" rx="8" fill="${colour}"/>`,
-        `<text x="${f(b.x + b.width - w / 2 - 6)}" y="${f(b.y + 3.5)}" text-anchor="middle" font-size="10" font-weight="600" fill="#ffffff">${esc(state)}</text>`,
+        `<rect x="${f(x)}" y="${f(b.y - 8)}" width="${f(w)}" height="16" rx="8" fill="${colour}"/>`,
+        `<text x="${f(x + w / 2)}" y="${f(b.y + 3.5)}" text-anchor="middle" font-size="10" font-weight="600" fill="#ffffff">${esc(state)}</text>`,
       )
     }
     parts.push("</g>")

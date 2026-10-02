@@ -143,3 +143,16 @@ describe("a fitted screen", () => {
     expect(read(true, 900).height).toBe("")
   })
 })
+
+describe("a KPI's precision", () => {
+  it("keeps the decimals the value was written with when none are asked for", () => {
+    const host = document.createElement("div")
+    const destroy = mountScreen(host, screen([{ kind: "kpi", title: "Conversion", value: 3.42, unit: "%" }, { kind: "kpi", title: "Orders", value: 12843 }, { kind: "kpi", title: "Rate", value: 3.42, decimals: 1 }]), false)
+    const shown = [...host.querySelectorAll(".aigui-bs-kpi-value, [class*='kpi-value']")].map((n) => n.textContent)
+    expect(shown.join("|")).toContain("3.42")
+    expect(shown.join("|")).toContain("12,843")
+    expect(shown.join("|")).toContain("3.4")
+    expect(shown.join("|")).not.toMatch(/(^|\|)3(\||$)/)
+    destroy()
+  })
+})

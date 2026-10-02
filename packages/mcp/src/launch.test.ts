@@ -86,7 +86,9 @@ function run(env: Record<string, string>, messages: object[], untilId: number): 
 
 const init = { jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "0" } } }
 
-describe("the plugin launcher", () => {
+// Each case starts real node processes; with headless browsers drawing alongside (test:browser) a
+// start can take seconds, which is load, not a hang.
+describe("the plugin launcher", { timeout: 20_000 }, () => {
   it("lists exactly the tools the real server lists", async () => {
     // The launcher answers tools/list from a file while the server is being installed; if that
     // file drifts, the first session of every new user sees different tools from the second.

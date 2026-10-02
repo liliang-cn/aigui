@@ -25,8 +25,8 @@ describe("parseTopology", () => {
   })
 
   it("keeps what was said and nothing it was not", () => {
-    const value = ok({ nodes: [{ id: "a", kind: "disk", state: "primary", note: "/dev/drbd0" }, { id: "b" }], links: [{ from: "a", to: "b" }] })
-    expect(value.nodes[0]).toEqual({ id: "a", kind: "disk", state: "primary", note: "/dev/drbd0" })
+    const value = ok({ nodes: [{ id: "a", kind: "disk", state: "primary", note: "/data" }, { id: "b" }], links: [{ from: "a", to: "b" }] })
+    expect(value.nodes[0]).toEqual({ id: "a", kind: "disk", state: "primary", note: "/data" })
     expect(value.nodes[1]).toEqual({ id: "b" })
     expect(value.links).toEqual([{ from: "a", to: "b" }])
     expect(value).not.toHaveProperty("steps")

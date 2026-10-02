@@ -50,14 +50,14 @@ export async function resolvePage(dir: string, ref?: string): Promise<string | u
 }
 
 /** The answer and settings a page was written from, read back out of the page itself. */
-export async function readPage(path: string): Promise<{ markdown: string; title?: string; theme?: "light" | "dark" }> {
+export async function readPage(path: string): Promise<{ markdown: string; title?: string; theme?: "light" | "dark"; locale?: "en" | "zh-CN" }> {
   const html = await readFile(path, "utf8")
   const data = /<script type="application\/json" id="aigui-data">([\s\S]*?)<\/script>/.exec(html)
   if (!data) throw new Error(`${path} is not a page aigui_open wrote`)
-  const parsed = JSON.parse(data[1]) as { markdown?: string; theme?: "light" | "dark" }
+  const parsed = JSON.parse(data[1]) as { markdown?: string; theme?: "light" | "dark"; locale?: "en" | "zh-CN" }
   const title = /<title>([\s\S]*?)<\/title>/.exec(html)?.[1]
   const unescape = (s: string) => s.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
-  return { markdown: parsed.markdown ?? "", title: title ? unescape(title) : undefined, theme: parsed.theme }
+  return { markdown: parsed.markdown ?? "", title: title ? unescape(title) : undefined, theme: parsed.theme, locale: parsed.locale }
 }
 
 /**
@@ -89,7 +89,7 @@ function indexHtml(entries: readonly PageEntry[]): string {
     .map((e) => `<li><a href="./${encodeURI(e.file)}">${escapeHtml(e.title)}</a><time>${e.updated.slice(0, 16).replace("T", " ")}</time></li>`)
     .join("\n")
   return `<!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AIGUI pages</title>
 <style>
 :root{--bg:#fff;--fg:#1c1c1e;--muted:#6b6b70;--rule:#e6e6ea;color-scheme:light}

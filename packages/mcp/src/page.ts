@@ -8,7 +8,14 @@ export interface PageOptions {
   viewerSrc: string
   /** Stylesheets the plugins cannot declare themselves: KaTeX's fonts, the molecule viewer. */
   extraCss?: string
+  /** Language of the page's own words — its buttons, its `lang`. Default English. */
+  locale?: "en" | "zh-CN"
 }
+
+const CHROME = {
+  en: { pages: "All pages", print: "Print / Save PDF" },
+  "zh-CN": { pages: "全部页面", print: "打印 / 存 PDF" },
+} as const
 
 const escapeHtml = (s: string): string => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
 
@@ -32,8 +39,10 @@ export function embed(data: unknown): string {
 export function pageHtml(options: PageOptions): string {
   const title = options.title?.trim() || "AIGUI"
   const forced = options.theme ? ` data-theme="${options.theme}"` : ""
+  const locale = options.locale === "zh-CN" ? "zh-CN" : "en"
+  const words = CHROME[locale]
   return `<!doctype html>
-<html lang="zh-CN"${forced}><head><meta charset="utf-8">
+<html lang="${locale}"${forced}><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)}</title>
 <style>
@@ -57,10 +66,10 @@ ${baseCss}
 ${options.extraCss ?? ""}
 </style></head>
 <body><main>
-<header><div><h1>${escapeHtml(title)}</h1><p>AIGUI · ${new Date().toISOString().slice(0, 16).replace("T", " ")}</p></div><nav><a href="./index.html">全部页面</a><button type="button" onclick="print()">打印 / 存 PDF</button></nav></header>
+<header><div><h1>${escapeHtml(title)}</h1><p>AIGUI · ${new Date().toISOString().slice(0, 16).replace("T", " ")}</p></div><nav><a href="./index.html">${words.pages}</a><button type="button" onclick="print()">${words.print}</button></nav></header>
 <div id="aigui-root"></div>
 </main>
-<script type="application/json" id="aigui-data">${embed({ markdown: options.markdown, theme: options.theme })}</script>
+<script type="application/json" id="aigui-data">${embed({ markdown: options.markdown, theme: options.theme, locale })}</script>
 <script src="${escapeHtml(options.viewerSrc)}"></script>
 </body></html>`
 }

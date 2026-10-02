@@ -68,7 +68,13 @@ export function topology(options: TopologyOptions = {}): AIGuiPlugin {
 
 function mountTopology(el: HTMLElement, definition: TopologyDefinition, theme: string | undefined, animate: boolean, stepMs: number): () => void {
   const colours = palette(theme)
-  const layout = layoutTopology(definition)
+  // Without a stated direction, whichever way draws larger in the space there is: a long chain laid
+  // left to right in a narrow column is scaled down until its badges are unreadable.
+  const room = el.clientWidth || el.parentElement?.clientWidth || 0
+  const across = layoutTopology(definition)
+  const down = definition.direction || !room ? undefined : layoutTopology({ ...definition, direction: "TB" })
+  const scale = (l: typeof across) => Math.min(1, room / l.width)
+  const layout = down && scale(down) > scale(across) + 0.05 ? down : across
   const steps = definition.steps ?? []
   el.setAttribute("data-aigui-topology", String(definition.nodes.length))
   if (definition.title) {
@@ -122,7 +128,7 @@ function mountTopology(el: HTMLElement, definition: TopologyDefinition, theme: s
       for (const step of steps) {
         const li = document.createElement("li")
         const carried = (step.messages ?? []).map((m) => `${m.label ? `${m.label}: ` : ""}${name(m.from)} → ${name(m.to)}`)
-        li.textContent = carried.length > 0 ? `${step.caption}（${carried.join("；")}）` : step.caption
+        li.textContent = carried.length > 0 ? `${step.caption} (${carried.join("; ")})` : step.caption
         ol.appendChild(li)
       }
       el.appendChild(ol)

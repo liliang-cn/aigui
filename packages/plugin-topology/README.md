@@ -3,7 +3,7 @@
 Infrastructure topology diagrams for [AIGUI](https://github.com/liliang-cn/aigui): nodes in hosts,
 racks and zones, the links between them and the state each is in — laid out automatically — with
 `steps` that play a process over them: a write travelling to the primary, the replication to its
-peer, the peer taking over when the primary fails.
+replica, the replica taking over when the primary fails.
 
 ```sh
 pnpm add @ai-gui/core @ai-gui/plugin-topology
@@ -22,29 +22,31 @@ their members. A step says only what changes — a state set in step 2 holds aft
 
 ```topology
 {
-  "title": "DRBD 主备复制",
+  "title": "Database replication",
   "groups": [
     { "id": "h1", "label": "node-a" },
     { "id": "h2", "label": "node-b" }
   ],
   "nodes": [
-    { "id": "app", "label": "应用", "kind": "client" },
-    { "id": "d1", "label": "DRBD r0", "kind": "disk", "group": "h1", "state": "primary", "note": "/dev/drbd0" },
-    { "id": "d2", "label": "DRBD r0", "kind": "disk", "group": "h2", "state": "secondary", "note": "/dev/drbd0" }
+    { "id": "app", "label": "app", "kind": "client" },
+    { "id": "db1", "label": "db", "kind": "database", "group": "h1", "state": "primary", "note": "primary" },
+    { "id": "db2", "label": "db", "kind": "database", "group": "h2", "state": "secondary", "note": "replica" }
   ],
   "links": [
-    { "from": "app", "to": "d1", "label": "写入" },
-    { "id": "rep", "from": "d1", "to": "d2", "label": "复制 (协议 C)" }
+    { "from": "app", "to": "db1", "label": "writes" },
+    { "id": "rep", "from": "db1", "to": "db2", "label": "sync replication" }
   ],
   "steps": [
-    { "caption": "应用写入主节点", "messages": [{ "from": "app", "to": "d1", "label": "write" }], "highlight": ["d1"] },
-    { "caption": "主节点把写入同步复制到备节点", "messages": [{ "from": "d1", "to": "d2", "label": "data" }] },
-    { "caption": "备节点落盘后回 ACK，写入才算完成", "messages": [{ "from": "d2", "to": "d1", "label": "ack" }] },
-    { "caption": "node-a 宕机，复制链路断开", "states": { "d1": "failed" }, "links": { "rep": "down" } },
-    { "caption": "node-b 提升为主节点，接管写入", "states": { "d2": "primary" }, "highlight": ["d2"] }
+    { "caption": "The app writes to the primary", "messages": [{ "from": "app", "to": "db1", "label": "write" }], "highlight": ["db1"] },
+    { "caption": "The primary replicates the write to the replica", "messages": [{ "from": "db1", "to": "db2", "label": "data" }] },
+    { "caption": "The replica acks once on disk; only then is the write complete", "messages": [{ "from": "db2", "to": "db1", "label": "ack" }] },
+    { "caption": "node-a fails; replication stops", "states": { "db1": "failed" }, "links": { "rep": "down" } },
+    { "caption": "node-b is promoted and takes over writes", "states": { "db2": "primary" }, "highlight": ["db2"] }
   ]
 }
 ```
+
+![The example above, drawn still](https://raw.githubusercontent.com/liliang-cn/aigui/main/docs/images/topology.png)
 
 In the page the steps play: each step's messages travel along the links, then its state changes
 land, with controls to pause and step. Drawn still (`animate: false`, as `@ai-gui/image` draws it),

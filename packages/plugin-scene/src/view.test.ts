@@ -67,7 +67,7 @@ describe("stacked objects with labels (the reported scene)", () => {
 
   it("hangs the turned cylinder's label from where the cylinder lies, not where it would stand", () => {
     const { labels } = lay(framed)
-    const pipe = labels.find((l) => l.text.startsWith("DRBD 复制网络"))!
+    const pipe = labels.find((l) => l.text.startsWith("replication network"))!
     const box = new THREE.Box3().setFromObject(pipe.node)
     // Lying along x, 7.2 m long and 0.1 m thick: its top is at 1.4 m, not 1.35 + 3.6.
     expect(box.max.y).toBeCloseTo(1.4, 2)

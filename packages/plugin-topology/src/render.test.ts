@@ -44,19 +44,19 @@ describe("layoutTopology", () => {
 describe("frameAt", () => {
   it("carries every state change forward to the steps after it", () => {
     const definition = example()
-    expect(frameAt(definition, -1).nodes.get("d1")).toBe("primary")
-    expect(frameAt(definition, 3).nodes.get("d1")).toBe("failed")
+    expect(frameAt(definition, -1).nodes.get("db1")).toBe("primary")
+    expect(frameAt(definition, 3).nodes.get("db1")).toBe("failed")
     expect(frameAt(definition, 3).links[1]).toBe("down")
     // Step 5 says nothing about d1 or the link: they stay as step 4 left them.
-    expect(frameAt(definition, 4).nodes.get("d1")).toBe("failed")
-    expect(frameAt(definition, 4).nodes.get("d2")).toBe("primary")
-    expect(frameAt(definition, 4).highlight).toEqual(new Set(["d2"]))
+    expect(frameAt(definition, 4).nodes.get("db1")).toBe("failed")
+    expect(frameAt(definition, 4).nodes.get("db2")).toBe("primary")
+    expect(frameAt(definition, 4).highlight).toEqual(new Set(["db2"]))
   })
 
   it("puts every step's messages on the still picture, numbered", () => {
     const frame = frameAt(example(), "all")
     expect(frame.messages.map((m) => [m.step, m.label])).toEqual([[1, "write"], [2, "data"], [3, "ack"]])
-    expect(frame.nodes.get("d2")).toBe("primary")
+    expect(frame.nodes.get("db2")).toBe("primary")
   })
 })
 

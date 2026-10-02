@@ -86,6 +86,7 @@ async function pageCheck(url: string, deps: ServerDeps): Promise<string> {
 export async function callTool(name: string, args: Record<string, unknown>, deps: ServerDeps = {}): Promise<ToolResult> {
   const str = (key: string) => (typeof args[key] === "string" ? (args[key] as string) : undefined)
   const theme = str("theme") === "light" || str("theme") === "dark" ? (str("theme") as "light" | "dark") : undefined
+  const pageLocale = str("locale") === "zh-CN" ? "zh-CN" : str("locale") === "en" ? "en" : undefined
   switch (name) {
     case "aigui_guide":
       try {
@@ -112,7 +113,7 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
       const markdown = str("markdown")
       if (!markdown) return failure("markdown is required.")
       try {
-        const page = await writePage(markdown, { title: str("title"), theme, outDir: deps.outDir, open: deps.open })
+        const page = await writePage(markdown, { title: str("title"), theme, locale: pageLocale, outDir: deps.outDir, open: deps.open })
         return { content: [{ type: "text", text: `${opened(page)}${await pageCheck(page.url, deps)}` }] }
       } catch (error) {
         return failure(`Could not write the page: ${String((error as Error).message)}`)
@@ -129,7 +130,7 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
       try {
         const current = await readPage(path)
         const markdown = applyEdits(current.markdown, edits)
-        const page = await writePage(markdown, { title: str("title") ?? current.title, theme: theme ?? current.theme, outDir: deps.outDir, open: deps.open, path })
+        const page = await writePage(markdown, { title: str("title") ?? current.title, theme: theme ?? current.theme, locale: pageLocale ?? current.locale, outDir: deps.outDir, open: deps.open, path })
         return { content: [{ type: "text", text: `Edited ${basename(path)} (${edits.length} change${edits.length === 1 ? "" : "s"}). ${opened(page)}${await pageCheck(page.url, deps)}` }] }
       } catch (error) {
         return failure(`Could not edit ${basename(path)}: ${String((error as Error).message)}`)
@@ -220,6 +221,7 @@ export function createServer(deps: ServerDeps = {}): McpServer {
         markdown: z.string().min(1).describe("The whole answer: prose and AIGUI blocks."),
         title: z.string().max(120).optional().describe("Page title."),
         theme: z.enum(["light", "dark"]).optional().describe("Default: follow the system setting."),
+        locale: z.enum(["en", "zh-CN"]).optional().describe("Language of the page's own buttons and labels. Default en; use the user's language when they ask for one."),
       },
       annotations: { readOnlyHint: false, openWorldHint: false },
     },
@@ -239,6 +241,7 @@ export function createServer(deps: ServerDeps = {}): McpServer {
         page: z.string().optional().describe('The page file path or name, or "last" (default).'),
         edits: z.array(z.object({ find: z.string().min(1), replace: z.string() })).min(1).describe("Find-and-replace edits on the page's markdown, applied in order."),
         title: z.string().max(120).optional().describe("A new title, if it should change."),
+        locale: z.enum(["en", "zh-CN"]).optional().describe("Change the language of the page's own buttons and labels."),
       },
       annotations: { readOnlyHint: false, openWorldHint: false },
     },

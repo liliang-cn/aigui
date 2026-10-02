@@ -91,12 +91,12 @@ const ZH = `3D 场景（围栏代码块）：\`\`\`scene 开头，块内是一�
 \`\`\`scene
 {
   "objects": [
-    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [-1.5, 0, 0], "anchor": "bottom", "color": "#64748b", "label": "LVM thin", "labelSide": "left" },
-    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [-1.5, 0.9, 0], "anchor": "bottom", "color": "#b45309", "label": "DRBD d1", "labelSide": "left" },
-    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [1.5, 0, 0], "anchor": "bottom", "color": "#64748b", "label": "LVM thin", "labelSide": "right" },
-    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [1.5, 0.9, 0], "anchor": "bottom", "color": "#b45309", "label": "DRBD d2", "labelSide": "right" }
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [-1.5, 0, 0], "anchor": "bottom", "color": "#64748b", "label": "存储池", "labelSide": "left" },
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [-1.5, 0.9, 0], "anchor": "bottom", "color": "#b45309", "label": "副本 r1", "labelSide": "left" },
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [1.5, 0, 0], "anchor": "bottom", "color": "#64748b", "label": "存储池", "labelSide": "right" },
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [1.5, 0.9, 0], "anchor": "bottom", "color": "#b45309", "label": "副本 r2", "labelSide": "right" }
   ],
-  "caption": "每个节点上 DRBD 叠在 LVM thin 之上"
+  "caption": "每个节点上，副本叠在存储池之上"
 }
 \`\`\`
 
@@ -157,12 +157,12 @@ Example — two storage stacks, their labels moved to the sides:
 \`\`\`scene
 {
   "objects": [
-    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [-1.5, 0, 0], "anchor": "bottom", "color": "#64748b", "label": "LVM thin", "labelSide": "left" },
-    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [-1.5, 0.9, 0], "anchor": "bottom", "color": "#b45309", "label": "DRBD d1", "labelSide": "left" },
-    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [1.5, 0, 0], "anchor": "bottom", "color": "#64748b", "label": "LVM thin", "labelSide": "right" },
-    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [1.5, 0.9, 0], "anchor": "bottom", "color": "#b45309", "label": "DRBD d2", "labelSide": "right" }
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [-1.5, 0, 0], "anchor": "bottom", "color": "#64748b", "label": "storage pool", "labelSide": "left" },
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [-1.5, 0.9, 0], "anchor": "bottom", "color": "#b45309", "label": "replica r1", "labelSide": "left" },
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [1.5, 0, 0], "anchor": "bottom", "color": "#64748b", "label": "storage pool", "labelSide": "right" },
+    { "shape": "box", "size": [1.6, 0.9, 1.2], "position": [1.5, 0.9, 0], "anchor": "bottom", "color": "#b45309", "label": "replica r2", "labelSide": "right" }
   ],
-  "caption": "On each node DRBD sits on top of LVM thin"
+  "caption": "On each node the replica sits on the storage pool"
 }
 \`\`\`
 

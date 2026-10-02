@@ -37,7 +37,8 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string,
 
 /** Count a number up from zero, returning the cancel. */
 function countUp(node: HTMLElement, panel: KpiPanel, animate: boolean): () => void {
-  const decimals = panel.decimals ?? 0
+  // Unstated, the value's own precision: 3.42 written without `decimals` must not read as 3.
+  const decimals = panel.decimals ?? Math.min(4, (String(panel.value).split(".")[1] ?? "").length)
   const show = (value: number) => {
     node.textContent = `${panel.prefix ?? ""}${formatNumber(value, decimals)}`
   }

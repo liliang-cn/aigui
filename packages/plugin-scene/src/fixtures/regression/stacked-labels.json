@@ -14,7 +14,7 @@
       ],
       "anchor": "bottom",
       "color": "#64748b",
-      "label": "STORAGE: LVM thin",
+      "label": "storage pool",
       "labelSide": "left"
     },
     {
@@ -31,7 +31,7 @@
       ],
       "anchor": "bottom",
       "color": "#b45309",
-      "label": "d1  DRBD",
+      "label": "replica r1",
       "labelSide": "left"
     },
     {
@@ -48,7 +48,7 @@
       ],
       "anchor": "bottom",
       "color": "#64748b",
-      "label": "STORAGE: LVM thin",
+      "label": "storage pool",
       "labelSide": "right"
     },
     {
@@ -65,7 +65,7 @@
       ],
       "anchor": "bottom",
       "color": "#b45309",
-      "label": "d2  DRBD",
+      "label": "replica r2",
       "labelSide": "right"
     },
     {
@@ -83,7 +83,7 @@
       "anchor": "bottom",
       "color": "#b45309",
       "opacity": 0.5,
-      "label": "d3  DRBD (diskless)",
+      "label": "replica r3 (diskless)",
       "labelSide": "right"
     },
     {
@@ -101,7 +101,7 @@
         90
       ],
       "color": "#dc2626",
-      "label": "DRBD 复制网络 eth1",
+      "label": "replication network eth1",
       "labelSide": "right"
     }
   ],

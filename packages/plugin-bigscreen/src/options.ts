@@ -54,7 +54,7 @@ export function gaugeOption(panel: GaugePanel, c: Palette, animate: boolean): EC
         title: { show: false },
         detail: {
           valueAnimation: animate,
-          offsetCenter: [0, ring ? 0 : "28%"],
+          offsetCenter: [0, ring ? 0 : "62%"],
           fontSize: ring ? 28 : 24,
           fontWeight: 700,
           fontFamily: FONT,

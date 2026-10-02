@@ -13,26 +13,26 @@ export function topologyPromptSpec(locale?: string): string {
 }
 
 const EXAMPLE = `{
-  "title": "DRBD 主备复制",
+  "title": "数据库主从复制",
   "groups": [
     { "id": "h1", "label": "node-a" },
     { "id": "h2", "label": "node-b" }
   ],
   "nodes": [
     { "id": "app", "label": "应用", "kind": "client" },
-    { "id": "d1", "label": "DRBD r0", "kind": "disk", "group": "h1", "state": "primary", "note": "/dev/drbd0" },
-    { "id": "d2", "label": "DRBD r0", "kind": "disk", "group": "h2", "state": "secondary", "note": "/dev/drbd0" }
+    { "id": "db1", "label": "db", "kind": "database", "group": "h1", "state": "primary", "note": "主库" },
+    { "id": "db2", "label": "db", "kind": "database", "group": "h2", "state": "secondary", "note": "从库" }
   ],
   "links": [
-    { "from": "app", "to": "d1", "label": "写入" },
-    { "id": "rep", "from": "d1", "to": "d2", "label": "复制 (协议 C)" }
+    { "from": "app", "to": "db1", "label": "写入" },
+    { "id": "rep", "from": "db1", "to": "db2", "label": "同步复制" }
   ],
   "steps": [
-    { "caption": "应用写入主节点", "messages": [{ "from": "app", "to": "d1", "label": "write" }], "highlight": ["d1"] },
-    { "caption": "主节点把写入同步复制到备节点", "messages": [{ "from": "d1", "to": "d2", "label": "data" }] },
-    { "caption": "备节点落盘后回 ACK，写入才算完成", "messages": [{ "from": "d2", "to": "d1", "label": "ack" }] },
-    { "caption": "node-a 宕机，复制链路断开", "states": { "d1": "failed" }, "links": { "rep": "down" } },
-    { "caption": "node-b 提升为主节点，接管写入", "states": { "d2": "primary" }, "highlight": ["d2"] }
+    { "caption": "应用写入主库", "messages": [{ "from": "app", "to": "db1", "label": "write" }], "highlight": ["db1"] },
+    { "caption": "主库把写入同步复制到从库", "messages": [{ "from": "db1", "to": "db2", "label": "data" }] },
+    { "caption": "从库落盘后回 ACK，写入才算完成", "messages": [{ "from": "db2", "to": "db1", "label": "ack" }] },
+    { "caption": "node-a 宕机，复制链路断开", "states": { "db1": "failed" }, "links": { "rep": "down" } },
+    { "caption": "node-b 提升为主库，接管写入", "states": { "db2": "primary" }, "highlight": ["db2"] }
   ]
 }`
 
@@ -57,13 +57,13 @@ const ZH = `拓扑图（围栏代码块）：\`\`\`topology 开头，块内是�
 步骤：caption（必填，一句话）、messages（这一步谁发给谁什么：[{"from","to","label"}]，沿连线移动）、states（从这一步起节点变成什么状态）、links（从这一步起连线变成什么状态，用连线 id）、highlight（这一步要突出的节点）
 - 每一步只写变化的部分：前面步骤设置的状态会一直保持
 
-例子——DRBD 主备复制与故障切换：
+例子——数据库主从复制与故障切换：
 
 \`\`\`topology
 ${EXAMPLE}
 \`\`\`
 
-数字、地址、状态必须来自对话或用户给的材料；讲概念时用 node-a、r0 这类通用名字，不要编造具体 IP。`
+数字、地址、状态必须来自对话或用户给的材料；讲概念时用 node-a、db1 这类通用名字，不要编造具体 IP。`
 
 const EN = `Topologies (fenced): \`\`\`topology with a JSON object inside. Use it to show how systems connect — clusters, networks, storage, services — and above all to show a process running over them: how a write travels, how a failover happens, how a request is routed. Prefer it to placing boxes by hand in a scene or forcing mermaid.
 
@@ -80,12 +80,12 @@ Link: from, to (required), id (only needed to change its state in a step), label
 Step: caption (required, one sentence), messages (what is sent where in this step: [{"from","to","label"}], travelling along the links), states (node states from this step on), links (link states from this step on, by link id), highlight (nodes to draw attention to in this step).
 - A step says only what changes: states set in an earlier step hold.
 
-Example — DRBD primary/secondary replication and failover:
+Example — database primary/replica replication and failover:
 
 \`\`\`topology
-${EXAMPLE.replace("DRBD 主备复制", "DRBD replication").replace(/"应用"/, '"app"').replace('"写入"', '"writes"').replace("复制 (协议 C)", "replication (protocol C)").replace("应用写入主节点", "The app writes to the primary").replace("主节点把写入同步复制到备节点", "The primary replicates the write to the secondary").replace("备节点落盘后回 ACK，写入才算完成", "The secondary acks once on disk; only then is the write complete").replace("node-a 宕机，复制链路断开", "node-a fails; replication stops").replace("node-b 提升为主节点，接管写入", "node-b is promoted and takes over writes")}
+${EXAMPLE.replace("数据库主从复制", "Database replication").replace(/"主库"/, '"primary"').replace(/"从库"/, '"replica"').replace(/"应用"/, '"app"').replace('"写入"', '"writes"').replace("同步复制", "sync replication").replace("应用写入主库", "The app writes to the primary").replace("主库把写入同步复制到从库", "The primary replicates the write to the replica").replace("从库落盘后回 ACK，写入才算完成", "The replica acks once on disk; only then is the write complete").replace("node-a 宕机，复制链路断开", "node-a fails; replication stops").replace("node-b 提升为主库，接管写入", "node-b is promoted and takes over writes")}
 \`\`\`
 
-Numbers, addresses and states must come from the conversation or the user's material; when explaining a concept use generic names like node-a and r0, never invented IPs.`
+Numbers, addresses and states must come from the conversation or the user's material; when explaining a concept use generic names like node-a and db1, never invented IPs.`
 
 const PROMPT: MessageBundle = { en: { spec: EN }, "zh-CN": { spec: ZH } }
