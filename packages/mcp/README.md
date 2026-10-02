@@ -1,79 +1,107 @@
 # @ai-gui/mcp
 
-An [MCP](https://modelcontextprotocol.io) server that lets an agent draw [AIGUI](../../README.md) blocks — charts, diagrams, maths, 3D scenes, orbits, molecules, data walls — as PNGs, or as a live page in the browser.
+[![npm](https://img.shields.io/npm/v/@ai-gui/mcp)](https://www.npmjs.com/package/@ai-gui/mcp)
+[![license](https://img.shields.io/npm/l/@ai-gui/mcp)](https://github.com/liliang-cn/aigui/blob/main/LICENSE)
+[![CI](https://github.com/liliang-cn/aigui/actions/workflows/ci.yml/badge.svg)](https://github.com/liliang-cn/aigui/actions/workflows/ci.yml)
 
-It is what the AIGUI plugin for Claude Code and Codex runs. A terminal shows only text; with this server the agent writes the same markdown an AIGUI frontend would render, and gets pictures back.
+**Let your coding agent draw.** An [MCP](https://modelcontextprotocol.io) server — and the engine of the AIGUI plugin for Claude Code and Codex — that turns charts, diagrams, maths, 3D scenes, molecules, orbits, dashboards and step-by-step infrastructure topologies into PNGs the agent can check, or a live page in your browser.
 
-## Use it from Claude Code
+![A failover topology, drawn and played by the agent](https://raw.githubusercontent.com/liliang-cn/aigui/main/docs/images/demo.gif)
 
-As a plugin, which also brings the skills that tell Claude when to draw:
+[Live demos](https://liliang-cn.github.io/aigui/) · [Source](https://github.com/liliang-cn/aigui) · [All packages](https://www.npmjs.com/org/ai-gui)
+
+## Install
+
+**Claude Code** — the plugin also brings the skills that tell the agent when a picture beats text:
 
 ```text
 /plugin marketplace add liliang-cn/aigui
 /plugin install aigui@aigui
 ```
 
-The plugin starts the server through a small launcher that ships with it. On first use it installs this package into `~/.cache/aigui/server/<version>` — a few hundred megabytes, charts, diagrams and 3D engines included — while the session is already connected; the first tool call waits for the install, and every later start runs the installed server directly, in well under a second. It does not use `npx`, which with a dependency tree this size either re-checks every package online on each start (longer than Claude Code waits for a server to connect) or, with `--prefer-offline`, trusts a cached registry listing that predates the release it was asked for and refuses to start.
+**Codex:**
 
-Or the server on its own, installed once:
+```sh
+codex plugin marketplace add liliang-cn/aigui
+codex plugin add aigui@aigui
+```
+
+**Any MCP client** — run `aigui-mcp` over stdio:
 
 ```sh
 npm install -g @ai-gui/mcp@0.47.0
 claude mcp add aigui -- aigui-mcp
 ```
 
-Any other MCP client runs the same `aigui-mcp` command, over stdio.
+Requires Node.js 18.11+. The first drawing downloads a headless browser (about 100 MB, once); everything runs locally, with no account or API key.
+
+## What it draws
+
+| | |
+| --- | --- |
+| ![Chart](https://raw.githubusercontent.com/liliang-cn/aigui/main/docs/images/chart.png) | ![3D scene](https://raw.githubusercontent.com/liliang-cn/aigui/main/docs/images/scene.png) |
+| ![Molecule](https://raw.githubusercontent.com/liliang-cn/aigui/main/docs/images/molecule.png) | ![Orbits](https://raw.githubusercontent.com/liliang-cn/aigui/main/docs/images/gravity.png) |
+
+21 block types: ECharts charts (3D too), Mermaid, KaTeX, dashboards and data walls, 3D scenes, molecules from SMILES, orbits and collisions, topologies whose steps play, knowledge graphs, geometry, function plots, optics, mechanics, labelled figures, candlesticks, tables and more. Nine of them render straight to PNG; all of them draw in a page.
 
 ## Tools
 
 | Tool | What it does |
 | --- | --- |
-| `aigui_guide` | With no arguments, lists the blocks. With `blocks: ["chart", "scene"]`, returns their exact syntax — the text `buildSystemPrompt` gives a browser, from the same plugins. |
-| `aigui_render` | Draws the blocks in a markdown string as PNGs and returns them inline and as file paths. Chart, mermaid, maths, tables, bigscreen, dashboard, scene, gravity, molecule. |
-| `aigui_open` | Writes the whole answer to an HTML page and opens it in the default browser, where charts are live, 3D can be turned and walls and orbits animate. Draws every block, including the page-only ones: graph, solid, function, optics, motion, physics, figure, quote and more. |
-| `aigui_edit` | Changes part of a page `aigui_open` wrote — a number, a panel, a step — by find-and-replace on its markdown, without sending the whole answer again. Each `find` must occur exactly once. Rewrites the page in place and looks it over again. |
-| `aigui_topology` | Reads a docker-compose file, a Kubernetes manifest or a directory of manifests and draws the system as a topology — services, databases, queues, Services, Ingresses, volumes and their links — from the config, not from memory. Returns the block too, to add steps to. |
-| `aigui_feedback` | Reads the comments the reader left on pages (a Comment button on every page opened while the session runs): page, block, what to change. Act on them with `aigui_edit`. |
-| `aigui_export` | Saves a page as one full-length PNG or a PDF, drawn still (nothing mid-animation), as a single self-contained HTML file that stays interactive and opens offline — carrying only the code its blocks use — or as a GIF or WebM of one play of what moves on it (a topology's or a scene's steps, a wall counting up). |
+| `aigui_guide` | Lists the blocks, or returns the exact syntax for the ones named — read before writing a block. |
+| `aigui_render` | Draws the blocks in a markdown string as PNGs, returned to the agent and saved to disk. |
+| `aigui_open` | Opens the whole answer as a live page: charts to hover, 3D to turn, topologies and walls that play. |
+| `aigui_edit` | Changes part of a page by find-and-replace, without sending the whole answer again. |
+| `aigui_export` | Saves a page as PNG, PDF, one self-contained HTML file, or a GIF / WebM of it playing. |
+| `aigui_topology` | Draws a system from its docker-compose file or Kubernetes manifests. |
+| `aigui_feedback` | Reads the comments the user left on a page's blocks. |
 
-The syntax is fetched on demand rather than written into the tool descriptions: every plugin's spec together is tens of kilobytes, and a description is sent on every turn whether anything is drawn or not.
+## Why it can be trusted
 
-## Data from files
-
-`aigui_render` and `aigui_open` take `data: {"sales": "/abs/path/sales.csv"}` (`.csv`, `.tsv`, `.json`, up to 5 MB). In a block's JSON, `{"$data":"sales"}` becomes the rows, `{"$data":"sales","column":"revenue"}` one column, `{"$data":"sales","pick":["month","revenue"]}` rows as arrays, and `{"$data":"sales","sum":"revenue"}` a total — also `count`, `max`, `min`, `avg`. The numbers then come from the file, and the result names the file behind each block; a page shows it under the block.
-
-## A browser for the pictures
-
-`aigui_render` draws in Playwright's headless Chromium. `npx` installs Playwright but not that browser, so the server downloads it itself (about 100 MB, once) in the background as soon as it starts; later starts check it in a fraction of a second. The first picture waits up to a minute for the download, then goes ahead with the Google Chrome or Microsoft Edge already on the machine, which draws charts and diagrams well but 3D slowly. `AIGUI_NO_BROWSER_DOWNLOAD=1` skips the download; `AIGUI_BROWSER_CHANNEL` pins a browser (`chromium`, `chrome`, `msedge`) and also skips it.
-
-`aigui_open` needs no headless browser at all: it writes a file and hands it to the system's default one.
+- **Numbers come from your files.** Pass `data: {"sales": "/abs/path/sales.csv"}` and write `{"$data":"sales","column":"revenue"}` in the chart — or `pick`, `sum`, `count`, `max`, `min`, `avg`. The figures are read from the file, never retyped by the model, and the result names the file behind each block.
+- **Every drawing is checked.** A headless browser looks for labels on top of each other, text cut off or under 9 px, poor contrast and crowded charts, and tells the agent to fix them before you see anything.
+- **Topologies from real config.** `aigui_topology` reads what is actually deployed, not what the model remembers.
+- **Local.** Pictures go to `~/.cache/aigui/images`, pages to `~/.cache/aigui/pages`, listed newest first in `pages/index.html`. A page loads nothing from the network.
 
 ## Custom blocks
 
-Add your own block type without touching this package. `npx @ai-gui/cli plugin new ticket` writes `~/.config/aigui/plugins/ticket/` (or `AIGUI_PLUGIN_DIR`) with three files:
+Add your own block type in three files — no build step, no fork:
+
+```sh
+npx @ai-gui/cli plugin new ticket   # writes ~/.config/aigui/plugins/ticket/
+```
 
 | File | What it is |
 | --- | --- |
-| `aigui.json` | `name`, `fences`, a one-line `description`, `picture` (whether `aigui_render` may draw it) |
-| `plugin.js` | A plain browser script — no build step — that registers its plugins: `(globalThis.__aiguiPacks ??= {}).ticket = (theme, still) => [{ name, nodeRenderers, isBlockComplete, css }]`. Same shape as `@ai-gui/core`'s `AIGuiPlugin`; its HTML is sanitized like any plugin's. |
-| `spec.md` | The rules the model follows to write the block — what `aigui_guide` returns for it. |
+| `aigui.json` | Name, fences, a one-line description, whether it may render to PNG |
+| `plugin.js` | A plain browser script registering an `AIGuiPlugin`: `(globalThis.__aiguiPacks ??= {}).ticket = (theme, still) => [...]`. Its HTML is sanitized like any plugin's. |
+| `spec.md` | The rules the model follows to write the block |
 
-The block then appears in `aigui_guide` marked `[custom]`, draws in pages, PNGs and standalone exports, and is picked up without a restart. Blocks installed when the server starts are also named in the tool descriptions, so the agent reaches for them unprompted — restart the session after adding one for that. A folder with a bad manifest is skipped with a reason in the listing; a name that collides with a built-in block is refused. Scripts run only from that folder, on your machine — the same trust as installing a package.
+It then appears in `aigui_guide` as `[custom]` and draws in pages, PNGs and exports. Blocks installed when a session starts are named in the tool descriptions too: in a measured run, agents used a custom block in 9 of 9 sessions with that, against 5 of 9 without. A broken folder is skipped with its reason; a name that collides with a built-in block is refused.
 
 ## Comments from the page
 
-While the session runs, pages are served from `127.0.0.1` on a port the system picks, and each carries a Comment button: pick a block, say what should change, send. The agent reads the comments with `aigui_feedback`. Only files under the pages directory are served; a page opened from disk, or after the session ends, simply has no button.
+While the session runs, pages are served on `127.0.0.1` (a port the system picks) with a **Comment** button: pick a block, say what should change, send. The agent reads it with `aigui_feedback` and edits the page. Only the pages directory is served.
 
-## Files
+## Configuration
 
-Pictures go to `~/.cache/aigui/images`, pages to `~/.cache/aigui/pages` with the viewer script beside them — not the temp directory, because a page is something a person reopens. `AIGUI_OUT_DIR` moves both; `XDG_CACHE_HOME` is honoured. `AIGUI_NO_OPEN=1` writes pages without opening them. Every page is listed, newest first, in `pages/index.html`, which each page links to; a page opened with `?still` plays nothing, which is how exports and the look-over see it. `AIGUI_OPEN_IMAGES=1` also opens `aigui_render`'s PNGs in the system image viewer — the Claude Code and Codex plugins set it, since a terminal cannot show them; leave it off in a client that shows images inline.
-
-A page is self-contained apart from that one viewer script (about 20 MB, every plugin inlined, copied once per version): it loads nothing from the network, and its maths fonts are embedded, because a page opened from `file://` cannot load fonts from beside itself.
+| Variable | Effect |
+| --- | --- |
+| `AIGUI_OUT_DIR` | Where pictures and pages go. Default `~/.cache/aigui` (`XDG_CACHE_HOME` honoured). |
+| `AIGUI_NO_OPEN=1` | Write pages without opening them. |
+| `AIGUI_OPEN_IMAGES=1` | Also open `aigui_render`'s PNGs in the image viewer — the plugins set it, since a terminal cannot show images. |
+| `AIGUI_PLUGIN_DIR` | Where custom blocks live. Default `~/.config/aigui/plugins`. |
+| `AIGUI_NO_BROWSER_DOWNLOAD=1` | Skip the headless-browser download; draw with an installed Chrome or Edge. |
+| `AIGUI_BROWSER_CHANNEL` | Pin a browser: `chromium`, `chrome` or `msedge`. |
 
 ## Programmatic use
 
 ```ts
-import { createServer, renderToContent, writePage, guide } from "@ai-gui/mcp"
+import { createServer, callTool, renderToContent, writePage } from "@ai-gui/mcp"
 ```
 
-`createServer()` returns the `McpServer` without connecting it, for a host that wants its own transport.
+`createServer()` returns the `McpServer` unconnected, for a host with its own transport; `callTool(name, args)` runs one tool directly.
+
+## License
+
+MIT © Liang Li
