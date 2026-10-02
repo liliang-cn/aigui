@@ -9,7 +9,7 @@ A terminal agent — Claude Code, Codex — shows text. The `aigui` MCP server d
 
 ## When to draw
 
-Draw when the picture carries the answer: comparing numbers, showing a trend, a flow with branches, a system's parts and how they connect (a cluster, a network, storage — and a process over it, like a write or a failover: use `topology`, whose steps play in the page), a formula worth typesetting, a 3D arrangement, an orbit, a molecule's shape, a set of KPIs. Do not draw what a sentence or a short table already says, and never draw instead of answering — the prose answer comes first, the picture supports it.
+Draw when the picture carries the answer: comparing numbers, showing a trend, a flow with branches, a system's parts and how they connect (a cluster, a network, storage — and a process over it, like a write or a failover: use `topology`, whose steps play in the page; when the system is described by a docker-compose file or Kubernetes manifests, start from `aigui_topology` on them rather than describing it from memory), a formula worth typesetting, a 3D arrangement, an orbit, a molecule's shape, a set of KPIs. Do not draw what a sentence or a short table already says, and never draw instead of answering — the prose answer comes first, the picture supports it.
 
 ## How
 

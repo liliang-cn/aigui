@@ -10,6 +10,7 @@ import { guide } from "./guide"
 import { ensureViewer, openFiles, standalonePage, writePage } from "./open"
 import { applyEdits, readPage, resolvePage } from "./pages"
 import { describeProvenance, fillData, loadData, type Provenance } from "./data"
+import { importTopology } from "./topology-import"
 import { outputRoot, packageVersion } from "./paths"
 import { renderToContent, type RenderedContent } from "./render"
 
@@ -164,6 +165,20 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
         return failure(`Could not edit ${basename(path)}: ${String((error as Error).message)}`)
       }
     }
+    case "aigui_topology": {
+      const path = str("path")
+      if (!path) return failure("path is required: a docker-compose file, a Kubernetes manifest, or a directory of manifests.")
+      try {
+        const topology = await importTopology(path)
+        const block = `\`\`\`topology\n${JSON.stringify(topology, null, 2)}\n\`\`\``
+        const summary = `Read ${path}: ${topology.nodes.length} parts, ${topology.links?.length ?? 0} links.`
+        if (args.open === false) return { content: [{ type: "text", text: `${summary} The block below draws it — add steps to it, or put it in an answer:\n\n${block}` }] }
+        const page = await writePage(`${block}\n\n*From ${path}*`, { title: str("title") ?? topology.title, theme, locale: pageLocale, outDir: deps.outDir, open: deps.open })
+        return { content: [{ type: "text", text: `${summary} ${opened(page)}${await pageCheck(page.url, deps)}\n\nThe block, to add steps to or reuse:\n\n${block}` }] }
+      } catch (error) {
+        return failure(`Could not read a topology from ${path}: ${String((error as Error).message)}`)
+      }
+    }
     case "aigui_export": {
       const pages = join(deps.outDir ?? outputRoot(), "pages")
       const path = await resolvePage(pages, str("page"))
@@ -297,6 +312,26 @@ export function createServer(deps: ServerDeps = {}): McpServer {
       annotations: { readOnlyHint: false, openWorldHint: false },
     },
     async (args) => callTool("aigui_edit", args, deps),
+  )
+
+  server.registerTool(
+    "aigui_topology",
+    {
+      title: "Draw a topology from real config",
+      description: [
+        "Read a docker-compose file, a Kubernetes manifest, or a directory of manifests and draw the system it describes as a topology — services, databases, queues, Services and Ingresses, volumes, and what connects to what — from the config itself rather than from memory.",
+        "Opens it as a page and returns the ```topology block, which you can extend with steps (a request's path, a failover) and draw again with aigui_open.",
+      ].join(" "),
+      inputSchema: {
+        path: z.string().min(1).describe("Absolute path to a compose file, a manifest, or a directory of .yaml manifests."),
+        open: z.boolean().optional().describe("Open it as a page (default true). false returns only the block."),
+        title: z.string().max(120).optional(),
+        theme: z.enum(["light", "dark"]).optional(),
+        locale: z.enum(["en", "zh-CN"]).optional(),
+      },
+      annotations: { readOnlyHint: false, openWorldHint: false },
+    },
+    async (args) => callTool("aigui_topology", args, deps),
   )
 
   server.registerTool(

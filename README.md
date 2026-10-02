@@ -78,7 +78,7 @@ codex plugin marketplace add liliang-cn/aigui
 codex plugin add aigui@aigui
 ```
 
-The agent can then draw: `aigui_render` returns PNGs, `aigui_open` opens a live page in your browser, `aigui_edit` changes a page in place, `aigui_export` saves it as PNG or PDF. Page text is English unless you ask for another language. See [`@ai-gui/mcp`](./packages/mcp/README.md).
+The agent can then draw: `aigui_render` returns PNGs, `aigui_open` opens a live page in your browser, `aigui_edit` changes a page in place, `aigui_export` saves it as PNG, PDF, a self-contained HTML file or a GIF/WebM of it playing, and `aigui_topology` draws a system straight from its docker-compose or Kubernetes files. Page text is English unless you ask for another language. See [`@ai-gui/mcp`](./packages/mcp/README.md).
 
 ## Docs
 

@@ -198,6 +198,54 @@
     }
   },
   {
+    "name": "aigui_topology",
+    "title": "Draw a topology from real config",
+    "description": "Read a docker-compose file, a Kubernetes manifest, or a directory of manifests and draw the system it describes as a topology — services, databases, queues, Services and Ingresses, volumes, and what connects to what — from the config itself rather than from memory. Opens it as a page and returns the ```topology block, which you can extend with steps (a request's path, a failover) and draw again with aigui_open.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Absolute path to a compose file, a manifest, or a directory of .yaml manifests."
+        },
+        "open": {
+          "description": "Open it as a page (default true). false returns only the block.",
+          "type": "boolean"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "theme": {
+          "type": "string",
+          "enum": [
+            "light",
+            "dark"
+          ]
+        },
+        "locale": {
+          "type": "string",
+          "enum": [
+            "en",
+            "zh-CN"
+          ]
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
     "name": "aigui_export",
     "title": "Save a page as PNG or PDF",
     "description": "Save a page written by aigui_open as one full-length PNG, a PDF, a single self-contained HTML file that stays interactive, or a GIF / WebM of it playing — for sending or attaching. Returns the file path. page defaults to the most recent one.",

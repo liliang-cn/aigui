@@ -1,7 +1,7 @@
 {
   "name": "@ai-gui/mcp",
   "version": "0.45.0",
-  "description": "An MCP server that lets an agent draw AIGUI blocks \u2014 charts, diagrams, maths, 3D scenes, orbits, molecules, data walls \u2014 as PNGs or as a live page in the browser.",
+  "description": "An MCP server that lets an agent draw AIGUI blocks — charts, diagrams, maths, 3D scenes, orbits, molecules, data walls — as PNGs or as a live page in the browser.",
   "keywords": [
     "mcp",
     "model-context-protocol",
@@ -68,10 +68,10 @@
     "@modelcontextprotocol/sdk": "^1.30.0",
     "echarts": "^5.5.1",
     "playwright": "^1.48.0",
+    "yaml": "^2",
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@ai-gui/vanilla": "workspace:*",
     "@ai-gui/plugin-bigscreen": "workspace:*",
     "@ai-gui/plugin-chart": "workspace:*",
     "@ai-gui/plugin-citation": "workspace:*",
@@ -80,7 +80,6 @@
     "@ai-gui/plugin-function": "workspace:*",
     "@ai-gui/plugin-graph": "workspace:*",
     "@ai-gui/plugin-gravity": "workspace:*",
-    "@ai-gui/plugin-topology": "workspace:*",
     "@ai-gui/plugin-highlight": "workspace:*",
     "@ai-gui/plugin-katex": "workspace:*",
     "@ai-gui/plugin-mermaid": "workspace:*",
@@ -92,6 +91,8 @@
     "@ai-gui/plugin-quote": "workspace:*",
     "@ai-gui/plugin-scene": "workspace:*",
     "@ai-gui/plugin-solid": "workspace:*",
+    "@ai-gui/plugin-topology": "workspace:*",
+    "@ai-gui/vanilla": "workspace:*",
     "@types/node": "^22.0.0",
     "echarts-gl": "^2.0.9",
     "katex": "^0.16.9",
