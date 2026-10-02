@@ -1,11 +1,11 @@
 import { spawn } from "node:child_process"
-import { copyFile, mkdir, stat, writeFile } from "node:fs/promises"
+import { copyFile, mkdir, readdir, stat, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { pathToFileURL } from "node:url"
 import { inlineKatexCss } from "@ai-gui/image"
 import { pageHtml } from "./page"
 import { recordPage } from "./pages"
-import { outputRoot, packageVersion, viewerBundlePath } from "./paths"
+import { outputRoot, packageVersion, viewerDir } from "./paths"
 
 
 /**
@@ -34,10 +34,16 @@ async function extraCss(): Promise<string> {
   return `${inlineKatexCss()}\n${moleculeCss}`
 }
 
-/** Put this build's viewer beside the pages in `dir`, unless it is already there; its file name. */
+/**
+ * Put this build's viewer beside the pages in `dir` — a folder named by version, holding the main
+ * script and its packs — unless it is already there; the folder's name.
+ */
 export async function ensureViewer(dir: string): Promise<string> {
-  const viewer = `aigui-viewer-${packageVersion()}.js`
-  if (!(await sameFile(viewerBundlePath(), join(dir, viewer)))) await copyFile(viewerBundlePath(), join(dir, viewer))
+  const viewer = `aigui-viewer-${packageVersion()}`
+  await mkdir(join(dir, viewer), { recursive: true })
+  for (const file of await readdir(viewerDir())) {
+    if (!(await sameFile(join(viewerDir(), file), join(dir, viewer, file)))) await copyFile(join(viewerDir(), file), join(dir, viewer, file))
+  }
   return viewer
 }
 
@@ -65,7 +71,7 @@ export async function writePage(
   const viewer = await ensureViewer(dir)
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*$/, "").replace("T", "-")
   const path = options.path ?? join(dir, `${stamp}-${slug(options.title)}.html`)
-  await writeFile(path, pageHtml({ markdown, title: options.title, theme: options.theme, locale: options.locale, viewerSrc: `./${viewer}`, extraCss: await extraCss() }))
+  await writeFile(path, pageHtml({ markdown, title: options.title, theme: options.theme, locale: options.locale, viewerSrc: `./${viewer}/core.js`, extraCss: await extraCss() }))
   await recordPage(dir, path, options.title?.trim() || "AIGUI")
   const opened = options.open !== false && process.env.AIGUI_NO_OPEN !== "1" ? openInBrowser(path) : false
   return { path, url: pathToFileURL(path).href, opened }

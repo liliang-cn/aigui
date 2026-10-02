@@ -61,11 +61,13 @@ describe("the aigui MCP server", () => {
     const result = await client.callTool({ name: "aigui_open", arguments: { markdown, title: "测试 Page" } })
     expect(result.isError).toBeFalsy()
     const files = await readdir(join(outDir, "pages"))
-    expect(files.some((f) => /^aigui-viewer-.+\.js$/.test(f))).toBe(true)
+    const viewer = files.find((f) => /^aigui-viewer-\d/.test(f))!
+    expect(await readdir(join(outDir, "pages", viewer))).toEqual(expect.arrayContaining(["core.js", "echarts.js", "katex.js"]))
     const page = files.find((f) => f.endsWith(".html"))!
     expect(page).toMatch(/-测试-page\.html$/)
     const html = await readFile(join(outDir, "pages", page), "utf8")
     expect(html).toContain("<title>测试 Page</title>")
+    expect(html).toContain(`<script src="./${viewer}/core.js"></script>`)
     // One closing script tag for the data block and one for the viewer — none smuggled in by the answer.
     expect(html.match(/<\/script>/g)).toHaveLength(2)
     const data = html.match(/<script type="application\/json" id="aigui-data">(.*?)<\/script>/s)![1]

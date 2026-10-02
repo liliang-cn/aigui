@@ -1,15 +1,15 @@
-// mhchem installs itself into KaTeX. The plugin starts that import itself, but asynchronously, and
-// a page draws its whole answer at once — before the import lands, so every \ce{} came out as
-// red error text. Loaded here, first, it is in place when the answer is parsed.
-import "katex/contrib/mhchem"
 import { createRenderer } from "@ai-gui/vanilla"
-import { viewerPlugins } from "./plugins"
+import { loadedPack, packsFor } from "./packs"
+import { corePlugins } from "./plugins"
 
 /**
- * The page's own script: read the answer out of the data block and draw it.
+ * The page's main script: read the answer out of the data block, load the packs its blocks need,
+ * and draw it.
  *
- * `setText` rather than `push`, so the whole answer is parsed as one finished text and the last
- * block is closed like every other — nothing is streaming here.
+ * Packs are classic scripts beside this one, not module chunks: a page opened from disk cannot
+ * import a module, but it can run a `<script src>`. A page exported as one file carries its packs
+ * inline, already registered, and nothing is fetched. `setText` rather than `push`, so the whole
+ * answer is parsed as one finished text — nothing is streaming here.
  */
 const data = JSON.parse(document.getElementById("aigui-data")?.textContent ?? "{}") as { markdown?: string; theme?: "light" | "dark" }
 const theme = data.theme ?? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
@@ -17,4 +17,23 @@ const root = document.getElementById("aigui-root") as HTMLElement
 // `?still`: drawn as a picture rather than played — what an export or a look-over wants.
 const still = new URLSearchParams(location.search).has("still")
 if (still) document.documentElement.setAttribute("data-still", "")
-createRenderer(root, { plugins: viewerPlugins(theme, still), theme }).setText(data.markdown ?? "")
+const here = (document.currentScript as HTMLScriptElement | null)?.src ?? ""
+const base = here.slice(0, here.lastIndexOf("/") + 1)
+
+function load(name: string): Promise<void> {
+  if (loadedPack(name)) return Promise.resolve()
+  return new Promise((resolve) => {
+    const script = document.createElement("script")
+    script.src = `${base}${name}.js`
+    // A pack that fails to load leaves its blocks as source; the rest of the answer still draws.
+    script.onload = script.onerror = () => resolve()
+    document.head.appendChild(script)
+  })
+}
+
+const markdown = data.markdown ?? ""
+const names = packsFor(markdown)
+void Promise.all(names.map(load)).then(() => {
+  const plugins = [...corePlugins(still), ...names.flatMap((name) => loadedPack(name)?.(theme, still) ?? [])]
+  createRenderer(root, { plugins, theme }).setText(markdown)
+})

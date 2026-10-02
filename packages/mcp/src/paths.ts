@@ -14,14 +14,14 @@ export function outputRoot(env: Record<string, string | undefined> = process.env
 }
 
 /**
- * The built browser bundle that ships in this package's `dist/viewer`.
+ * The built page viewer in this package's `dist/viewer`: `core.js` and one script per pack.
  *
  * Found through the package root rather than beside this module, so the same answer comes back
  * from the built `dist/index.js` and from the source a test imports.
  */
-export function viewerBundlePath(): string {
+export function viewerDir(): string {
   const manifest = createRequire(import.meta.url).resolve("@ai-gui/mcp/package.json")
-  return join(dirname(manifest), "dist", "viewer", "aigui-viewer.js")
+  return join(dirname(manifest), "dist", "viewer")
 }
 
 /** This package's version, for the server's handshake and the viewer's file name. */
