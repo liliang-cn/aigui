@@ -158,6 +158,24 @@ describe("the aigui MCP server", () => {
     expect(text(pdf)).toMatch(/Saved .*-report\.pdf/)
   })
 
+  it("fills a page's blocks from data files and says where the numbers came from", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-"))
+    const csv = join(outDir, "q.csv")
+    const { writeFile } = await import("node:fs/promises")
+    await writeFile(csv, "q,v\nQ1,3\nQ2,7\n")
+    const client = await connect({ outDir, open: false })
+    const markdown = '```chart\n{"xAxis":{"type":"category","data":{"$data":"q","column":"q"}},"yAxis":{"type":"value"},"series":[{"type":"bar","data":{"$data":"q","column":"v"}}]}\n```'
+    const result = await client.callTool({ name: "aigui_open", arguments: { markdown, title: "data", data: { q: csv } } })
+    expect(text(result)).toContain(`- chart: ${csv} (2 rows)`)
+    const page = (await readdir(join(outDir, "pages"))).find((f) => f.endsWith("-data.html"))!
+    const html = await readFile(join(outDir, "pages", page), "utf8")
+    expect(html).toContain('[\\"Q1\\",\\"Q2\\"]')
+    expect(html).toContain("*Data: q.csv (2 rows)*")
+    const missing = await client.callTool({ name: "aigui_open", arguments: { markdown } })
+    expect(missing.isError).toBe(true)
+    expect(text(missing)).toContain("no data files were given")
+  })
+
   it("refuses markdown with nothing drawable instead of launching a browser for it", async () => {
     let launched = false
     const client = await connect({

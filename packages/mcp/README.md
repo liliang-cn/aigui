@@ -36,6 +36,10 @@ Any other MCP client runs the same `aigui-mcp` command, over stdio.
 
 The syntax is fetched on demand rather than written into the tool descriptions: every plugin's spec together is tens of kilobytes, and a description is sent on every turn whether anything is drawn or not.
 
+## Data from files
+
+`aigui_render` and `aigui_open` take `data: {"sales": "/abs/path/sales.csv"}` (`.csv`, `.tsv`, `.json`, up to 5 MB). In a block's JSON, `{"$data":"sales"}` becomes the rows, `{"$data":"sales","column":"revenue"}` one column, `{"$data":"sales","pick":["month","revenue"]}` rows as arrays, and `{"$data":"sales","sum":"revenue"}` a total — also `count`, `max`, `min`, `avg`. The numbers then come from the file, and the result names the file behind each block; a page shows it under the block.
+
 ## A browser for the pictures
 
 `aigui_render` draws in Playwright's headless Chromium. `npx` installs Playwright but not that browser, so the server downloads it itself (about 100 MB, once) in the background as soon as it starts; later starts check it in a fraction of a second. The first picture waits up to a minute for the download, then goes ahead with the Google Chrome or Microsoft Edge already on the machine, which draws charts and diagrams well but 3D slowly. `AIGUI_NO_BROWSER_DOWNLOAD=1` skips the download; `AIGUI_BROWSER_CHANNEL` pins a browser (`chromium`, `chrome`, `msedge`) and also skips it.

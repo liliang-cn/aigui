@@ -44,6 +44,16 @@
           "minLength": 1,
           "description": "Markdown containing one or more AIGUI blocks."
         },
+        "data": {
+          "description": "Local data files by name, e.g. {\"sales\": \"/abs/path/sales.csv\"} (.csv, .tsv, .json). In a block's JSON, {\"$data\":\"sales\"} becomes its rows, {\"$data\":\"sales\",\"column\":\"revenue\"} one column, {\"$data\":\"sales\",\"pick\":[\"month\",\"revenue\"]} rows as arrays, {\"$data\":\"sales\",\"sum\":\"revenue\"} a total (also count, max, min, avg). Use this whenever the numbers are in a file: the figures then come from the file, not from you retyping them.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "theme": {
           "type": "string",
           "enum": [
@@ -82,6 +92,16 @@
           "type": "string",
           "minLength": 1,
           "description": "The whole answer: prose and AIGUI blocks."
+        },
+        "data": {
+          "description": "Local data files by name, e.g. {\"sales\": \"/abs/path/sales.csv\"} (.csv, .tsv, .json). In a block's JSON, {\"$data\":\"sales\"} becomes its rows, {\"$data\":\"sales\",\"column\":\"revenue\"} one column, {\"$data\":\"sales\",\"pick\":[\"month\",\"revenue\"]} rows as arrays, {\"$data\":\"sales\",\"sum\":\"revenue\"} a total (also count, max, min, avg). Use this whenever the numbers are in a file: the figures then come from the file, not from you retyping them.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
         },
         "title": {
           "description": "Page title.",

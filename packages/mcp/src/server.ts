@@ -9,6 +9,7 @@ import { ensureHeadlessShell, type BrowserSetup } from "./browser"
 import { guide } from "./guide"
 import { ensureViewer, openFiles, writePage } from "./open"
 import { applyEdits, readPage, resolvePage } from "./pages"
+import { describeProvenance, fillData, loadData, type Provenance } from "./data"
 import { outputRoot, packageVersion } from "./paths"
 import { renderToContent, type RenderedContent } from "./render"
 
@@ -46,6 +47,22 @@ function defaultShowImages(): ((paths: string[]) => boolean) | undefined {
 }
 
 export type ToolResult = RenderedContent
+
+/**
+ * Fill `{"$data": …}` references from the files the agent named, or say why not.
+ * Markdown that references data without naming any files is refused, not drawn half-empty.
+ */
+async function withData(markdown: string, data: unknown, note: boolean): Promise<{ markdown: string; provenance: Provenance[] } | { error: string }> {
+  const files = data && typeof data === "object" && !Array.isArray(data) ? (Object.fromEntries(Object.entries(data).filter(([, v]) => typeof v === "string")) as Record<string, string>) : undefined
+  if (!files || Object.keys(files).length === 0) {
+    return markdown.includes('"$data"') ? { error: 'The markdown references {"$data": …} but no data files were given — pass data: {"name": "/absolute/path.csv"}.' } : { markdown, provenance: [] }
+  }
+  try {
+    return fillData(markdown, await loadData(files), { note })
+  } catch (error) {
+    return { error: String((error as Error).message) }
+  }
+}
 
 const failure = (text: string): ToolResult => ({ content: [{ type: "text", text }], isError: true })
 
@@ -96,10 +113,13 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
         return failure(String((error as Error).message))
       }
     case "aigui_render": {
-      const markdown = str("markdown")
-      if (!markdown) return failure("markdown is required.")
+      const given = str("markdown")
+      if (!given) return failure("markdown is required.")
+      const filled = await withData(given, args.data, false)
+      if ("error" in filled) return failure(filled.error)
+      const markdown = filled.markdown
       const width = typeof args.width === "number" ? args.width : undefined
-      return renderToContent(markdown, {
+      const result = await renderToContent(markdown, {
         theme,
         width,
         outDir: deps.outDir,
@@ -108,13 +128,19 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
         setupWaitMs: deps.setupWaitMs,
         show: "showImages" in deps ? deps.showImages : defaultShowImages(),
       })
+      const first = result.content[0]
+      if (first?.type === "text") first.text += describeProvenance(filled.provenance)
+      return result
     }
     case "aigui_open": {
-      const markdown = str("markdown")
-      if (!markdown) return failure("markdown is required.")
+      const given = str("markdown")
+      if (!given) return failure("markdown is required.")
+      const filled = await withData(given, args.data, true)
+      if ("error" in filled) return failure(filled.error)
+      const markdown = filled.markdown
       try {
         const page = await writePage(markdown, { title: str("title"), theme, locale: pageLocale, outDir: deps.outDir, open: deps.open })
-        return { content: [{ type: "text", text: `${opened(page)}${await pageCheck(page.url, deps)}` }] }
+        return { content: [{ type: "text", text: `${opened(page)}${describeProvenance(filled.provenance)}${await pageCheck(page.url, deps)}` }] }
       } catch (error) {
         return failure(`Could not write the page: ${String((error as Error).message)}`)
       }
@@ -199,6 +225,7 @@ export function createServer(deps: ServerDeps = {}): McpServer {
       ].join(" "),
       inputSchema: {
         markdown: z.string().min(1).describe("Markdown containing one or more AIGUI blocks."),
+        data: z.record(z.string(), z.string()).optional().describe('Local data files by name, e.g. {"sales": "/abs/path/sales.csv"} (.csv, .tsv, .json). In a block\'s JSON, {"$data":"sales"} becomes its rows, {"$data":"sales","column":"revenue"} one column, {"$data":"sales","pick":["month","revenue"]} rows as arrays, {"$data":"sales","sum":"revenue"} a total (also count, max, min, avg). Use this whenever the numbers are in a file: the figures then come from the file, not from you retyping them.'),
         theme: z.enum(["light", "dark"]).optional(),
         width: z.number().int().min(320).max(1600).optional().describe("Picture width in CSS pixels. Default 720; use ~1100 for a bigscreen."),
       },
@@ -219,6 +246,7 @@ export function createServer(deps: ServerDeps = {}): McpServer {
       ].join(" "),
       inputSchema: {
         markdown: z.string().min(1).describe("The whole answer: prose and AIGUI blocks."),
+        data: z.record(z.string(), z.string()).optional().describe('Local data files by name, e.g. {"sales": "/abs/path/sales.csv"} (.csv, .tsv, .json). In a block\'s JSON, {"$data":"sales"} becomes its rows, {"$data":"sales","column":"revenue"} one column, {"$data":"sales","pick":["month","revenue"]} rows as arrays, {"$data":"sales","sum":"revenue"} a total (also count, max, min, avg). Use this whenever the numbers are in a file: the figures then come from the file, not from you retyping them.'),
         title: z.string().max(120).optional().describe("Page title."),
         theme: z.enum(["light", "dark"]).optional().describe("Default: follow the system setting."),
         locale: z.enum(["en", "zh-CN"]).optional().describe("Language of the page's own buttons and labels. Default en; use the user's language when they ask for one."),

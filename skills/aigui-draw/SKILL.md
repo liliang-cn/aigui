@@ -24,6 +24,7 @@ Draw when the picture carries the answer: comparing numbers, showing a trend, a 
 ## Rules that save a round trip
 
 - Use only numbers you actually have — from the conversation, a file you read, a command you ran. A chart of invented figures looks like evidence.
+- When the numbers are in a file (CSV, TSV, JSON), do not retype them: pass `data: {"sales": "/abs/path/sales.csv"}` and reference it in the block — `{"$data":"sales"}` for the rows (an ECharts `dataset.source`), `{"$data":"sales","column":"revenue"}` for one column, `{"$data":"sales","sum":"revenue"}` for a KPI. The result says which file filled which block; tell the user.
 - One block per fence, valid JSON inside, the fence name on the opening line: ` ```chart `, then the JSON, then ` ``` `.
 - For a dashboard of several metrics use one ` ```bigscreen ` block with panels rather than several charts; give it `width` 1100 in `aigui_render`.
 - For a molecule in 3D write SMILES with `"view": "3d"`; never write a Molfile from memory.
