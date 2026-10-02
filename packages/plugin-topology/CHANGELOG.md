@@ -1,6 +1,6 @@
 # @ai-gui/plugin-topology
 
-## 0.44.1
+## 0.45.0
 
 ### Patch Changes
 
