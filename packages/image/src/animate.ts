@@ -12,7 +12,13 @@ import { acquirePage, type PageLease } from "./browser"
 const gifenc = ("GIFEncoder" in gifencModule ? gifencModule : (gifencModule as unknown as { default: typeof gifencModule }).default) as typeof gifencModule
 const { GIFEncoder, applyPalette, quantize } = gifenc
 
+interface CdpSession {
+  send(method: string, params?: Record<string, unknown>): Promise<unknown>
+  on(event: string, handler: (payload: { data: string; sessionId: number; metadata: { timestamp: number } }) => void): void
+}
+
 interface AnimPage {
+  context(): { newCDPSession(page: unknown): Promise<CdpSession> }
   setViewportSize(size: { width: number; height: number }): Promise<void>
   goto(url: string, options?: { timeout?: number }): Promise<unknown>
   waitForTimeout(ms: number): Promise<void>
@@ -85,26 +91,22 @@ export async function exportAnimation(url: string, options: AnimationOptions): P
     }
     const box = await page.evaluate(() => {
       const r = document.getElementById("aigui-root")!.getBoundingClientRect()
-      return { x: Math.max(0, r.x), y: Math.max(0, r.y), width: Math.ceil(r.width), height: Math.min(1400, Math.ceil(r.height)) }
+      // Whole pixels: a fractional edge would cut a frame's rows short of whole RGBA pixels.
+      return { x: Math.max(0, Math.floor(r.x)), y: Math.max(0, Math.floor(r.y)), width: Math.ceil(r.width), height: Math.min(1400, Math.ceil(r.height)) }
     })
     await page.setViewportSize({ width, height: Math.max(900, Math.ceil(box.y + box.height) + 16) })
-    const fps = options.fps ?? 8
-    const interval = 1000 / fps
+    const fps = options.fps ?? 12
     const gif = GIFEncoder()
-    const start = Date.now()
-    let last = start
-    let first = true
-    while (Date.now() - start < length) {
-      const shot = PNG.sync.read(await page.screenshot({ clip: box, type: "png" }))
-      const now = Date.now()
-      const palette = quantize(shot.data, 256)
-      // Each frame shown for as long as it actually took to capture it, so the GIF runs at the
-      // page's own speed even when a screenshot is slower than the frame interval.
-      gif.writeFrame(applyPalette(shot.data, palette), shot.width, shot.height, { palette, delay: first ? interval : now - last, repeat: 0 })
-      first = false
-      last = now
-      const wait = interval - (Date.now() - now)
-      if (wait > 0) await page.waitForTimeout(wait)
+    const captured = await captureFrames(page, box, length, fps)
+    // A frame the same as the one before only lengthens it: a step holding still is one frame
+    // shown for longer, not a dozen identical ones.
+    const same = (a: Frame, b: Frame) => a.width === b.width && a.height === b.height && Buffer.compare(Buffer.from(a.data.buffer, a.data.byteOffset, a.data.byteLength), Buffer.from(b.data.buffer, b.data.byteOffset, b.data.byteLength)) === 0
+    const frames = captured.filter((frame, i) => i === 0 || !same(frame, captured[i - 1]))
+    for (const [i, frame] of frames.entries()) {
+      const palette = quantize(frame.data, 256)
+      // Shown for as long as it was on screen, so the GIF runs at the page's own speed.
+      const delay = i + 1 < frames.length ? frames[i + 1].at - frame.at : Math.max(1000 / fps, length - frame.at)
+      gif.writeFrame(applyPalette(frame.data, palette), frame.width, frame.height, { palette, delay, repeat: 0 })
     }
     gif.finish()
     await writeFile(options.path, gif.bytes())
@@ -113,4 +115,67 @@ export async function exportAnimation(url: string, options: AnimationOptions): P
     if (!released) await lease.release()
     if (videoDir) await rm(videoDir, { recursive: true, force: true }).catch(() => {})
   }
+}
+
+interface Frame {
+  data: Uint8Array
+  width: number
+  height: number
+  /** Milliseconds since capture began. */
+  at: number
+}
+
+/**
+ * Frames of `box` for `length` ms, at most `fps` a second.
+ *
+ * The browser's own screencast where there is one: it pushes a frame each time the page paints,
+ * at the page's speed, where a screenshot per frame costs a round trip and a full encode and fell
+ * to two frames a second. Screenshots remain the fallback for a browser without one.
+ */
+async function captureFrames(page: AnimPage, box: { x: number; y: number; width: number; height: number }, length: number, fps: number): Promise<Frame[]> {
+  const crop = (png: PNG): Frame => {
+    const width = Math.floor(Math.min(box.width, png.width - box.x))
+    const height = Math.floor(Math.min(box.height, png.height - box.y))
+    const data = new Uint8Array(width * height * 4)
+    for (let row = 0; row < height; row++) {
+      const from = ((box.y + row) * png.width + box.x) * 4
+      data.set(png.data.subarray(from, from + width * 4), row * width * 4)
+    }
+    return { data, width, height, at: 0 }
+  }
+  const frames: Frame[] = []
+  const minGap = 1000 / fps
+  let cdp: CdpSession | undefined
+  try {
+    cdp = await page.context().newCDPSession(page)
+  } catch {
+    cdp = undefined
+  }
+  if (cdp) {
+    const session = cdp
+    let start = 0
+    let last = -Infinity
+    session.on("Page.screencastFrame", (frame) => {
+      void session.send("Page.screencastFrameAck", { sessionId: frame.sessionId }).catch(() => {})
+      const at = frame.metadata.timestamp * 1000
+      if (!start) start = at
+      if (at - last < minGap) return
+      last = at
+      const shot = crop(PNG.sync.read(Buffer.from(frame.data, "base64")))
+      frames.push({ ...shot, at: at - start })
+    })
+    await session.send("Page.startScreencast", { format: "png", everyNthFrame: 1 })
+    await page.waitForTimeout(length)
+    await session.send("Page.stopScreencast").catch(() => {})
+    // A page that painted nothing at all in that time still makes a one-frame picture.
+    if (frames.length > 0) return frames
+  }
+  const start = Date.now()
+  while (Date.now() - start < length) {
+    const at = Date.now() - start
+    frames.push({ ...crop(PNG.sync.read(await page.screenshot({ type: "png" }))), at })
+    const wait = minGap - (Date.now() - start - at)
+    if (wait > 0) await page.waitForTimeout(wait)
+  }
+  return frames
 }

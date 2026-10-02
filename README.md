@@ -7,6 +7,10 @@
 
 Render a streaming LLM answer as live UI — markdown, charts, diagrams, maths, 3D, topologies and app-defined cards — in React, Vue or plain DOM.
 
+![A failover, drawn and played by the agent](docs/images/demo.gif)
+
+**Use it from Claude Code or Codex** — the agent draws charts, diagrams, 3D and topologies for you, as pictures or a live page: [install the plugin](#in-claude-code-and-codex).
+
 | | |
 | --- | --- |
 | ![Chart](docs/images/chart.png) | ![Topology with a failover played step by step](docs/images/topology.png) |
