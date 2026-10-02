@@ -1,5 +1,15 @@
 # @ai-gui/plugin-highlight
 
+## 0.48.0
+
+### Minor Changes
+
+- 4eb9340: Code in a language outside `langs` is highlighted too: the plugin loads a grammar Shiki bundles the first time a block names it, instead of setting the block as plain text. `loadOnDemand: false` keeps the old behaviour.
+
+### Patch Changes
+
+- @ai-gui/core@0.48.0
+
 ## 0.47.0
 
 ### Patch Changes

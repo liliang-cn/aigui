@@ -1,5 +1,11 @@
 # @ai-gui/plugin-optics
 
+## 0.48.0
+
+### Patch Changes
+
+- @ai-gui/core@0.48.0
+
 ## 0.47.0
 
 ### Patch Changes

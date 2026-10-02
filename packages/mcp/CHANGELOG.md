@@ -1,5 +1,15 @@
 # @ai-gui/mcp
 
+## 0.48.0
+
+### Patch Changes
+
+- 5b35d82: Listed in the MCP Registry as `io.github.liliang-cn/aigui` (published from CI on every release), with a rewritten npm README: demo, install for Claude Code, Codex and any MCP client, and the configuration in one table.
+  - @ai-gui/cli@0.48.0
+  - @ai-gui/core@0.48.0
+  - @ai-gui/plugin-molecule@0.48.0
+  - @ai-gui/image@0.48.0
+
 ## 0.47.0
 
 ### Minor Changes

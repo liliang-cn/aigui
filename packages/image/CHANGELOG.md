@@ -1,5 +1,21 @@
 # @ai-gui/image
 
+## 0.48.0
+
+### Patch Changes
+
+- @ai-gui/core@0.48.0
+- @ai-gui/vanilla@0.48.0
+- @ai-gui/plugin-katex@0.48.0
+- @ai-gui/plugin-mermaid@0.48.0
+- @ai-gui/plugin-chart@0.48.0
+- @ai-gui/plugin-molecule@0.48.0
+- @ai-gui/plugin-scene@0.48.0
+- @ai-gui/plugin-gravity@0.48.0
+- @ai-gui/plugin-dashboard@0.48.0
+- @ai-gui/plugin-bigscreen@0.48.0
+- @ai-gui/plugin-topology@0.48.0
+
 ## 0.47.0
 
 ### Minor Changes
