@@ -14,7 +14,7 @@ const { GIFEncoder, applyPalette, quantize } = gifenc
 
 interface CdpSession {
   send(method: string, params?: Record<string, unknown>): Promise<unknown>
-  on(event: string, handler: (payload: { data: string; sessionId: number; metadata: { timestamp: number } }) => void): void
+  on(event: string, handler: (payload: { data: string; sessionId: number; metadata: { timestamp: number; deviceWidth: number; deviceHeight: number; offsetTop: number } }) => void): void
 }
 
 interface AnimPage {
@@ -133,12 +133,16 @@ interface Frame {
  * to two frames a second. Screenshots remain the fallback for a browser without one.
  */
 async function captureFrames(page: AnimPage, box: { x: number; y: number; width: number; height: number }, length: number, fps: number): Promise<Frame[]> {
-  const crop = (png: PNG): Frame => {
-    const width = Math.floor(Math.min(box.width, png.width - box.x))
-    const height = Math.floor(Math.min(box.height, png.height - box.y))
+  // A screencast frame may be scaled from the page (its metadata says by how much), and starts
+  // below any browser chrome (`offsetTop`); a screenshot is the page at 1:1. Crop in frame pixels.
+  const crop = (png: PNG, scale = 1, offsetTop = 0): Frame => {
+    const x = Math.floor(box.x * scale)
+    const y = Math.floor((box.y + offsetTop) * scale)
+    const width = Math.floor(Math.min(box.width * scale, png.width - x))
+    const height = Math.floor(Math.min(box.height * scale, png.height - y))
     const data = new Uint8Array(width * height * 4)
     for (let row = 0; row < height; row++) {
-      const from = ((box.y + row) * png.width + box.x) * 4
+      const from = ((y + row) * png.width + x) * 4
       data.set(png.data.subarray(from, from + width * 4), row * width * 4)
     }
     return { data, width, height, at: 0 }
@@ -161,10 +165,12 @@ async function captureFrames(page: AnimPage, box: { x: number; y: number; width:
       if (!start) start = at
       if (at - last < minGap) return
       last = at
-      const shot = crop(PNG.sync.read(Buffer.from(frame.data, "base64")))
+      const png = PNG.sync.read(Buffer.from(frame.data, "base64"))
+      const shot = crop(png, png.width / frame.metadata.deviceWidth, frame.metadata.offsetTop)
       frames.push({ ...shot, at: at - start })
     })
-    await session.send("Page.startScreencast", { format: "png", everyNthFrame: 1 })
+    const size = await page.evaluate(() => ({ width: innerWidth, height: innerHeight }))
+    await session.send("Page.startScreencast", { format: "png", everyNthFrame: 1, maxWidth: size.width, maxHeight: size.height })
     await page.waitForTimeout(length)
     await session.send("Page.stopScreencast").catch(() => {})
     // A page that painted nothing at all in that time still makes a one-frame picture.

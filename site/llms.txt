@@ -1,0 +1,36 @@
+# AIGUI
+
+> AIGUI is an open-source (MIT) plugin for Claude Code and Codex, and an MCP server for any MCP client, that lets a coding agent answer with pictures: charts, diagrams, maths, 3D scenes, molecules, orbits, dashboards and infrastructure topologies whose steps play. It renders PNG images the agent can check, or opens a live page in the user's browser. Version {{VERSION}}, updated {{UPDATED}}.
+
+Install in Claude Code: `/plugin marketplace add liliang-cn/aigui` then `/plugin install aigui@aigui`.
+Install in Codex: `codex plugin marketplace add liliang-cn/aigui` then `codex plugin add aigui@aigui`.
+Any MCP client: `npm install -g @ai-gui/mcp` and run `aigui-mcp` (Node.js 18.11+).
+
+Facts:
+- 21 block types; 9 render to PNG (chart, mermaid, maths, bigscreen, dashboard, scene, gravity, topology, molecule).
+- 7 MCP tools: aigui_guide (block syntax), aigui_render (PNG), aigui_open (live page), aigui_edit (change a page by find-and-replace), aigui_export (PNG, PDF, standalone HTML, GIF, WebM), aigui_topology (draw from docker-compose or Kubernetes manifests), aigui_feedback (read the user's comments on a page).
+- Charts can be filled from CSV, TSV or JSON files with `{"$data": ...}` references, so numbers are not retyped by the model.
+- Every drawing is checked in a headless browser for overlapping, clipped, tiny or low-contrast text and crowded charts before the agent shows it.
+- Runs locally; no account or API key; output under ~/.cache/aigui.
+- The renderer is also a TypeScript SDK for rendering streaming LLM output as UI in React, Vue and plain DOM.
+
+## Docs
+
+- [README](https://github.com/liliang-cn/aigui#readme): overview, install, packages
+- [MCP server](https://github.com/liliang-cn/aigui/tree/main/packages/mcp#readme): tools, data files, comments, environment variables
+- [Agent guide](https://github.com/liliang-cn/aigui/blob/main/AGENTS.md): integrating the SDK and what a model may write
+- [Full guide](https://github.com/liliang-cn/aigui/blob/main/docs/guide.md): cards, actions, channels, plugins
+
+## Demos
+
+- [Topology with playable steps](https://liliang-cn.github.io/aigui/demos/topology.html)
+- [3D scene](https://liliang-cn.github.io/aigui/demos/scene.html)
+- [Dashboard](https://liliang-cn.github.io/aigui/demos/dashboard.html)
+- [Molecule from SMILES](https://liliang-cn.github.io/aigui/demos/molecule.html)
+- [Orbits](https://liliang-cn.github.io/aigui/demos/orbits.html)
+- [Charts, diagrams and maths](https://liliang-cn.github.io/aigui/demos/chart.html)
+
+## Optional
+
+- [npm: @ai-gui/mcp](https://www.npmjs.com/package/@ai-gui/mcp)
+- [All npm packages](https://www.npmjs.com/org/ai-gui)

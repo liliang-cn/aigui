@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIGUI — let Claude Code and Codex draw charts, 3D and topologies</title>
+<meta name="description" content="AIGUI is an open-source plugin for Claude Code and Codex that lets the agent answer with pictures: charts, diagrams, maths, 3D scenes, molecules and infrastructure topologies whose steps play. MIT licensed.">
+<link rel="canonical" href="https://liliang-cn.github.io/aigui/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="AIGUI — let your coding agent draw">
+<meta property="og:description" content="A Claude Code and Codex plugin: charts, diagrams, 3D scenes and step-by-step topologies, as PNGs or a live page.">
+<meta property="og:url" content="https://liliang-cn.github.io/aigui/">
+<meta property="og:image" content="https://liliang-cn.github.io/aigui/images/bigscreen.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="author" content="Liang Li">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Schibsted+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "name": "AIGUI",
+      "alternateName": ["@ai-gui/mcp", "aigui plugin"],
+      "description": "Open-source plugin and MCP server that lets Claude Code and Codex draw charts, diagrams, maths, 3D scenes, molecules, orbits, dashboards and step-by-step infrastructure topologies, as PNG images or a live browser page.",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "macOS, Linux, Windows",
+      "softwareVersion": "{{VERSION}}",
+      "dateModified": "{{UPDATED}}",
+      "license": "https://opensource.org/licenses/MIT",
+      "url": "https://liliang-cn.github.io/aigui/",
+      "codeRepository": "https://github.com/liliang-cn/aigui",
+      "downloadUrl": "https://www.npmjs.com/package/@ai-gui/mcp",
+      "softwareRequirements": "Node.js 18.11 or later; Claude Code or Codex, or any MCP client",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@type": "Person", "name": "Liang Li", "url": "https://github.com/liliang-cn" },
+      "featureList": [
+        "21 block types, 9 of which render to PNG",
+        "Charts filled from CSV, TSV or JSON files instead of retyped numbers",
+        "Automatic check of each drawing for overlapping, clipped or tiny text",
+        "Topologies generated from docker-compose files and Kubernetes manifests",
+        "Export as PNG, PDF, self-contained HTML, GIF or WebM",
+        "Comments left on a page are read back by the agent"
+      ],
+      "screenshot": "https://liliang-cn.github.io/aigui/images/topology.png"
+    },
+    {
+      "@type": "HowTo",
+      "name": "Install the AIGUI plugin in Claude Code",
+      "totalTime": "PT2M",
+      "step": [
+        { "@type": "HowToStep", "text": "In Claude Code, run /plugin marketplace add liliang-cn/aigui" },
+        { "@type": "HowToStep", "text": "Run /plugin install aigui@aigui" },
+        { "@type": "HowToStep", "text": "Restart Claude Code and ask a question whose answer is a picture, such as a trend or an architecture." }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        { "@type": "Question", "name": "What is AIGUI?", "acceptedAnswer": { "@type": "Answer", "text": "AIGUI is an open-source plugin for Claude Code and Codex, and an MCP server for any other MCP client, that lets a coding agent answer with pictures. It draws charts, diagrams, maths, 3D scenes, molecules, orbits, dashboards and infrastructure topologies, either as PNG images the agent can check or as a live page in your browser." } },
+        { "@type": "Question", "name": "How do I install AIGUI in Claude Code?", "acceptedAnswer": { "@type": "Answer", "text": "Run /plugin marketplace add liliang-cn/aigui, then /plugin install aigui@aigui, and restart Claude Code. The first drawing installs the server from npm and a headless browser, which takes about a minute once; later sessions start in under a second." } },
+        { "@type": "Question", "name": "Does AIGUI work with Codex?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Run codex plugin marketplace add liliang-cn/aigui, then codex plugin add aigui@aigui. Codex and Claude Code use the same server and the same skills, so the drawing tools and the guidance the agent follows are identical in both." } },
+        { "@type": "Question", "name": "Can AIGUI chart data from my CSV files?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The agent passes a CSV, TSV or JSON file by path and references it inside the chart, for example {\"$data\":\"sales\",\"column\":\"revenue\"}. The server fills in the numbers from the file, so they are never retyped by the model, and the result names the file behind each chart." } },
+        { "@type": "Question", "name": "What can AIGUI draw?", "acceptedAnswer": { "@type": "Answer", "text": "21 block types: ECharts charts including 3D, Mermaid diagrams, KaTeX maths, dashboards and data walls, 3D scenes, molecules from SMILES, orbits and collisions, infrastructure topologies with playable steps, knowledge graphs, geometry, function plots, optics, mechanics, labelled figures, candlesticks, tables, progress lists and cited sources." } },
+        { "@type": "Question", "name": "Is AIGUI free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. AIGUI is MIT licensed, runs locally, needs no account or API key, and sends nothing to a server: the pictures are drawn in a headless browser on your own machine and saved under ~/.cache/aigui." } },
+        { "@type": "Question", "name": "How is AIGUI different from a chart MCP server or Mermaid in chat?", "acceptedAnswer": { "@type": "Answer", "text": "A chart server draws charts and Mermaid draws flowcharts. AIGUI covers both plus 3D, molecules, physics and topologies whose steps play, fills charts from your files, checks each drawing for overlapping or clipped labels before the agent shows it, and exports pages as PDF, standalone HTML or GIF." } },
+        { "@type": "Question", "name": "Can I use the AIGUI renderer in my own chat app?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. The same renderer is a TypeScript SDK for React, Vue and plain DOM that turns a streaming LLM response into live UI as tokens arrive: markdown, charts, diagrams, maths and app-defined cards. Install @ai-gui/core with an adapter and the plugins you need." } }
+      ]
+    }
+  ]
+}
+</script>
+<style>
+:root{
+  --paper:#edf1f4;--paper-2:#e3e9ee;--ink:#14233a;--ink-2:#40516a;--rule:#cbd5df;--accent:#0e7fb8;--accent-ink:#0a5f8a;--ok:#16a34a;--bad:#dc2626;--term:#16243a;--term-ink:#d9e4ef;
+  --sans:"Schibsted Grotesk",ui-sans-serif,system-ui,-apple-system,"PingFang SC",sans-serif;--mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{--paper:#111c2b;--paper-2:#16233a;--ink:#e6edf4;--ink-2:#a3b3c6;--rule:#26364c;--accent:#4cb3e6;--accent-ink:#7cc8ee;--term:#0b1422;--term-ink:#d9e4ef;color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 17px/1.6 var(--sans)}
+a{color:var(--accent-ink)}
+a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+header.site{display:flex;align-items:center;justify-content:space-between;padding-block:18px}
+.mark{font-weight:800;font-size:20px;letter-spacing:-.01em;color:var(--ink);text-decoration:none}
+.mark span{color:var(--accent)}
+nav.site{display:flex;gap:20px;font-size:15px}
+nav.site a{color:var(--ink-2);text-decoration:none}
+nav.site a:hover{color:var(--ink)}
+
+/* The one bold move: the hero sits on drafting paper, the agent's drawing pinned to it. */
+.hero{background-color:var(--paper);background-image:linear-gradient(var(--rule) 1px,transparent 1px),linear-gradient(90deg,var(--rule) 1px,transparent 1px);background-size:32px 32px;background-position:-1px -1px;border-block:1px solid var(--rule)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,6fr);gap:48px;padding-block:72px 64px;align-items:center}
+h1{font-weight:800;font-size:clamp(40px,6vw,68px);line-height:1.02;letter-spacing:-.03em;margin:0 0 20px;max-width:12ch}
+.lede{font-size:19px;color:var(--ink-2);max-width:46ch;margin:0 0 28px}
+.install{background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;max-width:460px;min-width:0}
+.install p{margin:0 0 6px;font-size:14px;color:var(--ink-2)}
+.install code{display:block;font:400 14px/1.7 var(--mono);color:var(--ink);white-space:pre;overflow-x:auto}
+.install p + code{margin-bottom:10px}
+.cta{display:flex;gap:16px;align-items:center;margin-top:20px;font-size:15px}
+.button{display:inline-block;background:var(--ink);color:var(--paper);text-decoration:none;font-weight:700;padding:10px 16px;border-radius:8px}
+.button:hover{background:var(--accent-ink)}
+
+.terminal{overflow-wrap:anywhere;background:var(--term);color:var(--term-ink);border-radius:12px;font:400 14px/1.65 var(--mono);padding:16px 18px;box-shadow:0 1px 0 var(--rule)}
+.terminal .you{color:#8fd3ff}
+.terminal .dim{color:#7d8ea4}
+.terminal p{margin:0}
+.drawing{margin:-6px 18px 0;background:#fff;border:1px solid var(--rule);border-radius:0 0 10px 10px;padding:10px;position:relative}
+.drawing img{display:block;width:100%;height:auto}
+.drawing figcaption{font-size:13px;color:#5b6b80;margin-top:6px}
+
+section{padding-block:72px}
+section + section{border-top:1px solid var(--rule)}
+h2{font-weight:800;font-size:clamp(28px,3.4vw,38px);letter-spacing:-.02em;line-height:1.1;margin:0 0 12px}
+.intro{color:var(--ink-2);max-width:62ch;margin:0 0 36px}
+
+.gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
+.gallery a{display:block;text-decoration:none;color:inherit}
+.gallery .frame{background:#fff;border:1px solid var(--rule);border-radius:8px;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:8px}
+.gallery img{max-width:100%;max-height:100%;object-fit:contain}
+.gallery h3{font-size:17px;margin:12px 0 2px;font-weight:700}
+.gallery p{margin:0;font-size:15px;color:var(--ink-2)}
+.gallery a:hover h3{color:var(--accent-ink)}
+.gallery .wide{grid-column:span 3}
+.gallery .wide .frame{aspect-ratio:auto;background:var(--term)}
+
+ol.steps{list-style:none;counter-reset:step;padding:0;margin:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:28px}
+ol.steps li{counter-increment:step;border-top:2px solid var(--ink);padding-top:12px}
+ol.steps li::before{content:counter(step);font-weight:800;font-size:28px;color:var(--accent);display:block;line-height:1;margin-bottom:8px}
+ol.steps h3{font-size:17px;margin:0 0 4px}
+ol.steps p{margin:0;font-size:15px;color:var(--ink-2)}
+
+.points{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:36px 48px}
+.points h3{font-size:19px;margin:0 0 6px;letter-spacing:-.01em}
+.points p{margin:0;color:var(--ink-2);max-width:52ch}
+.points code,.faq code{font:400 .88em var(--mono);background:var(--paper-2);padding:1px 5px;border-radius:4px}
+
+table.compare{width:100%;border-collapse:collapse;font-size:15px}
+table.compare th,table.compare td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+table.compare thead th{font-weight:700;border-bottom:2px solid var(--ink)}
+table.compare td:first-child{color:var(--ink-2)}
+.yes{color:var(--ok);font-weight:700}
+.no{color:var(--ink-2)}
+.scroll{overflow-x:auto}
+
+.faq{max-width:780px}
+.faq details{border-bottom:1px solid var(--rule);padding:14px 0}
+.faq summary{font-weight:700;font-size:18px;cursor:pointer;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";float:right;color:var(--accent);font-weight:400}
+.faq details[open] summary::after{content:"–"}
+.faq details p{margin:8px 0 0;color:var(--ink-2)}
+
+footer.site{border-top:1px solid var(--rule);padding:28px 0 48px;font-size:14px;color:var(--ink-2)}
+footer.site .wrap{display:flex;flex-wrap:wrap;gap:12px 28px;justify-content:space-between}
+
+@media (max-width:900px){
+  .hero .wrap{grid-template-columns:minmax(0,1fr);padding-block:48px}
+  .gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.gallery .wide{grid-column:span 2}
+  ol.steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .points{grid-template-columns:1fr}
+}
+@media (max-width:560px){
+  nav.site a:not(.gh){display:none}
+  .gallery{grid-template-columns:1fr}.gallery .wide{grid-column:span 1}
+  ol.steps{grid-template-columns:1fr}
+  section{padding-block:52px}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="wrap site">
+  <a class="mark" href="./">AI<span>GUI</span></a>
+  <nav class="site" aria-label="Main">
+    <a href="#demos">Demos</a>
+    <a href="#how">How it works</a>
+    <a href="#faq">FAQ</a>
+    <a class="gh" href="https://github.com/liliang-cn/aigui">GitHub</a>
+  </nav>
+</header>
+
+<main>
+  <div class="hero">
+    <div class="wrap">
+      <div>
+        <h1>Let your coding agent draw.</h1>
+        <p class="lede">AIGUI is an open-source plugin for Claude Code and Codex that lets the agent answer with pictures: charts, diagrams, maths, 3D scenes, molecules and infrastructure topologies whose steps play. It draws PNGs the agent checks, or opens a live page in your browser.</p>
+        <div class="install">
+          <p>Claude Code</p>
+          <code>/plugin marketplace add liliang-cn/aigui
+/plugin install aigui@aigui</code>
+          <p>Codex</p>
+          <code>codex plugin marketplace add liliang-cn/aigui
+codex plugin add aigui@aigui</code>
+        </div>
+        <div class="cta">
+          <a class="button" href="#demos">See the live demos</a>
+          <a href="https://github.com/liliang-cn/aigui">Source on GitHub</a>
+        </div>
+      </div>
+      <div>
+        <div class="terminal" role="img" aria-label="A Claude Code session asking how failover works and the agent drawing it">
+          <p><span class="you">&gt;</span> How does failover work in this database setup?</p>
+          <p class="dim">● aigui_open — topology, 5 steps</p>
+          <p class="dim">  Checked in a headless browser: no problems found.</p>
+          <p>The write reaches the primary, is copied to the replica, and the replica takes over when node-a fails. It is open in your browser, playing.</p>
+        </div>
+        <figure class="drawing">
+          <img src="images/demo.gif" width="928" height="197" alt="An animated topology: an app writes to a primary database on node-a, the write is replicated to node-b, node-a fails and node-b is promoted to primary.">
+          <figcaption>What opened in the browser — drawn by AIGUI, not mocked up.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </div>
+
+  <section id="demos">
+    <div class="wrap">
+      <h2>What it draws</h2>
+      <p class="intro">21 block types, 9 of which render straight to PNG. Every picture below was drawn by AIGUI from a block a model wrote; each opens as an interactive page you can turn, hover and play. The data in them is sample data.</p>
+      <div class="gallery">
+        <a href="demos/topology.html"><div class="frame"><img src="images/topology.png" alt="Topology of a primary and replica database with numbered steps" loading="lazy"></div><h3>Topologies that play</h3><p>Nodes, hosts and links laid out for you; steps move messages and change states.</p></a>
+        <a href="demos/scene.html"><div class="frame"><img src="images/scene.png" alt="3D scene of stacked storage boxes with labels in side columns" loading="lazy"></div><h3>3D scenes</h3><p>Boxes, cylinders and models placed in metres; labels kept clear of each other.</p></a>
+        <a href="demos/molecule.html"><div class="frame"><img src="images/molecule.png" alt="Ball-and-stick model of caffeine" loading="lazy"></div><h3>Molecules</h3><p>From a SMILES string, relaxed with a force field, turnable in 3D.</p></a>
+        <a href="demos/chart.html"><div class="frame"><img src="images/chart.png" alt="Bar chart of quarterly revenue for two years" loading="lazy"></div><h3>Charts, diagrams, maths</h3><p>Any ECharts chart, Mermaid diagrams and KaTeX, in one page.</p></a>
+        <a href="demos/orbits.html"><div class="frame"><img src="images/gravity.png" alt="Orbits of Earth and Mars around the Sun" loading="lazy"></div><h3>Orbits and collisions</h3><p>Integrated from masses and distances, not hand-drawn ellipses.</p></a>
+        <a href="demos/chart.html"><div class="frame"><img src="images/mermaid.png" alt="Sequence diagram between a user, an app and a model" loading="lazy"></div><h3>Diagrams</h3><p>Flowcharts, sequences, state machines and class diagrams via Mermaid.</p></a>
+        <a class="wide" href="demos/dashboard.html"><div class="frame"><img src="images/bigscreen.png" alt="Dark operations dashboard with KPIs, a gauge, a line chart and a ranking" loading="lazy"></div><h3>Dashboards</h3><p>KPIs, gauges, rankings and charts on one wall, counting up as they appear.</p></a>
+      </div>
+    </div>
+  </section>
+
+  <section id="how">
+    <div class="wrap">
+      <h2>How it works</h2>
+      <p class="intro">The agent never writes drawing code. It writes a small block that states what to show, and AIGUI computes the rest — the layout, the 3D structure, the orbit.</p>
+      <ol class="steps">
+        <li><h3>You ask</h3><p>A question whose answer is a trend, a system or a process.</p></li>
+        <li><h3>The agent writes a block</h3><p>JSON or Mermaid inside ordinary markdown, after reading the syntax with <code>aigui_guide</code>.</p></li>
+        <li><h3>AIGUI draws and checks it</h3><p>In a headless browser, looking for overlapping, clipped or unreadable labels.</p></li>
+        <li><h3>You see it</h3><p>As a PNG in your image viewer, or a live page you can comment on and export.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="why">
+    <div class="wrap">
+      <h2>Built to be trusted</h2>
+      <p class="intro">A picture looks like evidence, so AIGUI is careful about what goes into one.</p>
+      <div class="points">
+        <div><h3>Numbers come from your files</h3><p>Pass a CSV, TSV or JSON file and reference it in the chart — <code>{"$data":"sales","column":"revenue"}</code>. The server fills in the figures and names the file behind each chart, so the model never retypes a number.</p></div>
+        <div><h3>It checks its own pictures</h3><p>Before the agent shows you anything, a headless browser looks for labels drawn on top of each other, text cut off or under 9 pixels, poor contrast and crowded charts, and the agent is told to fix them.</p></div>
+        <div><h3>Topologies from real config</h3><p>Point <code>aigui_topology</code> at a docker-compose file or a folder of Kubernetes manifests and it draws the services, databases, Services, Ingresses and volumes that are actually there.</p></div>
+        <div><h3>Pages you can keep</h3><p>Every page is listed in one index. Export any of them as PNG, PDF, a single self-contained HTML file that opens offline, or a GIF of its steps playing. Leave a comment on a block and the agent reads it with <code>aigui_feedback</code>.</p></div>
+        <div><h3>Local and free</h3><p>MIT licensed, no account, no API key. Drawing happens in a headless browser on your machine; pictures and pages are saved under <code>~/.cache/aigui</code>.</p></div>
+        <div><h3>Also an SDK</h3><p>The same renderer turns a streaming LLM response into live UI in React, Vue or plain DOM. Over 2,000 automated tests and real-browser checks run on every release.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="compare">
+    <div class="wrap">
+      <h2>AIGUI compared</h2>
+      <p class="intro">What a coding agent can show you with each approach.</p>
+      <div class="scroll">
+        <table class="compare">
+          <thead><tr><th scope="col"></th><th scope="col">AIGUI</th><th scope="col">A chart MCP server</th><th scope="col">Mermaid in chat</th></tr></thead>
+          <tbody>
+            <tr><td>Charts</td><td class="yes">Yes, including 3D</td><td class="yes">Yes</td><td class="no">No</td></tr>
+            <tr><td>Flow and sequence diagrams</td><td class="yes">Yes</td><td class="no">Usually not</td><td class="yes">Yes</td></tr>
+            <tr><td>3D scenes, molecules, orbits</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+            <tr><td>Topologies with playable steps</td><td class="yes">Yes</td><td class="no">No</td><td class="no">Static only</td></tr>
+            <tr><td>Numbers read from your files</td><td class="yes">Yes</td><td>Varies</td><td class="no">No</td></tr>
+            <tr><td>Drawing checked before it is shown</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+            <tr><td>Export PNG, PDF, HTML, GIF</td><td class="yes">All four</td><td>Usually PNG</td><td class="no">Depends on client</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="faq">
+    <div class="wrap faq">
+      <h2>Questions</h2>
+      <details open><summary>What is AIGUI?</summary><p>AIGUI is an open-source plugin for Claude Code and Codex, and an MCP server for any other MCP client, that lets a coding agent answer with pictures. It draws charts, diagrams, maths, 3D scenes, molecules, orbits, dashboards and infrastructure topologies, either as PNG images the agent can check or as a live page in your browser.</p></details>
+      <details><summary>How do I install AIGUI in Claude Code?</summary><p>Run <code>/plugin marketplace add liliang-cn/aigui</code>, then <code>/plugin install aigui@aigui</code>, and restart Claude Code. The first drawing installs the server from npm and a headless browser, which takes about a minute once; later sessions start in under a second.</p></details>
+      <details><summary>Does AIGUI work with Codex?</summary><p>Yes. Run <code>codex plugin marketplace add liliang-cn/aigui</code>, then <code>codex plugin add aigui@aigui</code>. Codex and Claude Code use the same server and the same skills, so the drawing tools and the guidance the agent follows are identical in both.</p></details>
+      <details><summary>Can AIGUI chart data from my CSV files?</summary><p>Yes. The agent passes a CSV, TSV or JSON file by path and references it inside the chart, for example <code>{"$data":"sales","column":"revenue"}</code>. The server fills in the numbers from the file, so they are never retyped by the model, and the result names the file behind each chart.</p></details>
+      <details><summary>What can AIGUI draw?</summary><p>21 block types: ECharts charts including 3D, Mermaid diagrams, KaTeX maths, dashboards and data walls, 3D scenes, molecules from SMILES, orbits and collisions, infrastructure topologies with playable steps, knowledge graphs, geometry, function plots, optics, mechanics, labelled figures, candlesticks, tables, progress lists and cited sources.</p></details>
+      <details><summary>Is AIGUI free?</summary><p>Yes. AIGUI is MIT licensed, runs locally, needs no account or API key, and sends nothing to a server: the pictures are drawn in a headless browser on your own machine and saved under <code>~/.cache/aigui</code>.</p></details>
+      <details><summary>How is AIGUI different from a chart MCP server or Mermaid in chat?</summary><p>A chart server draws charts and Mermaid draws flowcharts. AIGUI covers both plus 3D, molecules, physics and topologies whose steps play, fills charts from your files, checks each drawing for overlapping or clipped labels before the agent shows it, and exports pages as PDF, standalone HTML or GIF.</p></details>
+      <details><summary>Can I use the AIGUI renderer in my own chat app?</summary><p>Yes. The same renderer is a TypeScript SDK for React, Vue and plain DOM that turns a streaming LLM response into live UI as tokens arrive: markdown, charts, diagrams, maths and app-defined cards. Install <code>@ai-gui/core</code> with an adapter and the plugins you need.</p></details>
+    </div>
+  </section>
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <span>AIGUI {{VERSION}}, MIT licensed. Made by <a href="https://github.com/liliang-cn">Liang Li</a>.</span>
+    <span>Last updated <time datetime="{{UPDATED}}">{{UPDATED}}</time>. <a href="https://www.npmjs.com/package/@ai-gui/mcp">npm</a>&ensp;<a href="https://github.com/liliang-cn/aigui">GitHub</a>&ensp;<a href="llms.txt">llms.txt</a></span>
+  </div>
+</footer>
+</body>
+</html>
