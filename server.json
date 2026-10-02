@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.liliang-cn/aigui",
+  "title": "AIGUI",
+  "description": "Let coding agents draw charts, diagrams, 3D, molecules and animated topologies as PNGs or live pages",
+  "repository": { "url": "https://github.com/liliang-cn/aigui", "source": "github", "subfolder": "packages/mcp" },
+  "websiteUrl": "https://liliang-cn.github.io/aigui/",
+  "version": "0.47.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@ai-gui/mcp",
+      "version": "0.47.0",
+      "transport": { "type": "stdio" }
+    }
+  ]
+}

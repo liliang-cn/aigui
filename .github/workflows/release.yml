@@ -56,6 +56,16 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      # The MCP Registry, which MCP clients search. It verifies the npm package by its `mcpName`
+      # and this repository by GitHub's OIDC token — no secret. The registry is in preview, so a
+      # failure here is reported but does not fail a release whose packages are already out.
+      - name: Publish to the MCP Registry
+        continue-on-error: true
+        run: |
+          curl -sL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
+
       # The GitHub release: what changed, gathered from every package's changelog, and how to
       # install it. Watchers are notified; npm is the source of the packages either way.
       - run: |

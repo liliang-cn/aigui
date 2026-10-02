@@ -17,6 +17,18 @@ for (const manifest of [".claude-plugin/plugin.json", ".codex-plugin/plugin.json
   }
 }
 
+// The MCP Registry entry names the server's version and the npm package's.
+{
+  const path = new URL("server.json", root)
+  const server = JSON.parse(await readFile(path, "utf8"))
+  if (server.version !== version) {
+    server.version = version
+    for (const pkg of server.packages) pkg.version = version
+    await writeFile(path, `${JSON.stringify(server, null, 2)}\n`)
+    console.log(`server.json → ${version}`)
+  }
+}
+
 // The install lines in the docs pin the same version.
 for (const doc of ["README.md", "packages/mcp/README.md"]) {
   const url = new URL(doc, root)
