@@ -1,6 +1,7 @@
 import { createRenderer } from "@ai-gui/vanilla"
 import { loadedPack, packsFor } from "./packs"
 import { corePlugins } from "./plugins"
+import { enableComments } from "./comments"
 
 /**
  * The page's main script: read the answer out of the data block, load the packs its blocks need,
@@ -36,4 +37,5 @@ const names = packsFor(markdown)
 void Promise.all(names.map(load)).then(() => {
   const plugins = [...corePlugins(still), ...names.flatMap((name) => loadedPack(name)?.(theme, still) ?? [])]
   createRenderer(root, { plugins, theme }).setText(markdown)
+  if (!still) void enableComments(root)
 })

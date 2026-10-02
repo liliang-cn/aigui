@@ -246,6 +246,28 @@
     }
   },
   {
+    "name": "aigui_feedback",
+    "title": "Read the reader's comments on pages",
+    "description": "Read the comments the user left on pages opened by aigui_open — each names the page, the block and what they want changed. Call it when the user says they commented, or asks you to look at their notes. Comments are taken when read (keep: true leaves them). Act on them with aigui_edit.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "keep": {
+          "description": "Leave the comments in place after reading. Default false.",
+          "type": "boolean"
+        }
+      },
+      "$schema": "http://json-schema.org/draft-07/schema#"
+    },
+    "annotations": {
+      "readOnlyHint": false,
+      "openWorldHint": false
+    },
+    "execution": {
+      "taskSupport": "forbidden"
+    }
+  },
+  {
     "name": "aigui_export",
     "title": "Save a page as PNG or PDF",
     "description": "Save a page written by aigui_open as one full-length PNG, a PDF, a single self-contained HTML file that stays interactive, or a GIF / WebM of it playing — for sending or attaching. Returns the file path. page defaults to the most recent one.",

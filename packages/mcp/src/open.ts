@@ -64,7 +64,17 @@ export interface WrittenPage {
 /** Write the page and the viewer beside it, then hand the file to the system's browser. */
 export async function writePage(
   markdown: string,
-  options: { title?: string; theme?: "light" | "dark"; locale?: "en" | "zh-CN"; open?: boolean; outDir?: string; /** Rewrite this page rather than start a new one. */ path?: string } = {},
+  options: {
+    title?: string
+    theme?: "light" | "dark"
+    locale?: "en" | "zh-CN"
+    open?: boolean
+    outDir?: string
+    /** Rewrite this page rather than start a new one. */
+    path?: string
+    /** Where the page is served, when it is — a served page can take comments; a file cannot. */
+    servedAt?: (path: string) => string
+  } = {},
 ): Promise<WrittenPage> {
   const dir = join(options.outDir ?? outputRoot(), "pages")
   await mkdir(dir, { recursive: true })
@@ -74,8 +84,9 @@ export async function writePage(
   const path = options.path ?? join(dir, `${stamp}-${slug(options.title)}.html`)
   await writeFile(path, pageHtml({ markdown, title: options.title, theme: options.theme, locale: options.locale, viewerSrc: `./${viewer}/core.js`, extraCss: await extraCss() }))
   await recordPage(dir, path, options.title?.trim() || "AIGUI")
-  const opened = options.open !== false && process.env.AIGUI_NO_OPEN !== "1" ? openInBrowser(path) : false
-  return { path, url: pathToFileURL(path).href, opened }
+  const url = options.servedAt?.(path) ?? pathToFileURL(path).href
+  const opened = options.open !== false && process.env.AIGUI_NO_OPEN !== "1" ? openInBrowser(url) : false
+  return { path, url, opened }
 }
 
 /**

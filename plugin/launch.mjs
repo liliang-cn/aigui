@@ -103,6 +103,7 @@ function bootstrap() {
   const tools = JSON.parse(readFileSync(join(here, "tools.json"), "utf8"))
   let installed = install()
   let server
+  const deps = {}
   installed.catch((error) => log(String(error.message)))
   // The server module, once there is one, and its headless-browser download started right away,
   // the same as the installed server does on its own start.
@@ -111,6 +112,13 @@ function bootstrap() {
     if (!server) {
       server = await import(pathToFileURL(entry).href)
       void server.ensureHeadlessShell()
+      // Pages served, as the installed server serves them, so this first session's can take
+      // comments too. A server too old to have it simply opens pages from disk.
+      if (server.startPageServer && server.outputRoot) {
+        const pages = join(server.outputRoot(), "pages")
+        mkdirSync(pages, { recursive: true })
+        deps.pageServer = await server.startPageServer(pages).catch(() => undefined)
+      }
     }
     return server
   }
@@ -136,7 +144,7 @@ function bootstrap() {
       case "tools/call": {
         try {
           const module = await load()
-          return reply(id, await module.callTool(params?.name, params?.arguments ?? {}))
+          return reply(id, await module.callTool(params?.name, params?.arguments ?? {}, deps))
         } catch (error) {
           // A failed install is retried on the next call rather than for the rest of the session.
           installed = install()

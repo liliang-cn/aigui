@@ -23,10 +23,10 @@ type Content = Array<{ type: string; text?: string; data?: string; mimeType?: st
 const text = (result: { content: unknown }) => (result.content as Content).filter((c) => c.type === "text").map((c) => c.text).join("\n")
 
 describe("the aigui MCP server", () => {
-  it("offers exactly the six tools", async () => {
+  it("offers exactly the seven tools", async () => {
     const client = await connect()
     const { tools } = await client.listTools()
-    expect(tools.map((tool) => tool.name).sort()).toEqual(["aigui_edit", "aigui_export", "aigui_guide", "aigui_open", "aigui_render", "aigui_topology"])
+    expect(tools.map((tool) => tool.name).sort()).toEqual(["aigui_edit", "aigui_export", "aigui_feedback", "aigui_guide", "aigui_open", "aigui_render", "aigui_topology"])
     // The workflow an agent follows is in the descriptions, since that is all it sees before it decides to draw.
     for (const tool of tools.filter((t) => t.name === "aigui_render" || t.name === "aigui_open")) expect(tool.description).toContain("aigui_guide first")
   })

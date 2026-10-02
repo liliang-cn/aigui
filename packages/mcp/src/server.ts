@@ -11,6 +11,8 @@ import { ensureViewer, openFiles, standalonePage, writePage } from "./open"
 import { applyEdits, readPage, resolvePage } from "./pages"
 import { describeProvenance, fillData, loadData, type Provenance } from "./data"
 import { importTopology } from "./topology-import"
+import { describeFeedback, readFeedback, startPageServer, type PageServer } from "./feedback"
+import { mkdir } from "node:fs/promises"
 import { outputRoot, packageVersion } from "./paths"
 import { renderToContent, type RenderedContent } from "./render"
 
@@ -42,6 +44,8 @@ export interface ServerDeps {
   /** Injected in tests: how a page becomes a PNG or PDF. Default `exportPage` from @ai-gui/image. */
   exportFile?: (url: string, options: { format: "png" | "pdf"; path: string; theme?: "light" | "dark" }) => Promise<string>
   /** Injected in tests: how a page becomes a GIF or WebM. Default `exportAnimation` from @ai-gui/image. */
+  /** The page server `main` starts: pages opened through it can take the reader's comments. */
+  pageServer?: PageServer
   recordAnimation?: (url: string, options: { format: "gif" | "webm"; path: string; theme?: "light" | "dark" }) => Promise<string>
 }
 
@@ -142,7 +146,7 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
       if ("error" in filled) return failure(filled.error)
       const markdown = filled.markdown
       try {
-        const page = await writePage(markdown, { title: str("title"), theme, locale: pageLocale, outDir: deps.outDir, open: deps.open })
+        const page = await writePage(markdown, { title: str("title"), theme, locale: pageLocale, outDir: deps.outDir, open: deps.open, servedAt: deps.pageServer?.urlFor })
         return { content: [{ type: "text", text: `${opened(page)}${describeProvenance(filled.provenance)}${await pageCheck(page.url, deps)}` }] }
       } catch (error) {
         return failure(`Could not write the page: ${String((error as Error).message)}`)
@@ -159,7 +163,7 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
       try {
         const current = await readPage(path)
         const markdown = applyEdits(current.markdown, edits)
-        const page = await writePage(markdown, { title: str("title") ?? current.title, theme: theme ?? current.theme, locale: pageLocale ?? current.locale, outDir: deps.outDir, open: deps.open, path })
+        const page = await writePage(markdown, { title: str("title") ?? current.title, theme: theme ?? current.theme, locale: pageLocale ?? current.locale, outDir: deps.outDir, open: deps.open, path, servedAt: deps.pageServer?.urlFor })
         return { content: [{ type: "text", text: `Edited ${basename(path)} (${edits.length} change${edits.length === 1 ? "" : "s"}). ${opened(page)}${await pageCheck(page.url, deps)}` }] }
       } catch (error) {
         return failure(`Could not edit ${basename(path)}: ${String((error as Error).message)}`)
@@ -173,11 +177,16 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
         const block = `\`\`\`topology\n${JSON.stringify(topology, null, 2)}\n\`\`\``
         const summary = `Read ${path}: ${topology.nodes.length} parts, ${topology.links?.length ?? 0} links.`
         if (args.open === false) return { content: [{ type: "text", text: `${summary} The block below draws it — add steps to it, or put it in an answer:\n\n${block}` }] }
-        const page = await writePage(`${block}\n\n*From ${path}*`, { title: str("title") ?? topology.title, theme, locale: pageLocale, outDir: deps.outDir, open: deps.open })
+        const page = await writePage(`${block}\n\n*From ${path}*`, { title: str("title") ?? topology.title, theme, locale: pageLocale, outDir: deps.outDir, open: deps.open, servedAt: deps.pageServer?.urlFor })
         return { content: [{ type: "text", text: `${summary} ${opened(page)}${await pageCheck(page.url, deps)}\n\nThe block, to add steps to or reuse:\n\n${block}` }] }
       } catch (error) {
         return failure(`Could not read a topology from ${path}: ${String((error as Error).message)}`)
       }
+    }
+    case "aigui_feedback": {
+      const pages = join(deps.outDir ?? outputRoot(), "pages")
+      const items = await readFeedback(pages, args.keep !== true)
+      return { content: [{ type: "text", text: describeFeedback(items) }] }
     }
     case "aigui_export": {
       const pages = join(deps.outDir ?? outputRoot(), "pages")
@@ -335,6 +344,19 @@ export function createServer(deps: ServerDeps = {}): McpServer {
   )
 
   server.registerTool(
+    "aigui_feedback",
+    {
+      title: "Read the reader's comments on pages",
+      description: "Read the comments the user left on pages opened by aigui_open — each names the page, the block and what they want changed. Call it when the user says they commented, or asks you to look at their notes. Comments are taken when read (keep: true leaves them). Act on them with aigui_edit.",
+      inputSchema: {
+        keep: z.boolean().optional().describe("Leave the comments in place after reading. Default false."),
+      },
+      annotations: { readOnlyHint: false, openWorldHint: false },
+    },
+    async (args) => callTool("aigui_feedback", args, deps),
+  )
+
+  server.registerTool(
     "aigui_export",
     {
       title: "Save a page as PNG or PDF",
@@ -354,7 +376,12 @@ export function createServer(deps: ServerDeps = {}): McpServer {
 
 /** Run over stdio, the way Claude Code starts an MCP server, and shut the browser down with it. */
 export async function main(): Promise<void> {
-  const server = createServer()
+  // Pages are served from here while the session runs, so a reader can comment on them. Without
+  // a server (a port refused, say) they open from disk as before, minus the comments.
+  const pagesDir = join(outputRoot(), "pages")
+  await mkdir(pagesDir, { recursive: true })
+  const pageServer = await startPageServer(pagesDir).catch(() => undefined)
+  const server = createServer({ pageServer })
   const shutdown = async () => {
     await closeBrowser().catch(() => {})
     process.exit(0)

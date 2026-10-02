@@ -33,6 +33,7 @@ Any other MCP client runs the same `aigui-mcp` command, over stdio.
 | `aigui_open` | Writes the whole answer to an HTML page and opens it in the default browser, where charts are live, 3D can be turned and walls and orbits animate. Draws every block, including the page-only ones: graph, solid, function, optics, motion, physics, figure, quote and more. |
 | `aigui_edit` | Changes part of a page `aigui_open` wrote — a number, a panel, a step — by find-and-replace on its markdown, without sending the whole answer again. Each `find` must occur exactly once. Rewrites the page in place and looks it over again. |
 | `aigui_topology` | Reads a docker-compose file, a Kubernetes manifest or a directory of manifests and draws the system as a topology — services, databases, queues, Services, Ingresses, volumes and their links — from the config, not from memory. Returns the block too, to add steps to. |
+| `aigui_feedback` | Reads the comments the reader left on pages (a Comment button on every page opened while the session runs): page, block, what to change. Act on them with `aigui_edit`. |
 | `aigui_export` | Saves a page as one full-length PNG or a PDF, drawn still (nothing mid-animation), as a single self-contained HTML file that stays interactive and opens offline — carrying only the code its blocks use — or as a GIF or WebM of one play of what moves on it (a topology's or a scene's steps, a wall counting up). |
 
 The syntax is fetched on demand rather than written into the tool descriptions: every plugin's spec together is tens of kilobytes, and a description is sent on every turn whether anything is drawn or not.
@@ -46,6 +47,10 @@ The syntax is fetched on demand rather than written into the tool descriptions: 
 `aigui_render` draws in Playwright's headless Chromium. `npx` installs Playwright but not that browser, so the server downloads it itself (about 100 MB, once) in the background as soon as it starts; later starts check it in a fraction of a second. The first picture waits up to a minute for the download, then goes ahead with the Google Chrome or Microsoft Edge already on the machine, which draws charts and diagrams well but 3D slowly. `AIGUI_NO_BROWSER_DOWNLOAD=1` skips the download; `AIGUI_BROWSER_CHANNEL` pins a browser (`chromium`, `chrome`, `msedge`) and also skips it.
 
 `aigui_open` needs no headless browser at all: it writes a file and hands it to the system's default one.
+
+## Comments from the page
+
+While the session runs, pages are served from `127.0.0.1` on a port the system picks, and each carries a Comment button: pick a block, say what should change, send. The agent reads the comments with `aigui_feedback`. Only files under the pages directory are served; a page opened from disk, or after the session ends, simply has no button.
 
 ## Files
 
