@@ -333,6 +333,14 @@ Two constraints that will fail a release if ignored:
 - **`npm publish` would ship `"@ai-gui/core": "workspace:*"` verbatim** and break every
   install. Only pnpm/changesets rewrite the workspace protocol.
 
+### Changing how something looks
+
+CI compares rendered blocks with golden pictures in `packages/image/visual/linux-x64/`. After a
+change that is meant to alter a picture, run the **Visual goldens** workflow by hand
+(`gh workflow run visual-goldens.yml`), look at the pictures in its artifact, and commit them
+there. Locally, `AIGUI_IMAGE_E2E=1 AIGUI_VISUAL_UPDATE=1 pnpm vitest run --project image src/visual.e2e.test.ts`
+writes this machine's own goldens.
+
 ### Adding a new package
 
 `files` in `package.json` lists `README.md`, `LICENSE` and `CHANGELOG.md`. Create all
