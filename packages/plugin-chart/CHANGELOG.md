@@ -1,5 +1,15 @@
 # @ai-gui/plugin-chart
 
+## 0.46.0
+
+### Minor Changes
+
+- caba124: A chart drawn on a canvas says when it holds more than it can show — too many categories for its axis, a pie of slivers, a treemap of crumbs — through `data-aigui-issue`, which the page check reports.
+
+### Patch Changes
+
+- @ai-gui/core@0.46.0
+
 ## 0.45.0
 
 ### Patch Changes

@@ -1,5 +1,28 @@
 # @ai-gui/image
 
+## 0.46.0
+
+### Minor Changes
+
+- 1e1636f: `aigui_export` records a page playing as a GIF (encoded in-process) or a WebM; players restart at step 1 for the recording, on an `aigui:restart` event.
+
+### Patch Changes
+
+- 807388f: Visual regression tests compare rendered blocks with per-platform golden pictures; CI checks the Linux ones.
+- Updated dependencies [1e1636f]
+- Updated dependencies [caba124]
+  - @ai-gui/plugin-topology@0.46.0
+  - @ai-gui/plugin-scene@0.46.0
+  - @ai-gui/plugin-chart@0.46.0
+  - @ai-gui/core@0.46.0
+  - @ai-gui/vanilla@0.46.0
+  - @ai-gui/plugin-katex@0.46.0
+  - @ai-gui/plugin-mermaid@0.46.0
+  - @ai-gui/plugin-molecule@0.46.0
+  - @ai-gui/plugin-gravity@0.46.0
+  - @ai-gui/plugin-dashboard@0.46.0
+  - @ai-gui/plugin-bigscreen@0.46.0
+
 ## 0.45.0
 
 ### Patch Changes

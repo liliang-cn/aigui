@@ -1,5 +1,12 @@
 # @ai-gui/plugin-scene
 
+## 0.46.0
+
+### Patch Changes
+
+- 1e1636f: `aigui_export` records a page playing as a GIF (encoded in-process) or a WebM; players restart at step 1 for the recording, on an `aigui:restart` event.
+  - @ai-gui/core@0.46.0
+
 ## 0.45.0
 
 ### Patch Changes

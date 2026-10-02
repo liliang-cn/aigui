@@ -1,5 +1,25 @@
 # @ai-gui/mcp
 
+## 0.46.0
+
+### Minor Changes
+
+- 1e1636f: `aigui_export` records a page playing as a GIF (encoded in-process) or a WebM; players restart at step 1 for the recording, on an `aigui:restart` event.
+- 60c7211: `aigui_render` and `aigui_open` take `data` files (CSV, TSV, JSON); blocks reference them with `{"$data": …}` for rows, a column, picked columns or a total, so the numbers come from the file rather than being retyped.
+- 68eebea: Pages are served on 127.0.0.1 while the session runs and carry a Comment button: the reader picks a block and says what should change, and `aigui_feedback` hands the comments to the agent.
+- a92dd7f: `aigui_export` with `format: "html"` writes the page as one self-contained, interactive file that opens offline, carrying only the viewer packs its blocks use.
+- dc7e162: `aigui_topology` draws a system from its docker-compose file or Kubernetes manifests — services, databases, queues, Services, Ingresses, volumes and their links — and returns the topology block to extend with steps.
+- 9263c68: The page viewer is a 300 KB main script plus packs — ECharts, mermaid, KaTeX, code highlighting, three.js, molecules, topology — loaded only for an answer that uses them, instead of one 21 MB script on every page.
+
+### Patch Changes
+
+- Updated dependencies [1e1636f]
+- Updated dependencies [807388f]
+  - @ai-gui/image@0.46.0
+  - @ai-gui/cli@0.46.0
+  - @ai-gui/core@0.46.0
+  - @ai-gui/plugin-molecule@0.46.0
+
 ## 0.45.0
 
 ### Minor Changes
