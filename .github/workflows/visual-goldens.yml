@@ -1,0 +1,35 @@
+name: Visual goldens
+
+# Regenerates the Linux pictures the visual tests compare against, on the same runner CI checks
+# them on. Run it by hand after a change that is meant to alter how something looks, download the
+# artifact, and commit it to packages/image/visual/linux-x64/.
+on:
+  workflow_dispatch:
+
+jobs:
+  goldens:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: sudo apt-get update && sudo apt-get install -y fonts-noto-cjk
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      - run: pnpm --filter @ai-gui/image exec playwright install --with-deps --only-shell chromium
+
+      - run: AIGUI_IMAGE_E2E=1 AIGUI_VISUAL_UPDATE=1 pnpm vitest run --project image src/visual.e2e.test.ts
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: visual-goldens-linux-x64
+          path: packages/image/visual/linux-x64/
