@@ -4,16 +4,20 @@ import { collectNodeRenderers, type ASTNode, type RenderOutput } from "@ai-gui/c
 const mocks = vi.hoisted(() => ({
   codeToHtml: vi.fn((code: string) => `<pre>${code}</pre>`),
   createHighlighter: vi.fn(),
+  loadLanguage: vi.fn(async (_lang: string) => {}),
+  // Shiki's map of the grammars it bundles, by name and by alias.
+  bundledLanguages: { c: () => Promise.resolve({}), sh: () => Promise.resolve({}) },
 }))
 
-vi.mock("shiki", () => ({ createHighlighter: mocks.createHighlighter }))
+vi.mock("shiki", () => ({ createHighlighter: mocks.createHighlighter, bundledLanguages: mocks.bundledLanguages }))
 
 describe("plugin-highlight", () => {
   beforeEach(() => {
     vi.resetModules()
     mocks.codeToHtml.mockClear()
+    mocks.loadLanguage.mockReset()
     mocks.createHighlighter.mockReset()
-    mocks.createHighlighter.mockResolvedValue({ codeToHtml: mocks.codeToHtml })
+    mocks.createHighlighter.mockResolvedValue({ codeToHtml: mocks.codeToHtml, loadLanguage: mocks.loadLanguage })
   })
 
   it("renders a code node to highlighted html (async)", async () => {
@@ -29,6 +33,59 @@ describe("plugin-highlight", () => {
     const out = (await r({ key: "0:c", type: "code", content: "x", attrs: { lang: "unknownlang" } } as ASTNode)) as RenderOutput
     expect(out.kind).toBe("html")
     expect(mocks.codeToHtml).toHaveBeenCalledWith("x", { lang: "text", theme: "github-light" })
+  })
+
+  it("loads a grammar Shiki bundles the first time a block asks for it", async () => {
+    // A page of C, TOML or YAML used to come out as plain text: only the listed grammars were ever
+    // loaded, although Shiki had the others all along.
+    const { highlight } = await import("./index")
+    const render = collectNodeRenderers([highlight({ themes: ["github-light"], langs: ["ts"] })]).code
+
+    await render({ key: "0:c", type: "code", content: "int x;", attrs: { lang: "c" } } as ASTNode)
+    expect(mocks.loadLanguage).toHaveBeenCalledWith("c")
+    expect(mocks.codeToHtml).toHaveBeenLastCalledWith("int x;", { lang: "c", theme: "github-light" })
+  })
+
+  it("loads each grammar once, however many blocks ask for it at the same time", async () => {
+    const { highlight } = await import("./index")
+    const render = collectNodeRenderers([highlight({ themes: ["github-light"], langs: ["ts"] })]).code
+
+    await Promise.all([
+      render({ key: "0:a", type: "code", content: "a", attrs: { lang: "sh" } } as ASTNode),
+      render({ key: "0:b", type: "code", content: "b", attrs: { lang: "sh" } } as ASTNode),
+    ])
+    await render({ key: "0:d", type: "code", content: "d", attrs: { lang: "sh" } } as ASTNode)
+    expect(mocks.loadLanguage).toHaveBeenCalledOnce()
+    expect(mocks.codeToHtml).toHaveBeenLastCalledWith("d", { lang: "sh", theme: "github-light" })
+  })
+
+  it("does not ask Shiki for a language it does not bundle", async () => {
+    // Shiki throws for an unknown name, which would turn the block into the unhighlighted fallback.
+    const { highlight } = await import("./index")
+    const render = collectNodeRenderers([highlight({ themes: ["github-light"], langs: ["ts"] })]).code
+
+    await render({ key: "0:c", type: "code", content: "x", attrs: { lang: "unknownlang" } } as ASTNode)
+    expect(mocks.loadLanguage).not.toHaveBeenCalled()
+    expect(mocks.codeToHtml).toHaveBeenLastCalledWith("x", { lang: "text", theme: "github-light" })
+  })
+
+  it("with loadOnDemand off, highlights only the listed languages", async () => {
+    const { highlight } = await import("./index")
+    const render = collectNodeRenderers([highlight({ themes: ["github-light"], langs: ["ts"], loadOnDemand: false })]).code
+
+    await render({ key: "0:c", type: "code", content: "int x;", attrs: { lang: "c" } } as ASTNode)
+    expect(mocks.loadLanguage).not.toHaveBeenCalled()
+    expect(mocks.codeToHtml).toHaveBeenLastCalledWith("int x;", { lang: "text", theme: "github-light" })
+  })
+
+  it("sets a block as plain text when its grammar fails to load", async () => {
+    mocks.loadLanguage.mockRejectedValue(new Error("grammar failed"))
+    const { highlight } = await import("./index")
+    const render = collectNodeRenderers([highlight({ themes: ["github-light"], langs: ["ts"] })]).code
+
+    const out = (await render({ key: "0:c", type: "code", content: "int x;", attrs: { lang: "c" } } as ASTNode)) as RenderOutput
+    expect(out).toEqual({ kind: "html", html: "<pre>int x;</pre>" })
+    expect(mocks.codeToHtml).toHaveBeenLastCalledWith("int x;", { lang: "text", theme: "github-light" })
   })
 
   it("does not load Shiki until the first code node is rendered", async () => {

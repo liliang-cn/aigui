@@ -1,12 +1,20 @@
-import type { Highlighter } from "shiki"
+import type { BundledLanguage, Highlighter } from "shiki"
 import { translate, type AIGuiPlugin, type ASTNode, type MessageBundle, type NodeRenderContext, type RenderOutput } from "@ai-gui/core"
 
 /** Options for the Shiki-backed code highlighter plugin. */
 export interface HighlightOptions {
   /** Themes to load. First entry is the default when neither `theme` nor the host's scheme decides. */
   themes?: string[]
-  /** Grammars to load. A node whose `attrs.lang` is not listed falls back to plain text. */
+  /**
+   * Grammars to load up front. These are also the ones the prompt spec names to the model.
+   * A block in another language still gets its grammar when Shiki bundles one (see `loadOnDemand`).
+   */
   langs?: string[]
+  /**
+   * Load a grammar the first time a block asks for it, when Shiki bundles one by that name or alias.
+   * Default `true`. With `false`, only `langs` are highlighted and every other block is plain text.
+   */
+  loadOnDemand?: boolean
   /**
    * Pin the theme, ignoring the host's colour scheme.
    *
@@ -51,9 +59,10 @@ function escapeHtml(s: string): string {
  * `Highlighter` (Shiki's `createHighlighter` promise is created at most once) and
  * emits `highlighter.codeToHtml(...)` markup.
  *
- * A node whose `attrs.lang` is not among the loaded `langs` renders as plain
- * `"text"` so Shiki never throws for an unloaded grammar. Any other failure is
- * caught and rendered as an escaped `<pre><code>` block — the renderer never throws.
+ * A node whose `attrs.lang` is not among `langs` gets that grammar loaded on first
+ * use when Shiki bundles one by the name (`loadOnDemand`); any other language renders
+ * as plain `"text"`, so Shiki never throws for a grammar it does not have. Any other
+ * failure is caught and rendered as an escaped `<pre><code>` block — the renderer never throws.
  */
 export function highlight(opts: HighlightOptions = {}): AIGuiPlugin {
   const lightTheme = opts.lightTheme ?? "github-light"
@@ -61,17 +70,34 @@ export function highlight(opts: HighlightOptions = {}): AIGuiPlugin {
   // Both loaded up front: choosing per render is the point, and a theme Shiki has not loaded throws.
   const themes = opts.themes ?? [lightTheme, darkTheme]
   const langs = opts.langs ?? ["ts", "js", "json", "bash", "python", "html", "css"]
+  const loadOnDemand = opts.loadOnDemand ?? true
 
   let highlighterPromise: Promise<Highlighter> | null = null
   const getHighlighter = () => (highlighterPromise ??= import("shiki").then(({ createHighlighter }) =>
     createHighlighter({ themes, langs }),
   ))
 
+  // One load per grammar, shared by every block that asks for it while the load is in flight.
+  const grammars = new Map<string, Promise<boolean>>()
+  const loadGrammar = (highlighter: Highlighter, lang: string): Promise<boolean> => {
+    let loading = grammars.get(lang)
+    if (!loading) {
+      loading = import("shiki")
+        .then(async ({ bundledLanguages }) => {
+          // Shiki throws for a name it does not bundle, so the name is checked before asking.
+          if (!Object.prototype.hasOwnProperty.call(bundledLanguages, lang)) return false
+          await highlighter.loadLanguage(lang as BundledLanguage)
+          return true
+        })
+        .catch(() => false)
+      grammars.set(lang, loading)
+    }
+    return loading
+  }
+
   const render = async (node: ASTNode, context?: NodeRenderContext): Promise<RenderOutput> => {
     const code = node.content ?? ""
     const requested = node.attrs?.lang
-    // "text" is always available in Shiki and never requires a loaded grammar.
-    const lang = requested && langs.includes(requested) ? requested : "text"
     // The host's scheme decides unless a theme was pinned. Code set in a light theme on a dark page is
     // the same fault a chart has when it picks its own palette, and it is just as easy to miss when the
     // markup is correct either way.
@@ -79,6 +105,10 @@ export function highlight(opts: HighlightOptions = {}): AIGuiPlugin {
     const theme = themes.includes(wanted) ? wanted : themes[0]
     try {
       const highlighter = await getHighlighter()
+      // "text" is always available in Shiki and never requires a loaded grammar.
+      const lang = requested && (langs.includes(requested) || (loadOnDemand && (await loadGrammar(highlighter, requested))))
+        ? requested
+        : "text"
       return { kind: "html", html: highlighter.codeToHtml(code, { lang, theme }) }
     } catch {
       return { kind: "html", html: `<pre><code>${escapeHtml(code)}</code></pre>` }
