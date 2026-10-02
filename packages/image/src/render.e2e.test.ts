@@ -177,4 +177,5 @@ describe.skipIf(!enabled)("renderMarkdownToImages (real Chromium)", () => {
     expect(result.images[0].issues).toEqual([])
     expect(result.images[0].height).toBeGreaterThan(200)
   }, 60_000)
+
 })

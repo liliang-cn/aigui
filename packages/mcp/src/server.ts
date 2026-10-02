@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { basename, dirname, join } from "node:path"
 import { pathToFileURL } from "node:url"
-import { closeBrowser, exportPage, inspectPage, type InternalRenderOptions, type Issue } from "@ai-gui/image"
+import { closeBrowser, exportAnimation, exportPage, inspectPage, type InternalRenderOptions, type Issue } from "@ai-gui/image"
 import { z } from "zod"
 import { BLOCKS } from "./blocks"
 import { ensureHeadlessShell, type BrowserSetup } from "./browser"
@@ -40,6 +40,8 @@ export interface ServerDeps {
   showImages?: (paths: string[]) => boolean
   /** Injected in tests: how a page becomes a PNG or PDF. Default `exportPage` from @ai-gui/image. */
   exportFile?: (url: string, options: { format: "png" | "pdf"; path: string; theme?: "light" | "dark" }) => Promise<string>
+  /** Injected in tests: how a page becomes a GIF or WebM. Default `exportAnimation` from @ai-gui/image. */
+  recordAnimation?: (url: string, options: { format: "gif" | "webm"; path: string; theme?: "light" | "dark" }) => Promise<string>
 }
 
 function defaultShowImages(): ((paths: string[]) => boolean) | undefined {
@@ -174,6 +176,19 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
           return failure(`Could not export ${basename(path)}: ${String((error as Error).message)}`)
         }
       }
+      if (str("format") === "gif" || str("format") === "webm") {
+        const motion = str("format") as "gif" | "webm"
+        const out = join(dirname(path), basename(path).replace(/\.html$/, `.${motion}`))
+        try {
+          await ensureViewer(dirname(path))
+          const record = deps.recordAnimation ?? ((url: string, o: { format: "gif" | "webm"; path: string; theme?: "light" | "dark" }) => exportAnimation(url, o))
+          await record(pathToFileURL(path).href, { format: motion, path: out, theme })
+          const shown = deps.open !== false && process.env.AIGUI_NO_OPEN !== "1" && openFiles([out])
+          return { content: [{ type: "text", text: `Saved ${out} — one play of the page${shown ? ", open on the user's screen" : ""}.` }] }
+        } catch (error) {
+          return failure(`Could not record ${basename(path)}: ${String((error as Error).message)}. aigui_export needs the headless browser aigui_render uses.`)
+        }
+      }
       const format = str("format") === "pdf" ? "pdf" : "png"
       const out = join(dirname(path), basename(path).replace(/\.html$/, `.${format}`))
       try {
@@ -288,10 +303,10 @@ export function createServer(deps: ServerDeps = {}): McpServer {
     "aigui_export",
     {
       title: "Save a page as PNG or PDF",
-      description: "Save a page written by aigui_open as one full-length PNG, a PDF, or a single self-contained HTML file that stays interactive — for sending or attaching. Returns the file path. page defaults to the most recent one.",
+      description: "Save a page written by aigui_open as one full-length PNG, a PDF, a single self-contained HTML file that stays interactive, or a GIF / WebM of it playing — for sending or attaching. Returns the file path. page defaults to the most recent one.",
       inputSchema: {
         page: z.string().optional().describe('The page file path or name, or "last" (default).'),
-        format: z.enum(["png", "pdf", "html"]).optional().describe("png (default) or pdf: drawn still. html: the page as one self-contained file that stays interactive — for sending to someone."),
+        format: z.enum(["png", "pdf", "html", "gif", "webm"]).optional().describe("png (default) or pdf: drawn still. html: the page as one self-contained file that stays interactive — for sending to someone. gif or webm: one play of what moves on the page — a topology's or a scene's steps, a wall counting up — for a chat or a slide."),
         theme: z.enum(["light", "dark"]).optional().describe("Colour scheme to draw it in. Default light."),
       },
       annotations: { readOnlyHint: false, openWorldHint: false },

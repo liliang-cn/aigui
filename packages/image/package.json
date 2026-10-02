@@ -57,19 +57,21 @@
   },
   "dependencies": {
     "@ai-gui/core": "workspace:*",
-    "@ai-gui/vanilla": "workspace:*",
-    "@ai-gui/plugin-chart": "workspace:*",
-    "@ai-gui/plugin-mermaid": "workspace:*",
-    "@ai-gui/plugin-katex": "workspace:*",
-    "@ai-gui/plugin-dashboard": "workspace:*",
-    "@ai-gui/plugin-scene": "workspace:*",
-    "@ai-gui/plugin-gravity": "workspace:*",
-    "@ai-gui/plugin-topology": "workspace:*",
     "@ai-gui/plugin-bigscreen": "workspace:*",
+    "@ai-gui/plugin-chart": "workspace:*",
+    "@ai-gui/plugin-dashboard": "workspace:*",
+    "@ai-gui/plugin-gravity": "workspace:*",
+    "@ai-gui/plugin-katex": "workspace:*",
+    "@ai-gui/plugin-mermaid": "workspace:*",
     "@ai-gui/plugin-molecule": "workspace:*",
+    "@ai-gui/plugin-scene": "workspace:*",
+    "@ai-gui/plugin-topology": "workspace:*",
+    "@ai-gui/vanilla": "workspace:*",
+    "echarts": "^5.5.1",
     "echarts-gl": "^2.0.9",
+    "gifenc": "^1.0.3",
     "katex": "^0.16.9",
-    "echarts": "^5.5.1"
+    "pngjs": "^7.0.0"
   },
   "peerDependencies": {
     "playwright": "^1.48.0"
@@ -81,6 +83,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
+    "@types/pngjs": "^6.0.5",
     "playwright": "^1.48.0",
     "vite": "^5.4.0"
   }

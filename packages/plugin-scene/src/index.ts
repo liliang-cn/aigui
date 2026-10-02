@@ -103,7 +103,17 @@ function playSteps(el: HTMLElement, captions: string[], stepMs: number, show: (i
     go(playing ? index + 1 : index)
   }
   go(0)
-  return () => clearTimeout(timer)
+  // A recording asks every player to start over: one play from step 1 (see plugin-topology).
+  const restartAll = () => {
+    playing = true
+    play.textContent = "⏸"
+    go(0)
+  }
+  document.addEventListener("aigui:restart", restartAll)
+  return () => {
+    document.removeEventListener("aigui:restart", restartAll)
+    clearTimeout(timer)
+  }
 }
 
 export const sceneCss = [

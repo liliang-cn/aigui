@@ -200,7 +200,17 @@ function mountTopology(el: HTMLElement, definition: TopologyDefinition, theme: s
     restart()
   }
   frameId = requestAnimationFrame(tick)
+  // A recording (`aigui_export` as GIF or video) asks every player to start over, so the capture
+  // holds one play from step 1 rather than whatever step loading happened to end on.
+  const restartAll = () => {
+    index = 0
+    playing = true
+    play.textContent = "⏸"
+    restart()
+  }
+  document.addEventListener("aigui:restart", restartAll)
   return () => {
+    document.removeEventListener("aigui:restart", restartAll)
     cancelAnimationFrame(frameId)
     el.replaceChildren()
   }

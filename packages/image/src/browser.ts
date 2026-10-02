@@ -10,7 +10,7 @@ export interface BrowserLike {
    * accept it. Getting this wrong is invisible in code review and obvious on a phone: the picture
    * arrives at half the resolution it should.
    */
-  newPage(options?: { deviceScaleFactor?: number }): Promise<PageLike>
+  newPage(options?: { deviceScaleFactor?: number; [key: string]: unknown }): Promise<PageLike>
   close(): Promise<void>
 }
 export type Launcher = () => Promise<BrowserLike>
@@ -28,6 +28,8 @@ export interface AcquireOptions {
   launcher?: Launcher
   idleShutdownMs?: number
   deviceScaleFactor?: number
+  /** More of Playwright's new-page options — `recordVideo`, `viewport` — for the one page. */
+  pageOptions?: Record<string, unknown>
 }
 
 export interface PageLease {
@@ -137,7 +139,7 @@ export async function acquirePage(options: AcquireOptions = {}): Promise<PageLea
   }
   let page: PageLike
   try {
-    page = await browser.newPage({ deviceScaleFactor: options.deviceScaleFactor ?? DEFAULT_SCALE })
+    page = await browser.newPage({ ...options.pageOptions, deviceScaleFactor: options.deviceScaleFactor ?? DEFAULT_SCALE })
   } catch (error) {
     // The cached browser is dead — a crash, or an OOM kill. Keeping the handle would fail every
     // render from here on, so drop it and let the next call launch a fresh one.

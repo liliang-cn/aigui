@@ -191,6 +191,18 @@ describe("the aigui MCP server", () => {
     expect(html.match(/<\/script>/g)).toHaveLength(3)
   })
 
+  it("records the last page as a GIF or WebM beside it", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-"))
+    const calls: Array<{ format: string; path: string }> = []
+    const client = await connect({ outDir, open: false, recordAnimation: async (_url, o) => (calls.push(o), o.path) })
+    await client.callTool({ name: "aigui_open", arguments: { markdown: "# x", title: "Flow" } })
+    const gif = await client.callTool({ name: "aigui_export", arguments: { format: "gif" } })
+    await client.callTool({ name: "aigui_export", arguments: { format: "webm" } })
+    expect(calls.map((c) => c.format)).toEqual(["gif", "webm"])
+    expect(calls[0].path).toMatch(/-flow\.gif$/)
+    expect(text(gif)).toMatch(/Saved .*-flow\.gif/)
+  })
+
   it("refuses markdown with nothing drawable instead of launching a browser for it", async () => {
     let launched = false
     const client = await connect({
@@ -304,4 +316,19 @@ describe.skipIf(process.env.AIGUI_IMAGE_E2E !== "1")("aigui_open (real browser)"
       await browser.close()
     }
   }, 90_000)
+
+  it("records a topology playing as a GIF, every step in it", async () => {
+    const { topologyPromptSpec } = await import("@ai-gui/plugin-topology")
+    const block = topologyPromptSpec("en").split("```topology\n")[1]
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-gif-"))
+    const client = await connect({ outDir, open: false })
+    await client.callTool({ name: "aigui_open", arguments: { markdown: "```topology\n" + block.slice(0, block.indexOf("```")) + "```", title: "flow" } })
+    const result = await client.callTool({ name: "aigui_export", arguments: { format: "gif" } })
+    expect(text(result)).toMatch(/Saved/)
+    const out = text(result).match(/Saved (\S+\.gif)/)![1]
+    const bytes = await readFile(out)
+    expect(bytes.subarray(0, 6).toString()).toBe("GIF89a")
+    // One image descriptor per frame: a dozen seconds at 8 fps is far more than a handful.
+    expect(bytes.filter((b, i) => b === 0x2c && bytes[i - 1] === 0x00).length).toBeGreaterThan(20)
+  }, 120_000)
 })
