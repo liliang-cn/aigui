@@ -58,7 +58,7 @@ Add your own block type without touching this package. `npx @ai-gui/cli plugin n
 | `plugin.js` | A plain browser script — no build step — that registers its plugins: `(globalThis.__aiguiPacks ??= {}).ticket = (theme, still) => [{ name, nodeRenderers, isBlockComplete, css }]`. Same shape as `@ai-gui/core`'s `AIGuiPlugin`; its HTML is sanitized like any plugin's. |
 | `spec.md` | The rules the model follows to write the block — what `aigui_guide` returns for it. |
 
-The block then appears in `aigui_guide` marked `[custom]`, draws in pages, PNGs and standalone exports, and is picked up without a restart. A folder with a bad manifest is skipped with a reason in the listing; a name that collides with a built-in block is refused. Scripts run only from that folder, on your machine — the same trust as installing a package.
+The block then appears in `aigui_guide` marked `[custom]`, draws in pages, PNGs and standalone exports, and is picked up without a restart. Blocks installed when the server starts are also named in the tool descriptions, so the agent reaches for them unprompted — restart the session after adding one for that. A folder with a bad manifest is skipped with a reason in the listing; a name that collides with a built-in block is refused. Scripts run only from that folder, on your machine — the same trust as installing a package.
 
 ## Comments from the page
 

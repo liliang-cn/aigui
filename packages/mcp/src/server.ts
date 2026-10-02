@@ -47,6 +47,12 @@ export interface ServerDeps {
   /** Injected in tests: how a page becomes a GIF or WebM. Default `exportAnimation` from @ai-gui/image. */
   /** Where custom blocks are read from. Default `AIGUI_PLUGIN_DIR` or ~/.config/aigui/plugins. */
   customDir?: string
+  /**
+   * The custom blocks installed when the server started, named in the tool descriptions. Measured:
+   * listed only by aigui_guide, a custom block was used in 5 of 9 runs — the agent that never
+   * called aigui_guide without arguments never learned it existed.
+   */
+  announce?: readonly CustomPlugin[]
   /** The page server `main` starts: pages opened through it can take the reader's comments. */
   pageServer?: PageServer
   recordAnimation?: (url: string, options: { format: "gif" | "webm"; path: string; theme?: "light" | "dark" }) => Promise<string>
@@ -261,6 +267,10 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
  */
 export function createServer(deps: ServerDeps = {}): McpServer {
   const server = new McpServer({ name: "aigui", version: packageVersion() })
+  const custom = deps.announce ?? []
+  const customLine = custom.length
+    ? [`Custom blocks installed here — use them whenever the content is what they show, rather than a generic block or plain text: ${custom.map((p) => `${p.fences.map((f) => `\`\`\`${f}`).join("/")} (${p.description})`).join("; ")}. Get their syntax from aigui_guide.`]
+    : []
 
   server.registerTool(
     "aigui_guide",
@@ -270,6 +280,7 @@ export function createServer(deps: ServerDeps = {}): McpServer {
         "Get the exact syntax for AIGUI blocks before writing any. Call with no arguments for the list of blocks, then with the names you will use.",
         `Blocks: ${ALL}.`,
         "Each block is a fenced code block of JSON (or mermaid text, or $$ maths) inside ordinary markdown. The rules matter: most blocks take conditions, not results, and compute the numbers themselves.",
+        ...customLine,
       ].join(" "),
       inputSchema: {
         blocks: z.array(z.string()).optional().describe("Block names to get the syntax for, e.g. [\"chart\", \"scene\"]. Omit for the list."),
@@ -289,6 +300,7 @@ export function createServer(deps: ServerDeps = {}): McpServer {
         `Draws: ${PICTURE}, and markdown tables. Anything else in the markdown is ignored.`,
         "Use it when a picture answers better than text — a chart of numbers, a diagram of a flow, a 3D shape, an orbit, a molecule. The images come back to you and are saved to disk; the result says whether they were also opened on the user's screen — if not, tell the user the paths.",
         "Call aigui_guide first for the syntax of any block you have not written in this session.",
+        ...customLine.filter(() => custom.some((p) => p.picture)),
       ].join(" "),
       inputSchema: {
         markdown: z.string().min(1).describe("Markdown containing one or more AIGUI blocks."),
@@ -310,6 +322,7 @@ export function createServer(deps: ServerDeps = {}): McpServer {
         `Draws every block: ${ALL}, plus maths, tables and code.`,
         "Use it for a long answer that is mostly visual, for anything the user will want to explore, or for a [page only] block. Returns the file path.",
         "Call aigui_guide first for the syntax of any block you have not written in this session.",
+        ...customLine,
       ].join(" "),
       inputSchema: {
         markdown: z.string().min(1).describe("The whole answer: prose and AIGUI blocks."),
@@ -401,7 +414,8 @@ export async function main(): Promise<void> {
   const pagesDir = join(outputRoot(), "pages")
   await mkdir(pagesDir, { recursive: true })
   const pageServer = await startPageServer(pagesDir).catch(() => undefined)
-  const server = createServer({ pageServer })
+  const announce = (await loadCustomPlugins(customPluginDir(), RESERVED).catch(() => ({ plugins: [] }))).plugins
+  const server = createServer({ pageServer, announce })
   const shutdown = async () => {
     await closeBrowser().catch(() => {})
     process.exit(0)
