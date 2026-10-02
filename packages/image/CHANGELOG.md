@@ -1,5 +1,27 @@
 # @ai-gui/image
 
+## 0.47.0
+
+### Minor Changes
+
+- 86f8118: Custom blocks: a folder with `aigui.json`, a plain `plugin.js` and a `spec.md` in `~/.config/aigui/plugins` adds a block type to `aigui_guide`, pages, PNGs and standalone exports. `aigui plugin new <name>` scaffolds one; `aigui plugin list` shows what loaded and why anything did not.
+
+### Patch Changes
+
+- 3bd53d7: GIF recordings crop screencast frames at their real scale, so a recording is never offset or mixed with an earlier frame.
+- 0ff92bf: GIF recordings capture with the browser's screencast — smooth at the page's own frame rate instead of a screenshot per frame — and merge identical frames, so a held step costs one frame.
+  - @ai-gui/core@0.47.0
+  - @ai-gui/vanilla@0.47.0
+  - @ai-gui/plugin-katex@0.47.0
+  - @ai-gui/plugin-mermaid@0.47.0
+  - @ai-gui/plugin-chart@0.47.0
+  - @ai-gui/plugin-molecule@0.47.0
+  - @ai-gui/plugin-scene@0.47.0
+  - @ai-gui/plugin-gravity@0.47.0
+  - @ai-gui/plugin-dashboard@0.47.0
+  - @ai-gui/plugin-bigscreen@0.47.0
+  - @ai-gui/plugin-topology@0.47.0
+
 ## 0.46.0
 
 ### Minor Changes

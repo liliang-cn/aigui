@@ -1,5 +1,43 @@
 # @ai-gui/cli
 
+## 0.47.0
+
+### Minor Changes
+
+- 86f8118: Custom blocks: a folder with `aigui.json`, a plain `plugin.js` and a `spec.md` in `~/.config/aigui/plugins` adds a block type to `aigui_guide`, pages, PNGs and standalone exports. `aigui plugin new <name>` scaffolds one; `aigui plugin list` shows what loaded and why anything did not.
+
+### Patch Changes
+
+- @ai-gui/core@0.47.0
+- @ai-gui/plugin-katex@0.47.0
+- @ai-gui/plugin-highlight@0.47.0
+- @ai-gui/plugin-mermaid@0.47.0
+- @ai-gui/plugin-primitives@0.47.0
+- @ai-gui/plugin-chart@0.47.0
+- @ai-gui/plugin-form@0.47.0
+- @ai-gui/plugin-citation@0.47.0
+- @ai-gui/plugin-artifact@0.47.0
+- @ai-gui/plugin-ui@0.47.0
+- @ai-gui/plugin-molecule@0.47.0
+- @ai-gui/plugin-solid@0.47.0
+- @ai-gui/plugin-scene@0.47.0
+- @ai-gui/plugin-function@0.47.0
+- @ai-gui/plugin-optics@0.47.0
+- @ai-gui/plugin-motion@0.47.0
+- @ai-gui/plugin-gravity@0.47.0
+- @ai-gui/plugin-graph@0.47.0
+- @ai-gui/plugin-quote@0.47.0
+- @ai-gui/plugin-resultset@0.47.0
+- @ai-gui/plugin-physics@0.47.0
+- @ai-gui/plugin-figure@0.47.0
+- @ai-gui/plugin-progress@0.47.0
+- @ai-gui/plugin-flashcard@0.47.0
+- @ai-gui/plugin-map@0.47.0
+- @ai-gui/plugin-evidence@0.47.0
+- @ai-gui/plugin-dashboard@0.47.0
+- @ai-gui/plugin-bigscreen@0.47.0
+- @ai-gui/plugin-topology@0.47.0
+
 ## 0.46.0
 
 ### Patch Changes

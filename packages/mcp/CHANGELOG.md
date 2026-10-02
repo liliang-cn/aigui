@@ -1,5 +1,23 @@
 # @ai-gui/mcp
 
+## 0.47.0
+
+### Minor Changes
+
+- 86f8118: Custom blocks: a folder with `aigui.json`, a plain `plugin.js` and a `spec.md` in `~/.config/aigui/plugins` adds a block type to `aigui_guide`, pages, PNGs and standalone exports. `aigui plugin new <name>` scaffolds one; `aigui plugin list` shows what loaded and why anything did not.
+
+### Patch Changes
+
+- 37583cd: Installed custom blocks are named in the tool descriptions, so an agent knows of them before it writes anything (measured: used in 9 of 9 runs, up from 5 of 9 when only aigui_guide listed them).
+- 3bd53d7: GIF recordings crop screencast frames at their real scale, so a recording is never offset or mixed with an earlier frame.
+- Updated dependencies [86f8118]
+- Updated dependencies [3bd53d7]
+- Updated dependencies [0ff92bf]
+  - @ai-gui/cli@0.47.0
+  - @ai-gui/image@0.47.0
+  - @ai-gui/core@0.47.0
+  - @ai-gui/plugin-molecule@0.47.0
+
 ## 0.46.0
 
 ### Minor Changes
