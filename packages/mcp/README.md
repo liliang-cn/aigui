@@ -32,7 +32,7 @@ Any other MCP client runs the same `aigui-mcp` command, over stdio.
 | `aigui_render` | Draws the blocks in a markdown string as PNGs and returns them inline and as file paths. Chart, mermaid, maths, tables, bigscreen, dashboard, scene, gravity, molecule. |
 | `aigui_open` | Writes the whole answer to an HTML page and opens it in the default browser, where charts are live, 3D can be turned and walls and orbits animate. Draws every block, including the page-only ones: graph, solid, function, optics, motion, physics, figure, quote and more. |
 | `aigui_edit` | Changes part of a page `aigui_open` wrote — a number, a panel, a step — by find-and-replace on its markdown, without sending the whole answer again. Each `find` must occur exactly once. Rewrites the page in place and looks it over again. |
-| `aigui_export` | Saves a page as one full-length PNG or a PDF, drawn still (nothing mid-animation), beside the page. |
+| `aigui_export` | Saves a page as one full-length PNG or a PDF, drawn still (nothing mid-animation), or as a single self-contained HTML file that stays interactive and opens offline — carrying only the code its blocks use. |
 
 The syntax is fetched on demand rather than written into the tool descriptions: every plugin's spec together is tens of kilobytes, and a description is sent on every turn whether anything is drawn or not.
 

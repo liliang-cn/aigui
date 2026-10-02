@@ -1,10 +1,11 @@
 import { spawn } from "node:child_process"
-import { copyFile, mkdir, readdir, stat, writeFile } from "node:fs/promises"
-import { join } from "node:path"
+import { copyFile, mkdir, readFile, readdir, stat, writeFile } from "node:fs/promises"
+import { dirname, join } from "node:path"
 import { pathToFileURL } from "node:url"
 import { inlineKatexCss } from "@ai-gui/image"
 import { pageHtml } from "./page"
-import { recordPage } from "./pages"
+import { packsFor } from "./viewer/packs"
+import { readPage, recordPage } from "./pages"
 import { outputRoot, packageVersion, viewerDir } from "./paths"
 
 
@@ -104,3 +105,24 @@ export function openFiles(paths: string[]): boolean {
 }
 
 export const openInBrowser = (path: string): boolean => openFiles([path])
+
+/**
+ * A page as one file: its viewer and the packs its blocks use inlined, nothing fetched.
+ *
+ * The packs go first and register themselves; the main script then finds them loaded and draws.
+ * Only the packs this answer needs are carried — a chart page is about 2 MB, not 20. Every
+ * `</script` inside the inlined code is escaped, or the first one would end the tag early.
+ */
+export async function standalonePage(path: string): Promise<string> {
+  const html = await readFile(path, "utf8")
+  const { markdown } = await readPage(path)
+  const tag = /<script src="\.\/(aigui-viewer-[^"/]+)\/core\.js"><\/script>/.exec(html)
+  if (!tag) throw new Error("it does not load the viewer the way aigui_open writes it")
+  await ensureViewer(dirname(path))
+  const dir = join(dirname(path), tag[1])
+  const inline = async (name: string) => `<script data-aigui-pack="${name}">${(await readFile(join(dir, `${name}.js`), "utf8")).replace(/<\/script/gi, "<\\/script")}</script>`
+  const scripts = [...(await Promise.all(packsFor(markdown).map(inline))), await inline("core")].join("\n")
+  const out = path.replace(/\.html$/, ".standalone.html")
+  await writeFile(out, html.replace(tag[0], () => scripts).replace('<a href="./index.html">', '<a hidden href="./index.html">'))
+  return out
+}

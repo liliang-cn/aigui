@@ -200,7 +200,7 @@
   {
     "name": "aigui_export",
     "title": "Save a page as PNG or PDF",
-    "description": "Save a page written by aigui_open as one full-length PNG or as a PDF, for sending or attaching. Returns the file path. page defaults to the most recent one.",
+    "description": "Save a page written by aigui_open as one full-length PNG, a PDF, or a single self-contained HTML file that stays interactive — for sending or attaching. Returns the file path. page defaults to the most recent one.",
     "inputSchema": {
       "type": "object",
       "properties": {
@@ -209,11 +209,12 @@
           "type": "string"
         },
         "format": {
-          "description": "Default png.",
+          "description": "png (default) or pdf: drawn still. html: the page as one self-contained file that stays interactive — for sending to someone.",
           "type": "string",
           "enum": [
             "png",
-            "pdf"
+            "pdf",
+            "html"
           ]
         },
         "theme": {

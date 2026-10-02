@@ -7,7 +7,7 @@ import { z } from "zod"
 import { BLOCKS } from "./blocks"
 import { ensureHeadlessShell, type BrowserSetup } from "./browser"
 import { guide } from "./guide"
-import { ensureViewer, openFiles, writePage } from "./open"
+import { ensureViewer, openFiles, standalonePage, writePage } from "./open"
 import { applyEdits, readPage, resolvePage } from "./pages"
 import { describeProvenance, fillData, loadData, type Provenance } from "./data"
 import { outputRoot, packageVersion } from "./paths"
@@ -166,6 +166,14 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
       const pages = join(deps.outDir ?? outputRoot(), "pages")
       const path = await resolvePage(pages, str("page"))
       if (!path) return failure("There is no page to export yet — write one with aigui_open first.")
+      if (str("format") === "html") {
+        try {
+          const out = await standalonePage(path)
+          return { content: [{ type: "text", text: `Saved ${out} — one file with everything it needs; it opens anywhere, offline, and stays interactive.` }] }
+        } catch (error) {
+          return failure(`Could not export ${basename(path)}: ${String((error as Error).message)}`)
+        }
+      }
       const format = str("format") === "pdf" ? "pdf" : "png"
       const out = join(dirname(path), basename(path).replace(/\.html$/, `.${format}`))
       try {
@@ -280,10 +288,10 @@ export function createServer(deps: ServerDeps = {}): McpServer {
     "aigui_export",
     {
       title: "Save a page as PNG or PDF",
-      description: "Save a page written by aigui_open as one full-length PNG or as a PDF, for sending or attaching. Returns the file path. page defaults to the most recent one.",
+      description: "Save a page written by aigui_open as one full-length PNG, a PDF, or a single self-contained HTML file that stays interactive — for sending or attaching. Returns the file path. page defaults to the most recent one.",
       inputSchema: {
         page: z.string().optional().describe('The page file path or name, or "last" (default).'),
-        format: z.enum(["png", "pdf"]).optional().describe("Default png."),
+        format: z.enum(["png", "pdf", "html"]).optional().describe("png (default) or pdf: drawn still. html: the page as one self-contained file that stays interactive — for sending to someone."),
         theme: z.enum(["light", "dark"]).optional().describe("Colour scheme to draw it in. Default light."),
       },
       annotations: { readOnlyHint: false, openWorldHint: false },

@@ -178,6 +178,19 @@ describe("the aigui MCP server", () => {
     expect(text(missing)).toContain("no data files were given")
   })
 
+  it("exports a page as one file carrying only the packs it uses", async () => {
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-"))
+    const client = await connect({ outDir, open: false })
+    await client.callTool({ name: "aigui_open", arguments: { markdown: "# x\n\n```mermaid\ngraph TD; A-->B\n```\n\nIt mentions </script> in prose.", title: "one" } })
+    const result = await client.callTool({ name: "aigui_export", arguments: { format: "html" } })
+    const out = text(result).match(/Saved (\S+\.html)/)![1]
+    const html = await readFile(out, "utf8")
+    expect(html).not.toContain('src="./aigui-viewer')
+    expect([...html.matchAll(/data-aigui-pack="(\w+)"/g)].map((m) => m[1])).toEqual(["mermaid", "core"])
+    // Exactly the data block's, the two inlined scripts' closing tags — nothing ended early.
+    expect(html.match(/<\/script>/g)).toHaveLength(3)
+  })
+
   it("refuses markdown with nothing drawable instead of launching a browser for it", async () => {
     let launched = false
     const client = await connect({
