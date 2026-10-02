@@ -2,7 +2,7 @@
 
 An [MCP](https://modelcontextprotocol.io) server that lets an agent draw [AIGUI](../../README.md) blocks — charts, diagrams, maths, 3D scenes, orbits, molecules, data walls — as PNGs, or as a live page in the browser.
 
-It is what the AIGUI Claude Code plugin runs. A terminal shows only text; with this server the agent writes the same markdown an AIGUI frontend would render, and gets pictures back.
+It is what the AIGUI plugin for Claude Code and Codex runs. A terminal shows only text; with this server the agent writes the same markdown an AIGUI frontend would render, and gets pictures back.
 
 ## Use it from Claude Code
 
@@ -44,7 +44,7 @@ The syntax is fetched on demand rather than written into the tool descriptions: 
 
 ## Files
 
-Pictures go to `~/.cache/aigui/images`, pages to `~/.cache/aigui/pages` with the viewer script beside them — not the temp directory, because a page is something a person reopens. `AIGUI_OUT_DIR` moves both; `XDG_CACHE_HOME` is honoured. `AIGUI_NO_OPEN=1` writes pages without opening them. Every page is listed, newest first, in `pages/index.html`, which each page links to; a page opened with `?still` plays nothing, which is how exports and the look-over see it. `AIGUI_OPEN_IMAGES=1` also opens `aigui_render`'s PNGs in the system image viewer — the Claude Code plugin sets it, since a terminal cannot show them; leave it off in a client that shows images inline.
+Pictures go to `~/.cache/aigui/images`, pages to `~/.cache/aigui/pages` with the viewer script beside them — not the temp directory, because a page is something a person reopens. `AIGUI_OUT_DIR` moves both; `XDG_CACHE_HOME` is honoured. `AIGUI_NO_OPEN=1` writes pages without opening them. Every page is listed, newest first, in `pages/index.html`, which each page links to; a page opened with `?still` plays nothing, which is how exports and the look-over see it. `AIGUI_OPEN_IMAGES=1` also opens `aigui_render`'s PNGs in the system image viewer — the Claude Code and Codex plugins set it, since a terminal cannot show them; leave it off in a client that shows images inline.
 
 A page is self-contained apart from that one viewer script (about 20 MB, every plugin inlined, copied once per version): it loads nothing from the network, and its maths fonts are embedded, because a page opened from `file://` cannot load fonts from beside itself.
 

@@ -34,7 +34,9 @@ if (isMain) {
   const tag = process.argv[2] ?? process.env.GITHUB_REF_NAME ?? ""
   // The Claude Code plugin is released by the same tag, so its manifest has to carry the same
   // version: `/plugin update` compares it, and its launcher installs that version of the server.
-  const plugin = JSON.parse(await readFile(new URL("../.claude-plugin/plugin.json", import.meta.url), "utf8"))
-  validateRelease(tag, [...(await readPublicPackages()), { name: ".claude-plugin/plugin.json", version: plugin.version }])
+  const manifests = await Promise.all(
+    [".claude-plugin/plugin.json", ".codex-plugin/plugin.json"].map(async (name) => ({ name, version: JSON.parse(await readFile(new URL(`../${name}`, import.meta.url), "utf8")).version })),
+  )
+  validateRelease(tag, [...(await readPublicPackages()), ...manifests])
   console.log(`Validated release ${tag}`)
 }

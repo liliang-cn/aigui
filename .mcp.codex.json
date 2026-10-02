@@ -1,0 +1,10 @@
+{
+  "aigui": {
+    "command": "node",
+    "args": ["./plugin/launch.mjs"],
+    "cwd": ".",
+    "env": {
+      "AIGUI_OPEN_IMAGES": "1"
+    }
+  }
+}

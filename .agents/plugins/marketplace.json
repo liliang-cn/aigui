@@ -1,0 +1,20 @@
+{
+  "name": "aigui",
+  "interface": {
+    "displayName": "AIGUI"
+  },
+  "plugins": [
+    {
+      "name": "aigui",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -66,14 +66,19 @@ export function Answer() {
 
 `buildSystemPrompt` tells the model which blocks it may write; pass `locale: "zh-CN"` for the rules in Chinese. The backend only streams text — any language works.
 
-## In Claude Code
+## In Claude Code and Codex
 
 ```text
+# Claude Code
 /plugin marketplace add liliang-cn/aigui
 /plugin install aigui@aigui
+
+# Codex
+codex plugin marketplace add liliang-cn/aigui
+codex plugin add aigui@aigui
 ```
 
-Claude can then draw: `aigui_render` returns PNGs, `aigui_open` opens a live page in your browser, `aigui_edit` changes a page in place, `aigui_export` saves it as PNG or PDF. Page text is English unless you ask for another language. See [`@ai-gui/mcp`](./packages/mcp/README.md).
+The agent can then draw: `aigui_render` returns PNGs, `aigui_open` opens a live page in your browser, `aigui_edit` changes a page in place, `aigui_export` saves it as PNG or PDF. Page text is English unless you ask for another language. See [`@ai-gui/mcp`](./packages/mcp/README.md).
 
 ## Docs
 

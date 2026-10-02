@@ -1,0 +1,25 @@
+{
+  "name": "aigui",
+  "version": "0.45.0",
+  "description": "Draw charts, diagrams, maths, 3D scenes, topologies, orbits, molecules and dashboards from Codex — as PNGs or a live page in the browser — and get guidance for integrating the @ai-gui SDK.",
+  "author": {
+    "name": "Liang Li",
+    "email": "ll_faw@hotmail.com",
+    "url": "https://github.com/liliang-cn/aigui"
+  },
+  "homepage": "https://github.com/liliang-cn/aigui",
+  "repository": "https://github.com/liliang-cn/aigui",
+  "license": "MIT",
+  "keywords": ["chart", "diagram", "3d", "topology", "visualization", "mcp", "echarts", "mermaid", "katex"],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.codex.json",
+  "interface": {
+    "displayName": "AIGUI",
+    "shortDescription": "Charts, diagrams, 3D and topologies, drawn by the agent",
+    "longDescription": "An MCP server that draws AIGUI blocks — charts, mermaid, maths, 3D scenes, topologies with playable steps, orbits, molecules, data walls — as PNGs the agent can check, or as a live page in your browser; plus skills for when a picture beats text and for integrating the @ai-gui SDK.",
+    "developerName": "Liang Li",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://github.com/liliang-cn/aigui"
+  }
+}
