@@ -17,6 +17,8 @@ export type RenderableKind =
   | "scene"
   | "gravity"
   | "topology"
+  /** A block from a custom plugin the caller supplied — see `extraFences`. */
+  | "custom"
   | "bigscreen"
   | "molecule"
 

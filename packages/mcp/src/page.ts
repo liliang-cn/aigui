@@ -10,6 +10,8 @@ export interface PageOptions {
   extraCss?: string
   /** Language of the page's own words — its buttons, its `lang`. Default English. */
   locale?: "en" | "zh-CN"
+  /** Custom block scripts the page loads, by the fences they draw. */
+  custom?: Array<{ name: string; fences: string[]; src: string }>
 }
 
 const CHROME = {
@@ -69,7 +71,7 @@ ${options.extraCss ?? ""}
 <header><div><h1>${escapeHtml(title)}</h1><p>AIGUI · ${new Date().toISOString().slice(0, 16).replace("T", " ")}</p></div><nav><a href="./index.html">${words.pages}</a><button type="button" onclick="print()">${words.print}</button></nav></header>
 <div id="aigui-root"></div>
 </main>
-<script type="application/json" id="aigui-data">${embed({ markdown: options.markdown, theme: options.theme, locale })}</script>
+<script type="application/json" id="aigui-data">${embed({ markdown: options.markdown, theme: options.theme, locale, custom: options.custom ?? [] })}</script>
 <script src="${escapeHtml(options.viewerSrc)}"></script>
 </body></html>`
 }

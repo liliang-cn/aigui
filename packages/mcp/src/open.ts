@@ -6,6 +6,7 @@ import { inlineKatexCss } from "@ai-gui/image"
 import { pageHtml } from "./page"
 import { packsFor } from "./viewer/packs"
 import { readPage, recordPage } from "./pages"
+import type { CustomPlugin } from "@ai-gui/cli"
 import { outputRoot, packageVersion, viewerDir } from "./paths"
 
 
@@ -74,6 +75,8 @@ export async function writePage(
     path?: string
     /** Where the page is served, when it is — a served page can take comments; a file cannot. */
     servedAt?: (path: string) => string
+    /** Custom blocks the page uses: their scripts are copied beside it and loaded by the viewer. */
+    custom?: readonly CustomPlugin[]
   } = {},
 ): Promise<WrittenPage> {
   const dir = join(options.outDir ?? outputRoot(), "pages")
@@ -82,7 +85,15 @@ export async function writePage(
   const viewer = await ensureViewer(dir)
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*$/, "").replace("T", "-")
   const path = options.path ?? join(dir, `${stamp}-${slug(options.title)}.html`)
-  await writeFile(path, pageHtml({ markdown, title: options.title, theme: options.theme, locale: options.locale, viewerSrc: `./${viewer}/core.js`, extraCss: await extraCss() }))
+  // Named by content hash: a script edited since an earlier page is a new file, never a stale copy.
+  const custom = []
+  for (const p of options.custom ?? []) {
+    const file = `plugins/${p.name}-${p.hash}.js`
+    await mkdir(join(dir, "plugins"), { recursive: true })
+    await copyFile(p.script, join(dir, file))
+    custom.push({ name: p.name, fences: p.fences, src: `./${file}` })
+  }
+  await writeFile(path, pageHtml({ markdown, title: options.title, theme: options.theme, locale: options.locale, custom, viewerSrc: `./${viewer}/core.js`, extraCss: await extraCss() }))
   await recordPage(dir, path, options.title?.trim() || "AIGUI")
   const url = options.servedAt?.(path) ?? pathToFileURL(path).href
   const opened = options.open !== false && process.env.AIGUI_NO_OPEN !== "1" ? openInBrowser(url) : false
@@ -132,7 +143,9 @@ export async function standalonePage(path: string): Promise<string> {
   await ensureViewer(dirname(path))
   const dir = join(dirname(path), tag[1])
   const inline = async (name: string) => `<script data-aigui-pack="${name}">${(await readFile(join(dir, `${name}.js`), "utf8")).replace(/<\/script/gi, "<\\/script")}</script>`
-  const scripts = [...(await Promise.all(packsFor(markdown).map(inline))), await inline("core")].join("\n")
+  const custom = await readPage(path).then((page) => page.custom ?? [])
+  const customScripts = await Promise.all(custom.map(async (c) => `<script data-aigui-pack="${c.name}">${(await readFile(join(dirname(path), c.src), "utf8")).replace(/<\/script/gi, "<\\/script")}</script>`))
+  const scripts = [...(await Promise.all(packsFor(markdown, custom.flatMap((c) => c.fences)).map(inline))), ...customScripts, await inline("core")].join("\n")
   const out = path.replace(/\.html$/, ".standalone.html")
   await writeFile(out, html.replace(tag[0], () => scripts).replace('<a href="./index.html">', '<a hidden href="./index.html">'))
   return out

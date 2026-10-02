@@ -50,14 +50,14 @@ export async function resolvePage(dir: string, ref?: string): Promise<string | u
 }
 
 /** The answer and settings a page was written from, read back out of the page itself. */
-export async function readPage(path: string): Promise<{ markdown: string; title?: string; theme?: "light" | "dark"; locale?: "en" | "zh-CN" }> {
+export async function readPage(path: string): Promise<{ markdown: string; title?: string; theme?: "light" | "dark"; locale?: "en" | "zh-CN"; custom?: Array<{ name: string; fences: string[]; src: string }> }> {
   const html = await readFile(path, "utf8")
   const data = /<script type="application\/json" id="aigui-data">([\s\S]*?)<\/script>/.exec(html)
   if (!data) throw new Error(`${path} is not a page aigui_open wrote`)
-  const parsed = JSON.parse(data[1]) as { markdown?: string; theme?: "light" | "dark"; locale?: "en" | "zh-CN" }
+  const parsed = JSON.parse(data[1]) as { markdown?: string; theme?: "light" | "dark"; locale?: "en" | "zh-CN"; custom?: Array<{ name: string; fences: string[]; src: string }> }
   const title = /<title>([\s\S]*?)<\/title>/.exec(html)?.[1]
   const unescape = (s: string) => s.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&")
-  return { markdown: parsed.markdown ?? "", title: title ? unescape(title) : undefined, theme: parsed.theme, locale: parsed.locale }
+  return { markdown: parsed.markdown ?? "", title: title ? unescape(title) : undefined, theme: parsed.theme, locale: parsed.locale, custom: parsed.custom }
 }
 
 /**

@@ -24,6 +24,8 @@ export function hasTrigger(markdown: string): boolean {
 
 export interface SelectOptions {
   kinds?: RenderableKind[]
+  /** Fence names a custom plugin draws; such blocks are selected as kind "custom". */
+  extraFences?: readonly string[]
   registry?: CardRegistry
   max?: number
 }
@@ -38,7 +40,8 @@ export interface SelectOptions {
  */
 const FENCED: ReadonlySet<string> = new Set(["chart", "mermaid", "dashboard", "scene", "gravity", "topology", "bigscreen", "molecule"])
 
-function classify(node: ASTNode): RenderableKind | undefined {
+function classify(node: ASTNode, extra: ReadonlySet<string> = new Set()): RenderableKind | undefined {
+  if (extra.has(node.type)) return node.complete ? "custom" : undefined
   if (FENCED.has(node.type)) {
     return node.complete ? (node.type as RenderableKind) : undefined
   }
@@ -56,15 +59,19 @@ function classify(node: ASTNode): RenderableKind | undefined {
 export function selectRenderableBlocks(markdown: string, options: SelectOptions = {}): BlockSelection[] {
   const kinds = new Set(options.kinds ?? DEFAULT_KINDS)
   const max = options.max ?? DEFAULT_MAX
-  const parse = createParserWithMetadata({ plugins: imagePlugins(), registry: options.registry })
+  const extra = new Set(options.extraFences ?? [])
+  // A stand-in for each custom fence so the parser makes it a node of its own; the real plugin
+  // is browser code and runs only in the page that draws it.
+  const stand = extra.size > 0 ? [{ name: "custom-blocks", nodeRenderers: Object.fromEntries([...extra].map((f) => [f, () => ({ kind: "html" as const, html: "" })])) }] : []
+  const parse = createParserWithMetadata({ plugins: [...imagePlugins(), ...stand], registry: options.registry })
   const { nodes, blocks } = parse(markdown)
   const selections: BlockSelection[] = []
   for (const block of blocks) {
     if (selections.length >= max) break
     // A block can span several nodes; the first one that names a picture wins.
     for (let i = block.nodeStart; i < block.nodeEnd; i++) {
-      const kind = classify(nodes[i])
-      if (!kind || !kinds.has(kind)) continue
+      const kind = classify(nodes[i], extra)
+      if (!kind || (kind !== "custom" && !kinds.has(kind))) continue
       selections.push({ kind, start: block.start, end: block.end })
       break
     }

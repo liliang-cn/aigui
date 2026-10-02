@@ -39,14 +39,14 @@ const BLOCKS = new Set([
 ])
 
 /** Which packs an answer needs, from the fences and the maths in it. */
-export function packsFor(markdown: string): string[] {
+export function packsFor(markdown: string, customFences: readonly string[] = []): string[] {
   const needed = new Set<string>()
   for (const match of markdown.matchAll(/^ {0,3}(?:`{3,}|~{3,})[ \t]*([\w:+#.-]*)/gm)) {
     const name = match[1].toLowerCase()
     if (!name) continue
     const pack = Object.entries(PACKS).find(([, fences]) => fences.includes(name))?.[0]
     if (pack) needed.add(pack)
-    else if (!BLOCKS.has(name) && !name.startsWith("card:")) needed.add("highlight")
+    else if (!BLOCKS.has(name) && !customFences.includes(name) && !name.startsWith("card:")) needed.add("highlight")
   }
   // $$…$$, \(…\), or a $…$ that looks like maths rather than a price.
   if (/\$\$|\\\(|\\\[|(^|[^\\$\w])\$[^$\s][^$\n]*[^$\s\\]\$(?!\d)/m.test(markdown) || /\\ce\{/.test(markdown)) needed.add("katex")

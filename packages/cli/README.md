@@ -87,3 +87,14 @@ system, _ := os.ReadFile("prompt.txt")
 The frontend still needs the same plugins installed to render what the model writes, and the
 prompt has to be regenerated when that list changes — which is what putting `aigui prompt` in the
 build makes automatic.
+
+## Custom blocks
+
+```sh
+npx @ai-gui/cli plugin new ticket     # writes ~/.config/aigui/plugins/ticket/
+npx @ai-gui/cli plugin list           # what is installed, and any folder that was skipped and why
+npx @ai-gui/cli prompt --plugins katex,ticket   # custom names work like built-in ones
+```
+
+A custom block is a folder with `aigui.json` (name, fences, description), `plugin.js` (a plain browser script registering an `AIGuiPlugin`) and `spec.md` (the rules for the model). `--dir` or `AIGUI_PLUGIN_DIR` points elsewhere. The MCP server (`@ai-gui/mcp`) loads the same folders.
+

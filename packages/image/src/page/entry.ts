@@ -1,3 +1,4 @@
+import type { AIGuiPlugin } from "@ai-gui/core"
 import { createRenderer } from "@ai-gui/vanilla"
 import { imagePlugins } from "../plugins"
 import { inspectRendered, type Issue } from "./inspect"
@@ -58,7 +59,10 @@ function frame(): Promise<void> {
 window.__aiguiRenderBlock = async (source, options = {}) => {
   const root = document.getElementById("root") as HTMLElement
   root.replaceChildren()
-  const renderer = createRenderer(root, { plugins: imagePlugins(options.width), theme: options.theme })
+  // Custom blocks: scripts added beside this bundle registered their plugins here; drawn still.
+  const packs = (globalThis as { __aiguiPacks?: Record<string, (theme: string, still: boolean) => AIGuiPlugin[]> }).__aiguiPacks ?? {}
+  const custom = Object.values(packs).flatMap((factory) => factory(options.theme ?? "light", true))
+  const renderer = createRenderer(root, { plugins: [...imagePlugins(options.width), ...custom], theme: options.theme })
   renderer.push(source)
   await quiescent(root, options.quietMs ?? 150)
   await document.fonts.ready

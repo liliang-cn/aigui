@@ -11,6 +11,7 @@ import { ensureViewer, openFiles, standalonePage, writePage } from "./open"
 import { applyEdits, readPage, resolvePage } from "./pages"
 import { describeProvenance, fillData, loadData, type Provenance } from "./data"
 import { importTopology } from "./topology-import"
+import { customPluginDir, loadCustomPlugins, type CustomPlugin } from "@ai-gui/cli"
 import { describeFeedback, readFeedback, startPageServer, type PageServer } from "./feedback"
 import { mkdir } from "node:fs/promises"
 import { outputRoot, packageVersion } from "./paths"
@@ -44,6 +45,8 @@ export interface ServerDeps {
   /** Injected in tests: how a page becomes a PNG or PDF. Default `exportPage` from @ai-gui/image. */
   exportFile?: (url: string, options: { format: "png" | "pdf"; path: string; theme?: "light" | "dark" }) => Promise<string>
   /** Injected in tests: how a page becomes a GIF or WebM. Default `exportAnimation` from @ai-gui/image. */
+  /** Where custom blocks are read from. Default `AIGUI_PLUGIN_DIR` or ~/.config/aigui/plugins. */
+  customDir?: string
   /** The page server `main` starts: pages opened through it can take the reader's comments. */
   pageServer?: PageServer
   recordAnimation?: (url: string, options: { format: "gif" | "webm"; path: string; theme?: "light" | "dark" }) => Promise<string>
@@ -70,6 +73,18 @@ async function withData(markdown: string, data: unknown, note: boolean): Promise
     return { error: String((error as Error).message) }
   }
 }
+
+/** Names a custom block may not take: every built-in block and fence. */
+const RESERVED = [...BLOCKS.map((b) => b.name), "list", "table", "key-value", "layout", "sources", "flashcards", "card", "math"]
+
+/** The custom blocks installed now — read on every call, so a new one works without a restart. */
+async function customBlocks(deps: ServerDeps): Promise<{ plugins: CustomPlugin[]; problems: string[] }> {
+  return loadCustomPlugins(deps.customDir ?? customPluginDir(), RESERVED)
+}
+
+/** The custom blocks a markdown answer actually uses. */
+const usedIn = (markdown: string, plugins: readonly CustomPlugin[]) =>
+  plugins.filter((p) => p.fences.some((f) => new RegExp(`^ {0,3}(\`{3,}|~{3,})[ \t]*${f}\\b`, "m").test(markdown)))
 
 const failure = (text: string): ToolResult => ({ content: [{ type: "text", text }], isError: true })
 
@@ -115,7 +130,10 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
     case "aigui_guide":
       try {
         const blocks = Array.isArray(args.blocks) ? args.blocks.filter((b): b is string => typeof b === "string") : undefined
-        return { content: [{ type: "text", text: await guide(blocks, str("locale")) }] }
+        const custom = await customBlocks(deps)
+        const text = await guide(blocks, str("locale"), custom.plugins)
+        const skipped = !blocks?.length && custom.problems.length > 0 ? `\n\nCustom blocks skipped (fix their folder in ${deps.customDir ?? customPluginDir()}):\n${custom.problems.map((p) => `- ${p}`).join("\n")}` : ""
+        return { content: [{ type: "text", text: text + skipped }] }
       } catch (error) {
         return failure(String((error as Error).message))
       }
@@ -126,7 +144,9 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
       if ("error" in filled) return failure(filled.error)
       const markdown = filled.markdown
       const width = typeof args.width === "number" ? args.width : undefined
+      const used = usedIn(markdown, (await customBlocks(deps)).plugins).filter((p) => p.picture)
       const result = await renderToContent(markdown, {
+        custom: used,
         theme,
         width,
         outDir: deps.outDir,
@@ -146,7 +166,7 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
       if ("error" in filled) return failure(filled.error)
       const markdown = filled.markdown
       try {
-        const page = await writePage(markdown, { title: str("title"), theme, locale: pageLocale, outDir: deps.outDir, open: deps.open, servedAt: deps.pageServer?.urlFor })
+        const page = await writePage(markdown, { title: str("title"), theme, locale: pageLocale, outDir: deps.outDir, open: deps.open, servedAt: deps.pageServer?.urlFor, custom: usedIn(markdown, (await customBlocks(deps)).plugins) })
         return { content: [{ type: "text", text: `${opened(page)}${describeProvenance(filled.provenance)}${await pageCheck(page.url, deps)}` }] }
       } catch (error) {
         return failure(`Could not write the page: ${String((error as Error).message)}`)
@@ -163,7 +183,7 @@ export async function callTool(name: string, args: Record<string, unknown>, deps
       try {
         const current = await readPage(path)
         const markdown = applyEdits(current.markdown, edits)
-        const page = await writePage(markdown, { title: str("title") ?? current.title, theme: theme ?? current.theme, locale: pageLocale ?? current.locale, outDir: deps.outDir, open: deps.open, path, servedAt: deps.pageServer?.urlFor })
+        const page = await writePage(markdown, { title: str("title") ?? current.title, theme: theme ?? current.theme, locale: pageLocale ?? current.locale, outDir: deps.outDir, open: deps.open, path, servedAt: deps.pageServer?.urlFor, custom: usedIn(markdown, (await customBlocks(deps)).plugins) })
         return { content: [{ type: "text", text: `Edited ${basename(path)} (${edits.length} change${edits.length === 1 ? "" : "s"}). ${opened(page)}${await pageCheck(page.url, deps)}` }] }
       } catch (error) {
         return failure(`Could not edit ${basename(path)}: ${String((error as Error).message)}`)

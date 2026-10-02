@@ -48,6 +48,18 @@ The syntax is fetched on demand rather than written into the tool descriptions: 
 
 `aigui_open` needs no headless browser at all: it writes a file and hands it to the system's default one.
 
+## Custom blocks
+
+Add your own block type without touching this package. `npx @ai-gui/cli plugin new ticket` writes `~/.config/aigui/plugins/ticket/` (or `AIGUI_PLUGIN_DIR`) with three files:
+
+| File | What it is |
+| --- | --- |
+| `aigui.json` | `name`, `fences`, a one-line `description`, `picture` (whether `aigui_render` may draw it) |
+| `plugin.js` | A plain browser script — no build step — that registers its plugins: `(globalThis.__aiguiPacks ??= {}).ticket = (theme, still) => [{ name, nodeRenderers, isBlockComplete, css }]`. Same shape as `@ai-gui/core`'s `AIGuiPlugin`; its HTML is sanitized like any plugin's. |
+| `spec.md` | The rules the model follows to write the block — what `aigui_guide` returns for it. |
+
+The block then appears in `aigui_guide` marked `[custom]`, draws in pages, PNGs and standalone exports, and is picked up without a restart. A folder with a bad manifest is skipped with a reason in the listing; a name that collides with a built-in block is refused. Scripts run only from that folder, on your machine — the same trust as installing a package.
+
 ## Comments from the page
 
 While the session runs, pages are served from `127.0.0.1` on a port the system picks, and each carries a Comment button: pick a block, say what should change, send. The agent reads the comments with `aigui_feedback`. Only files under the pages directory are served; a page opened from disk, or after the session ends, simply has no button.

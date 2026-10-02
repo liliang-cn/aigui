@@ -15,4 +15,8 @@ describe("packsFor", () => {
     expect(packsFor("It costs $5 and $10 tomorrow.")).toEqual([])
     expect(packsFor("\\ce{H2O}")).toEqual(["katex"])
   })
+  it("leaves a custom block's fence to its own script, not to the code highlighter", () => {
+    expect(packsFor("```ticket\n{}\n```")).toEqual(["highlight"])
+    expect(packsFor("```ticket\n{}\n```", ["ticket"])).toEqual([])
+  })
 })

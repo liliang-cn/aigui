@@ -128,4 +128,9 @@ describe("classify edge cases", () => {
     const source = 'Some text.\n\n<div>The katex-display class centres display math.</div>'
     expect(selectRenderableBlocks(source)).toEqual([])
   })
+  it("selects a custom block's fence when told it is one, and only then", () => {
+    const source = '```ticket\n{"title":"t"}\n```'
+    expect(selectRenderableBlocks(source)).toEqual([])
+    expect(selectRenderableBlocks(source, { extraFences: ["ticket"] }).map((s) => s.kind)).toEqual(["custom"])
+  })
 })

@@ -203,6 +203,24 @@ describe("the aigui MCP server", () => {
     expect(text(gif)).toMatch(/Saved .*-flow\.gif/)
   })
 
+  it("lists custom blocks, gives their rules, and ships their script beside a page that uses one", async () => {
+    const { scaffoldCustomPlugin } = await import("@ai-gui/cli")
+    const outDir = await mkdtemp(join(tmpdir(), "aigui-mcp-"))
+    const customDir = await mkdtemp(join(tmpdir(), "aigui-blocks-"))
+    await scaffoldCustomPlugin("ticket", customDir)
+    const client = await connect({ outDir, open: false, customDir })
+    expect(text(await client.callTool({ name: "aigui_guide", arguments: {} }))).toContain("- ticket (```ticket) [custom]")
+    expect(text(await client.callTool({ name: "aigui_guide", arguments: { blocks: ["ticket"] } }))).toContain('"status"')
+    await client.callTool({ name: "aigui_open", arguments: { markdown: "plain prose", title: "none" } })
+    await client.callTool({ name: "aigui_open", arguments: { markdown: '```ticket\n{"title":"t"}\n```', title: "one" } })
+    const pages = await readdir(join(outDir, "pages"))
+    expect((await readdir(join(outDir, "pages", "plugins"))).length).toBe(1)
+    const html = await readFile(join(outDir, "pages", pages.find((f) => f.endsWith("-one.html"))!), "utf8")
+    expect(html).toMatch(/"src":"\.\/plugins\/ticket-[0-9a-f]{10}\.js"/)
+    const none = await readFile(join(outDir, "pages", pages.find((f) => f.endsWith("-none.html"))!), "utf8")
+    expect(none).toContain('"custom":[]')
+  })
+
   it("refuses markdown with nothing drawable instead of launching a browser for it", async () => {
     let launched = false
     const client = await connect({

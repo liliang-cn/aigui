@@ -39,11 +39,14 @@ export async function renderToContent(
     /** The background browser download, and how long to wait for it. */
     setup?: BrowserSetup
     setupWaitMs?: number
+    /** Custom blocks this markdown uses that can be drawn as pictures. */
+    custom?: ReadonlyArray<{ script: string; fences: string[] }>
     /** Show the PNGs to the person too, when they are reading in a terminal that cannot. */
     show?: (paths: string[]) => boolean
   } = {},
 ): Promise<RenderedContent> {
-  const candidates = selectRenderableBlocks(markdown, { kinds: DEFAULT_KINDS, max: 12 })
+  const custom = options.custom?.length ? { scripts: options.custom.map((c) => c.script), fences: options.custom.flatMap((c) => c.fences) } : undefined
+  const candidates = selectRenderableBlocks(markdown, { kinds: DEFAULT_KINDS, max: 12, extraFences: custom?.fences })
   if (candidates.length === 0) {
     return {
       content: [{ type: "text", text: "Nothing in this markdown can be drawn as a picture. Use a chart, mermaid, $$ maths, a table, bigscreen, dashboard, scene, gravity, topology or molecule block — or aigui_open for the rest." }],
@@ -59,6 +62,7 @@ export async function renderToContent(
       width: options.width,
       kinds: DEFAULT_KINDS,
       max: 12,
+      custom,
       timeoutMs: 30_000,
       acquire: options.acquire,
     })

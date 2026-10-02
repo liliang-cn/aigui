@@ -30,6 +30,11 @@ interface RenderPage {
 
 export interface InternalRenderOptions extends RenderOptions {
   registry?: CardRegistry
+  /**
+   * Custom block plugins: classic scripts that register a factory on `globalThis.__aiguiPacks`,
+   * and the fence names they draw. Their blocks are selected as kind "custom" and drawn by them.
+   */
+  custom?: { scripts: string[]; fences: string[] }
   /** Injected in tests. Defaults to the module's own lazy Chromium. */
   acquire?: (options: {
     idleShutdownMs?: number
@@ -72,6 +77,7 @@ export async function renderMarkdownToImages(
 ): Promise<RenderResult> {
   const selections = selectRenderableBlocks(markdown, {
     kinds: options.kinds,
+    extraFences: options.custom?.fences,
     registry: options.registry,
     max: options.max,
   })
@@ -93,6 +99,7 @@ export async function renderMarkdownToImages(
     await page.setViewportSize({ width, height: 800 })
     await page.setContent(pageHtml({ theme: options.theme, width }))
     await page.addScriptTag({ path: pageBundlePath() })
+    for (const script of options.custom?.scripts ?? []) await page.addScriptTag({ path: script })
 
     for (const [index, selection] of selections.entries()) {
       const source = markdown.slice(selection.start, selection.end)
