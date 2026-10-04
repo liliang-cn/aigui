@@ -56,16 +56,6 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # The MCP Registry, which MCP clients search. It verifies the npm package by its `mcpName`
-      # and this repository by GitHub's OIDC token — no secret. The registry is in preview, so a
-      # failure here is reported but does not fail a release whose packages are already out.
-      - name: Publish to the MCP Registry
-        continue-on-error: true
-        run: |
-          curl -sL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
-          ./mcp-publisher login github-oidc
-          ./mcp-publisher publish
-
       # The GitHub release: what changed, gathered from every package's changelog, and how to
       # install it. Watchers are notified; npm is the source of the packages either way.
       - run: |
@@ -73,3 +63,19 @@ jobs:
           gh release create "${GITHUB_REF_NAME}" --title "${GITHUB_REF_NAME}" --notes-file release-notes.md --verify-tag
         env:
           GH_TOKEN: ${{ github.token }}
+
+      # The MCP Registry, which MCP clients search. It verifies the npm package by its `mcpName`
+      # and this repository by GitHub's OIDC token — no secret. The registry is in preview, so a
+      # failure here is reported but does not fail a release whose packages are already out.
+      # The registry looks the version up on npm, which can lag a fresh publish by many minutes,
+      # so it waits for npm to serve it first.
+      - name: Publish to the MCP Registry
+        continue-on-error: true
+        timeout-minutes: 45
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          until npm view "@ai-gui/mcp@${version}" version >/dev/null 2>&1; do sleep 30; done
+          curl -sL "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_linux_amd64.tar.gz" | tar xz mcp-publisher
+          ./mcp-publisher login github-oidc
+          for attempt in 1 2 3 4 5; do ./mcp-publisher publish && exit 0; sleep 60; done
+          exit 1
