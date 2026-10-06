@@ -1,0 +1,10 @@
+{
+  "name": "img-view",
+  "version": "0.1.0",
+  "description": "Shows images in a pane beside the conversation: real pixels where the terminal draws them, colour block art everywhere else",
+  "author": { "name": "Liang Li" },
+  "homepage": "https://github.com/liliang-cn/aigui/tree/main/mods/img-view",
+  "repository": "https://github.com/liliang-cn/aigui",
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}

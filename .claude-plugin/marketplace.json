@@ -11,6 +11,11 @@
       "name": "aigui",
       "source": "./",
       "description": "Draw charts, diagrams, maths, 3D scenes, orbits, molecules and dashboards from Claude Code, and integrate the @ai-gui SDK."
+    },
+    {
+      "name": "img-view",
+      "source": "./mods/img-view",
+      "description": "A Claude Code mod that shows pictures in a pane beside the conversation: AIGUI's drawings, images Claude reads, or /img <path>. Real pixels in kitty, Ghostty, iTerm2 and WezTerm; colour block art in any other terminal."
     }
   ]
 }

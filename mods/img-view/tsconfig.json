@@ -1,0 +1,5 @@
+{
+  "extends": "./.claude-plugin/types/tsconfig.json",
+  // The runtime has Uint8Array's base64 helpers (ES2026); the base config's lib predates them.
+  "compilerOptions": { "lib": ["es2023", "esnext.typedarrays"] }
+}
