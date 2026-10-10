@@ -29,7 +29,7 @@ codex plugin add aigui@aigui
 **Any MCP client** — run `aigui-mcp` over stdio:
 
 ```sh
-npm install -g @ai-gui/mcp@0.48.0
+npm install -g @ai-gui/mcp@0.49.0
 claude mcp add aigui -- aigui-mcp
 ```
 

@@ -1,5 +1,11 @@
 # @ai-gui/anthropic
 
+## 0.49.0
+
+### Patch Changes
+
+- @ai-gui/core@0.49.0
+
 ## 0.48.0
 
 ### Patch Changes

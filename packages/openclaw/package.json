@@ -1,6 +1,6 @@
 {
   "name": "@ai-gui/openclaw",
-  "version": "0.48.0",
+  "version": "0.49.0",
   "description": "OpenClaw plugin that renders AIGUI blocks as images for channels that only carry pictures, such as WeChat.",
   "keywords": [
     "openclaw",
