@@ -2,6 +2,7 @@ import { createRenderer } from "@ai-gui/vanilla"
 import { loadedPack, packsFor } from "./packs"
 import { corePlugins } from "./plugins"
 import { enableComments } from "./comments"
+import { enableToolbar } from "./toolbar"
 
 /**
  * The page's main script: read the answer out of the data block, load the packs its blocks need,
@@ -44,5 +45,12 @@ const sources = new Map(custom.map((c) => [c.name, new URL(c.src, location.href)
 void Promise.all(names.map((name) => load(name, sources.get(name)))).then(() => {
   const plugins = [...corePlugins(still), ...names.flatMap((name) => loadedPack(name)?.(theme, still) ?? [])]
   createRenderer(root, { plugins, theme }).setText(markdown)
-  if (!still) void enableComments(root)
+  if (still) return
+  void enableComments(root)
+  // Zoom, full screen and save on every picture; saving any kind of block needs the agent's page
+  // server, which says so on /ping.
+  const served = location.protocol.startsWith("http")
+    ? fetch("/ping").then((r) => (r.ok ? r.text() : "")).catch(() => "")
+    : Promise.resolve("")
+  void served.then((answer) => enableToolbar(root, { theme, canSnapshot: answer.includes("snapshot") }))
 })

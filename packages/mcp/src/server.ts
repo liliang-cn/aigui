@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { basename, dirname, join } from "node:path"
 import { pathToFileURL } from "node:url"
-import { closeBrowser, exportAnimation, exportPage, inspectPage, type InternalRenderOptions, type Issue } from "@ai-gui/image"
+import { closeBrowser, exportAnimation, exportBlock, exportPage, inspectPage, type InternalRenderOptions, type Issue } from "@ai-gui/image"
 import { z } from "zod"
 import { BLOCKS } from "./blocks"
 import { ensureHeadlessShell, type BrowserSetup } from "./browser"
@@ -413,7 +413,9 @@ export async function main(): Promise<void> {
   // a server (a port refused, say) they open from disk as before, minus the comments.
   const pagesDir = join(outputRoot(), "pages")
   await mkdir(pagesDir, { recursive: true })
-  const pageServer = await startPageServer(pagesDir).catch(() => undefined)
+  const pageServer = await startPageServer(pagesDir, {
+    snapshot: (url, block, theme) => exportBlock(url, { block, theme }),
+  }).catch(() => undefined)
   const announce = (await loadCustomPlugins(customPluginDir(), RESERVED).catch(() => ({ plugins: [] }))).plugins
   const server = createServer({ pageServer, announce })
   const shutdown = async () => {

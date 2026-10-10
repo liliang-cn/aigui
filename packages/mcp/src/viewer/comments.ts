@@ -47,7 +47,7 @@ export async function enableComments(root: HTMLElement): Promise<void> {
     for (const node of [el, ...Array.from(el.querySelectorAll("*")).slice(0, 40)]) {
       for (const name of node.getAttributeNames()) {
         const m = /^data-aigui-([a-z0-9]+)$/.exec(name)
-        if (m && !["issue", "renderer", "mount", "style", "node", "block"].includes(m[1])) return m[1]
+        if (m && !["issue", "renderer", "mount", "style", "node", "block", "tools", "zoom", "wide"].includes(m[1])) return m[1]
       }
     }
     return el.tagName.toLowerCase() === "pre" ? "code" : "markdown"

@@ -35,4 +35,33 @@ describe("the page server", () => {
     expect(await status("/etc/passwd")).toBe(404)
     expect(await status("/ping")).toBe(200)
   })
+
+  it("draws one block of a page for its Save button, one at a time, and only pages it serves", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "aigui-fb-"))
+    await writeFile(join(dir, "p.html"), "<h1>hi</h1>")
+    const asked: Array<[string, number, string]> = []
+    server = await startPageServer(dir, {
+      snapshot: async (url, block, theme) => {
+        asked.push([url, block, theme])
+        return new Uint8Array([0x89, 0x50, 0x4e, 0x47])
+      },
+    })
+    const get = (query: string) => fetch(`http://127.0.0.1:${server!.port}/snapshot?${query}`)
+    expect(await (await fetch(`http://127.0.0.1:${server.port}/ping`)).text()).toContain("snapshot")
+    const res = await get("page=p.html&block=3&theme=dark")
+    expect(res.status).toBe(200)
+    expect(res.headers.get("content-type")).toBe("image/png")
+    expect(asked).toEqual([[`http://127.0.0.1:${server.port}/pages/p.html`, 3, "dark"]])
+    expect((await get("page=..%2Fp.html&block=1")).status).toBe(200) // reduced to its own name
+    expect((await get("page=missing.html&block=1")).status).toBe(400)
+    expect((await get("page=p.html&block=0")).status).toBe(400)
+  })
+
+  it("has no snapshot to give without a drawer", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "aigui-fb-"))
+    await writeFile(join(dir, "p.html"), "<h1>hi</h1>")
+    server = await startPageServer(dir)
+    expect(await (await fetch(`http://127.0.0.1:${server.port}/ping`)).text()).toBe("aigui")
+    expect((await fetch(`http://127.0.0.1:${server.port}/snapshot?page=p.html&block=1`)).status).toBe(404)
+  })
 })

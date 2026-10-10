@@ -126,11 +126,16 @@ export async function renderMarkdownToImages(
         // The plugin threw inside the page. Screenshotting now would attach a blank picture and
         // drop the source that explained it; leaving the block as text is the better failure.
         if (size.failed) throw new Error(`${selection.kind} failed to draw`)
+        // A block that would be unreadable at the page's width draws wider (a large topology);
+        // the viewport follows it so the picture holds all of it.
+        const wide = size.width > width
+        if (wide) await page.setViewportSize({ width: Math.ceil(size.width), height: 800 })
         await withTimeout(
           page.locator("#root").screenshot({ path }) as Promise<unknown>,
           timeoutMs,
           `screenshotting ${selection.kind}`,
         )
+        if (wide) await page.setViewportSize({ width, height: 800 })
         images.push({ kind: selection.kind, path, width: size.width, height: size.height, issues: size.issues ?? [] })
         rendered.push(selection)
       } catch {

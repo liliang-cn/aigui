@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { layoutTopology } from "./layout"
 import { parseTopology } from "./parse"
 import { topologyPromptSpec } from "./prompt"
-import { frameAt, palette, svgFor } from "./render"
+import { frameAt, palette, svgFor, svgShell } from "./render"
 import type { TopologyDefinition } from "./types"
 
 const example = (): TopologyDefinition => {
@@ -72,3 +72,28 @@ describe("svgFor", () => {
     expect(svg).toMatch(/data-topo-link="1"[^>]*stroke-dasharray/)
   })
 })
+
+describe("svgShell", () => {
+  it("scales to its container, or holds a readable width and lets the page scroll it", () => {
+    const layout = layoutTopology(example())
+    expect(svgShell(layout, "t")).toContain('width="100%"')
+    const fixed = svgShell(layout, "t", 1234)
+    expect(fixed).toContain('width="1234"')
+    expect(fixed).not.toContain("100%")
+  })
+
+  it("keeps step markers off the nodes and their state badges", () => {
+    const definition = example()
+    const layout = layoutTopology(definition)
+    const svg = svgFor(definition, layout, frameAt(definition, "all"), palette(), true)
+    const markers = [...svg.matchAll(/<g data-topo-message><circle cx="([\d.]+)" cy="([\d.]+)"/g)].map((m) => ({ x: Number(m[1]), y: Number(m[2]) }))
+    expect(markers).toHaveLength(3)
+    for (const at of markers) {
+      for (const b of layout.nodes.values()) {
+        const inside = at.x > b.x - 9 && at.x < b.x + b.width + 9 && at.y > b.y - 17 && at.y < b.y + b.height + 9
+        expect(inside).toBe(false)
+      }
+    }
+  })
+})
+

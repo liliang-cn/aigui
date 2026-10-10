@@ -65,11 +65,42 @@ export interface PageServer {
  * machine. A comment is appended to a file, so it survives this process ending and waits for the
  * next session's `aigui_feedback`.
  */
-export async function startPageServer(pagesDir: string): Promise<PageServer> {
+export interface PageServerOptions {
+  /**
+   * How one block of a served page becomes a PNG, for the page's Save button: `exportBlock`
+   * from @ai-gui/image in the server, a stand-in in tests. Absent, `/snapshot` answers 404 and
+   * the page saves what the browser itself can.
+   */
+  snapshot?: (url: string, block: number, theme: "light" | "dark") => Promise<Uint8Array>
+}
+
+export async function startPageServer(pagesDir: string, options: PageServerOptions = {}): Promise<PageServer> {
+  // One snapshot at a time: each drives the one shared headless page.
+  let snapshotting: Promise<unknown> = Promise.resolve()
   const server: Server = createServer(async (req, res) => {
     const url = new URL(req.url ?? "/", "http://127.0.0.1")
     if (req.method === "GET" && url.pathname === "/ping") {
-      res.writeHead(200, { "content-type": "text/plain" }).end("aigui")
+      res.writeHead(200, { "content-type": "text/plain" }).end(options.snapshot ? "aigui snapshot" : "aigui")
+      return
+    }
+    if (req.method === "GET" && url.pathname === "/snapshot") {
+      const page = basename(url.searchParams.get("page") ?? "")
+      const block = Math.trunc(Number(url.searchParams.get("block")))
+      const theme = url.searchParams.get("theme") === "dark" ? "dark" : "light"
+      const exists = page.endsWith(".html") && (await stat(join(pagesDir, page)).catch(() => undefined))?.isFile()
+      if (!options.snapshot || !exists || !(block >= 1 && block <= 500)) {
+        res.writeHead(options.snapshot ? 400 : 404).end()
+        return
+      }
+      const take = options.snapshot
+      const run = snapshotting.then(() => take(`http://127.0.0.1:${port}/pages/${encodeURIComponent(page)}`, block, theme))
+      snapshotting = run.catch(() => {})
+      try {
+        const png = await run
+        res.writeHead(200, { "content-type": "image/png", "cache-control": "no-store" }).end(Buffer.from(png))
+      } catch {
+        res.writeHead(500).end()
+      }
       return
     }
     if (req.method === "POST" && url.pathname === "/feedback") {

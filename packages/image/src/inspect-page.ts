@@ -10,6 +10,7 @@ interface InspectPage {
   goto(url: string, options?: { timeout?: number }): Promise<unknown>
   evaluate<R, A>(fn: (arg: A) => R | Promise<R>, arg: A): Promise<R>
   $eval<R, A>(selector: string, fn: (el: Element, arg: A) => R, arg: A): Promise<R>
+  locator(selector: string): { screenshot(options?: { type?: "png"; timeout?: number }): Promise<Uint8Array> }
 }
 
 /**
@@ -114,6 +115,37 @@ export async function exportPage(url: string, options: ExportPageOptions): Promi
     return options.path
   } finally {
     // The shared page is reused: leave it as other renders expect to find it.
+    await page.emulateMedia({ colorScheme: null }).catch(() => {})
+    await lease.release()
+  }
+}
+
+export interface ExportBlockOptions {
+  /** Which top-level block, counted from 1 as the page's comments count them. */
+  block: number
+  theme?: "light" | "dark"
+  width?: number
+  timeoutMs?: number
+  acquire?: () => Promise<PageLease>
+}
+
+/**
+ * One block of a page as a PNG, at the shared page's device scale (2× by default): what a
+ * reader's Save button asks for. The whole page is drawn still and left to settle first, so a
+ * chart, a WebGL scene or a topology comes out as it looks, which a browser's own canvas export
+ * cannot promise for every kind.
+ */
+export async function exportBlock(url: string, options: ExportBlockOptions): Promise<Uint8Array> {
+  const lease = await (options.acquire ?? (() => acquirePage() as unknown as Promise<PageLease>))()
+  const page = lease.page as unknown as InspectPage
+  try {
+    await page.emulateMedia({ colorScheme: options.theme ?? "light" })
+    await page.setViewportSize({ width: options.width ?? 1100, height: 900 })
+    await page.goto(still(url), { timeout: options.timeoutMs ?? 20_000 })
+    await page.evaluate(settle, { selector: "body", quietMs: 300, maxMs: 4_000, canvasMs: 1500 })
+    const index = Math.max(1, Math.trunc(options.block))
+    return await page.locator(`#aigui-root > :nth-child(${index})`).screenshot({ type: "png", timeout: options.timeoutMs ?? 20_000 })
+  } finally {
     await page.emulateMedia({ colorScheme: null }).catch(() => {})
     await lease.release()
   }

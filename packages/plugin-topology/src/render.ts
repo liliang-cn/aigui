@@ -212,8 +212,19 @@ export function svgFor(definition: TopologyDefinition, layout: Layout, frame: Fr
     const taken: Point[] = layout.linkLabels.filter((p): p is Point => !!p)
     for (const message of frame.messages) {
       const route = routeFor(definition, layout, message)
-      const spots = [0.5, 0.32, 0.68, 0.22, 0.78, 0.4, 0.6].map((t) => pointAlong(route, t))
-      const room = (p: Point) => Math.min(Infinity, ...taken.map((u) => Math.hypot(u.x - p.x, (u.y - p.y) * 1.6)))
+      const spots = [0.5, 0.32, 0.68, 0.22, 0.78, 0.4, 0.6, 0.12, 0.88].map((t) => pointAlong(route, t))
+      // Nodes are in the way too, their state badge (8 px above the top edge) included: a marker
+      // on a short route would otherwise land on the badge of the node it arrives at.
+      const clear = (p: Point) =>
+        Math.min(
+          Infinity,
+          ...[...layout.nodes.values()].map((b) => {
+            const dx = Math.max(b.x - p.x, 0, p.x - (b.x + b.width))
+            const dy = Math.max(b.y - 10 - p.y, 0, p.y - (b.y + b.height))
+            return Math.hypot(dx, dy) - 10
+          }),
+        )
+      const room = (p: Point) => Math.min(clear(p), ...taken.map((u) => Math.hypot(u.x - p.x, (u.y - p.y) * 1.6)))
       const at = spots.reduce((best, p) => (room(p) > room(best) + 4 ? p : best), spots[0])
       taken.push(at)
       parts.push(`<g data-topo-message><circle cx="${f(at.x)}" cy="${f(at.y)}" r="9" fill="${colours.accent}" stroke="${colours.halo}" stroke-width="2"/><text x="${f(at.x)}" y="${f(at.y + 3.6)}" text-anchor="middle" font-size="10.5" font-weight="700" fill="#ffffff">${message.step}</text></g>`)
@@ -222,9 +233,13 @@ export function svgFor(definition: TopologyDefinition, layout: Layout, frame: Fr
   return parts.join("")
 }
 
-/** The layout and an SVG element's opening tag for it, scaled to its container. */
-export function svgShell(layout: Layout, label: string): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${layout.width} ${layout.height}" width="100%" style="max-width:${layout.width}px;display:block;margin-inline:auto;font-family:ui-sans-serif,system-ui,-apple-system,'PingFang SC','Noto Sans CJK SC',sans-serif" role="img" aria-label="${esc(label)}">`
+/**
+ * The layout and an SVG element's opening tag for it: scaled to its container, or at `fixedWidth`
+ * pixels when scaling to fit would shrink its text past reading.
+ */
+export function svgShell(layout: Layout, label: string, fixedWidth?: number): string {
+  const size = fixedWidth ? `width="${fixedWidth}" style="display:block;` : `width="100%" style="max-width:${layout.width}px;display:block;margin-inline:auto;`
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${layout.width} ${layout.height}" ${size}font-family:ui-sans-serif,system-ui,-apple-system,'PingFang SC','Noto Sans CJK SC',sans-serif" role="img" aria-label="${esc(label)}">`
 }
 
 export { layoutTopology, lengthOf, pointAlong }

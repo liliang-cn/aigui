@@ -16,6 +16,9 @@ const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 export const topologyCss = [
   "[data-aigui-topology]{margin-block:0.75rem;max-width:100%}",
   "[data-aigui-topology] svg{overflow:visible}",
+  // Wider than it can be drawn readably: scrolled sideways on a page, whole in a picture.
+  "[data-aigui-topology-scroll]{overflow-x:auto;overscroll-behavior-x:contain;padding-bottom:4px}",
+  "[data-still] [data-aigui-topology-scroll]{overflow:visible}",
   "[data-aigui-topology-title]{font-weight:600;margin-bottom:0.35rem}",
   "[data-aigui-topology-caption]{margin-top:0.35rem;font-size:0.875rem;opacity:0.75;text-align:center}",
   "[data-aigui-topology-steps]{margin:0.5rem 0 0;padding-left:1.4rem;font-size:0.875rem}",
@@ -66,15 +69,34 @@ export function topology(options: TopologyOptions = {}): AIGuiPlugin {
   }
 }
 
+/**
+ * The smallest a topology is drawn: its 11 px notes stay about 9 px, the least a reader can make
+ * out. Below it, the drawing keeps this scale and the page scrolls it.
+ */
+const MIN_SCALE = 0.82
+
 function mountTopology(el: HTMLElement, definition: TopologyDefinition, theme: string | undefined, animate: boolean, stepMs: number): () => void {
   const colours = palette(theme)
-  // Without a stated direction, whichever way draws larger in the space there is: a long chain laid
-  // left to right in a narrow column is scaled down until its badges are unreadable.
+  // Whichever way draws larger in the space there is: a long chain laid left to right in a narrow
+  // column is scaled down until its text is unreadable. A stated direction is kept unless it would
+  // shrink the text below the floor and the other way is clearly larger.
   const room = el.clientWidth || el.parentElement?.clientWidth || 0
-  const across = layoutTopology(definition)
-  const down = definition.direction || !room ? undefined : layoutTopology({ ...definition, direction: "TB" })
-  const scale = (l: typeof across) => Math.min(1, room / l.width)
-  const layout = down && scale(down) > scale(across) + 0.05 ? down : across
+  const stated = layoutTopology(definition)
+  const flipped = room ? layoutTopology({ ...definition, direction: (definition.direction ?? "LR") === "LR" ? "TB" : "LR" }) : undefined
+  const scale = (l: typeof stated) => (room ? Math.min(1, room / l.width) : 1)
+  const layout = !flipped
+    ? stated
+    : definition.direction
+      ? scale(stated) < MIN_SCALE && scale(flipped) >= scale(stated) * 1.25
+        ? flipped
+        : stated
+      : scale(flipped) > scale(stated) + 0.05
+        ? flipped
+        : stated
+  // Never shrunk past the floor: wider than that, the page scrolls it sideways, and a picture of
+  // it grows wider instead.
+  const fixedWidth = scale(layout) < MIN_SCALE ? Math.round(layout.width * MIN_SCALE) : undefined
+  if (fixedWidth) el.setAttribute("data-aigui-wide", String(fixedWidth))
   const steps = definition.steps ?? []
   el.setAttribute("data-aigui-topology", String(definition.nodes.length))
   if (definition.title) {
@@ -84,6 +106,7 @@ function mountTopology(el: HTMLElement, definition: TopologyDefinition, theme: s
     el.appendChild(title)
   }
   const figure = document.createElement("div")
+  if (fixedWidth) figure.setAttribute("data-aigui-topology-scroll", "")
   el.appendChild(figure)
   if (definition.nodes.length > 40) el.setAttribute("data-aigui-issue", `${definition.nodes.length} nodes in one topology — too many to read; split it, or group the repeated ones`)
 
@@ -92,7 +115,7 @@ function mountTopology(el: HTMLElement, definition: TopologyDefinition, theme: s
     // In flight, the states are still the previous step's — they change when the messages land —
     // but what is moving and what is lit belong to this step.
     const frame = moving && typeof index === "number" ? { ...frameAt(definition, index - 1), messages: frameAt(definition, index).messages, highlight: frameAt(definition, index).highlight } : frameAt(definition, index)
-    let svg = svgShell(layout, label) + svgFor(definition, layout, frame, colours, index === "all")
+    let svg = svgShell(layout, label, fixedWidth) + svgFor(definition, layout, frame, colours, index === "all")
     if (moving) {
       for (const message of frame.messages) {
         const route = routeFor(definition, layout, message)
